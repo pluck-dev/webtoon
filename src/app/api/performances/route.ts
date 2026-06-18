@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     data: {
       episodeId: parsed.data.episodeId,
       userId: user.id,
-      title: `${parsed.data.displayName}님의 더빙 버전`
+      title: `${parsed.data.displayName} voice version`
     }
   });
 

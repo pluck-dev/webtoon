@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Episode = {
   id: string;
@@ -57,6 +57,41 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const recordedCount = allDialogues.filter((dialogue) => recordings[dialogue.id]?.saved).length;
   const progress = ((activeCut + 1) / episode.cuts.length) * 100;
   const isLoggedIn = Boolean(performanceId && userId);
+  const sessionKey = `webtoon-voice-session:${episode.id}`;
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(sessionKey);
+    if (!stored) return;
+
+    const parsed = JSON.parse(stored) as { performanceId?: string };
+    if (!parsed.performanceId) return;
+
+    fetch(`/api/performances/${parsed.performanceId}`)
+      .then((response) => {
+        if (!response.ok) throw new Error('saved performance not found');
+        return response.json();
+      })
+      .then((body) => {
+        const restoredRecordings: Record<string, RecordingState> = {};
+        for (const recording of body.recordings ?? []) {
+          restoredRecordings[recording.dialogueId] = {
+            url: recording.audioUrl,
+            durationMs: recording.durationMs,
+            saved: true
+          };
+        }
+
+        setPerformanceId(body.performance.id);
+        setUserId(body.user.id);
+        setDisplayName(body.user.displayName);
+        setHandle(body.user.handle);
+        setRecordings(restoredRecordings);
+        setStatus(`${body.user.displayName} 계정의 저장된 녹음을 불러왔습니다.`);
+      })
+      .catch(() => {
+        window.localStorage.removeItem(sessionKey);
+      });
+  }, [sessionKey]);
 
   async function createPerformance() {
     const response = await fetch('/api/performances', {
@@ -73,6 +108,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     setPerformanceId(body.performance.id);
     setUserId(body.user.id);
     setStatus(`${body.user.displayName} 계정으로 참여 중입니다.`);
+    window.localStorage.setItem(sessionKey, JSON.stringify({ performanceId: body.performance.id }));
   }
 
   async function toggleRecording(dialogueId: string, cutIndex: number) {
@@ -231,7 +267,9 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       <aside className="phone">
         <div className="phone-head">
           <span>{episode.title}</span>
-          <button type="button" onClick={() => setActiveCut((activeCut + 1) % episode.cuts.length)}>다음 컷</button>
+          <button type="button" onClick={previewing ? () => stopPreview() : playFullPreview}>
+            {previewing ? '정지' : '재생'}
+          </button>
         </div>
         <div className="phone-scroll">
           {episode.cuts.map((cut, index) => (
