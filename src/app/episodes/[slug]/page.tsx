@@ -1,8 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
+import AuthNav from '@/components/AuthNav';
 import EpisodeStudio from '@/components/EpisodeStudio';
 
 export const dynamic = 'force-dynamic';
@@ -40,34 +40,21 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
           <a href="#studio">Studio</a>
           <a href="#cast">Cast</a>
         </nav>
-        <Link href="/" className="market-cta">Back to collection</Link>
+        <AuthNav />
       </header>
 
-      <section className="episode-hero">
-        <div className="episode-hero-copy">
-          <p className="market-kicker">Recording room</p>
-          <h1>{episode.title}</h1>
-          <p>{episode.logline}</p>
+      <section className="episode-studio-card" id="studio">
+        <div className="episode-room-heading">
+          <div>
+            <p>Recording room</p>
+            <h1>{episode.title}</h1>
+            <span>{episode.logline}</span>
+          </div>
           <div className="episode-meta-row">
             <span>{episode.cuts.length} cuts</span>
             <span>{episode.maxSeconds}s max</span>
             <span>{episode._count.performances} versions</span>
           </div>
-        </div>
-        <div className="episode-hero-strip" aria-hidden="true">
-          {episode.cuts.slice(0, 3).map((cut) => (
-            <img src={cut.imageUrl} alt="" key={cut.id} />
-          ))}
-        </div>
-      </section>
-
-      <section className="episode-studio-card" id="studio">
-        <div className="section-heading episode-studio-heading">
-          <div>
-            <p>Voice studio</p>
-            <h2>Record each bubble, then preview the full episode.</h2>
-          </div>
-          <span>Browser recording</span>
         </div>
         <EpisodeStudio
           episode={{

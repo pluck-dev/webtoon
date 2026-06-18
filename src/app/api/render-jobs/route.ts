@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
 import { buildHyperlapseTimeline } from '@/lib/timeline';
 
@@ -9,6 +10,11 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const user = await getRequiredDbUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Login required' }, { status: 401 });
+  }
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -40,6 +46,10 @@ export async function POST(request: Request) {
 
   if (!performance) {
     return NextResponse.json({ error: 'Performance not found' }, { status: 404 });
+  }
+
+  if (performance.userId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const timeline = buildHyperlapseTimeline(performance.episode.cuts, performance.episode.maxSeconds);

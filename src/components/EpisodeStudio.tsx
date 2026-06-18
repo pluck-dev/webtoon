@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Show, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Episode = {
   id: string;
@@ -40,14 +41,12 @@ type SessionState = {
 };
 
 export default function EpisodeStudio({ episode }: { episode: Episode }) {
+  const { isSignedIn, user } = useUser();
   const [activeCut, setActiveCut] = useState(0);
-  const [displayName, setDisplayName] = useState('My acting');
-  const [handle, setHandle] = useState('actor-demo');
-  const [session, setSession] = useState<SessionState | null>(null);
   const [recordingDialogue, setRecordingDialogue] = useState('');
   const [recordings, setRecordings] = useState<Record<string, RecordingState>>({});
   const [timeline, setTimeline] = useState('');
-  const [status, setStatus] = useState('녹음 버튼을 누르면 세션을 만들고 마이크 권한을 요청합니다.');
+  const [status, setStatus] = useState('Sign in to save your own voice version.');
   const [previewing, setPreviewing] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -62,86 +61,83 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const allDialogues = useMemo(() => episode.cuts.flatMap((cut) => cut.dialogues), [episode.cuts]);
   const recordedCount = allDialogues.filter((dialogue) => recordings[dialogue.id]?.saved).length;
   const progress = ((activeCut + 1) / episode.cuts.length) * 100;
-  const sessionKey = `webtoon-voice-session:${episode.id}`;
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(sessionKey);
-    if (!stored) return;
-
-    let parsed: { performanceId?: string };
-    try {
-      parsed = JSON.parse(stored);
-    } catch {
-      window.localStorage.removeItem(sessionKey);
+  const loadPerformance = useCallback(async () => {
+    const response = await fetch(`/api/performances?episodeId=${episode.id}`);
+    if (response.status === 401) {
+      setStatus('Sign in to load your saved recordings.');
       return;
     }
 
-    if (!parsed.performanceId) return;
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      setStatus('Could not load your saved version.');
+      return;
+    }
 
-    fetch(`/api/performances/${parsed.performanceId}`)
-      .then((response) => {
-        if (!response.ok) throw new Error('saved performance not found');
-        return response.json();
-      })
-      .then((body) => {
-        const restoredRecordings: Record<string, RecordingState> = {};
-        for (const recording of body.recordings ?? []) {
-          restoredRecordings[recording.dialogueId] = {
-            url: recording.audioUrl,
-            durationMs: recording.durationMs,
-            saved: true
-          };
-        }
+    if (!body?.performance) {
+      setStatus('Ready. Record a cut to create your voice version.');
+      return;
+    }
 
-        const restoredSession = {
-          performanceId: body.performance.id,
-          userId: body.user.id
-        };
-        sessionRef.current = restoredSession;
-        setSession(restoredSession);
-        setDisplayName(body.user.displayName);
-        setHandle(body.user.handle);
-        setRecordings(restoredRecordings);
-      setStatus(`${body.user.displayName}님의 저장된 녹음 세션을 불러왔습니다.`);
-      })
-      .catch(() => {
-        window.localStorage.removeItem(sessionKey);
+    const nextSession = {
+      performanceId: body.performance.id,
+      userId: body.performance.userId
+    };
+    sessionRef.current = nextSession;
+
+    const restored: Record<string, RecordingState> = {};
+    for (const recording of body.recordings ?? []) {
+      restored[recording.dialogueId] = {
+        url: recording.audioUrl,
+        durationMs: recording.durationMs,
+        saved: true
+      };
+    }
+    setRecordings(restored);
+    setStatus(`Loaded your saved version with ${Object.keys(restored).length} recordings.`);
+  }, [episode.id]);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      queueMicrotask(() => {
+        sessionRef.current = null;
+        setRecordings({});
+        setTimeline('');
+        setStatus('Sign in to save your own voice version.');
       });
-  }, [sessionKey]);
+      return;
+    }
 
-  async function createPerformance() {
-    let response: Response;
-    try {
-      response = await fetch('/api/performances', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ episodeId: episode.id, handle, displayName })
-      });
-    } catch {
-      setStatus('세션 생성 요청이 실패했습니다. 개발 서버와 DB가 켜져 있는지 확인해주세요.');
+    queueMicrotask(() => {
+      void loadPerformance();
+    });
+  }, [isSignedIn, user?.id, loadPerformance]);
+
+  async function ensurePerformance() {
+    if (sessionRef.current) return sessionRef.current;
+    if (!isSignedIn) {
+      setStatus('Sign in before recording.');
       return null;
     }
 
+    const response = await fetch('/api/performances', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ episodeId: episode.id })
+    });
     const body = await response.json().catch(() => null);
-    if (!response.ok || !body?.performance || !body?.user) {
-      setStatus('세션을 만들지 못했습니다. 핸들은 영문/숫자/_/- 만 사용할 수 있습니다.');
+    if (!response.ok || !body?.performance) {
+      setStatus('Could not create your episode version.');
       return null;
     }
 
     const nextSession = {
       performanceId: body.performance.id,
-      userId: body.user.id
+      userId: body.performance.userId
     };
     sessionRef.current = nextSession;
-    setSession(nextSession);
-    window.localStorage.setItem(sessionKey, JSON.stringify({ performanceId: body.performance.id }));
-    setStatus(`${body.user.displayName}님 녹음 세션이 준비됐습니다.`);
     return nextSession;
-  }
-
-  async function ensureSession() {
-    if (sessionRef.current) return sessionRef.current;
-    return createPerformance();
   }
 
   async function toggleRecording(dialogueId: string, cutIndex: number) {
@@ -153,20 +149,20 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     stopPreview();
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus('이 브라우저에서는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 localhost로 접속해주세요.');
+      setStatus('This browser cannot record audio. Use Chrome or Edge on localhost.');
       return;
     }
 
-    const activeSession = await ensureSession();
+    const activeSession = await ensurePerformance();
     if (!activeSession) return;
 
     let stream: MediaStream;
     try {
-      setStatus('마이크 권한을 요청하는 중입니다. 브라우저 권한 팝업에서 허용을 눌러주세요.');
+      setStatus('Requesting microphone permission.');
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (error) {
       const message = error instanceof DOMException ? error.name : 'unknown';
-      setStatus(`마이크 권한이 막혔습니다. 주소창 왼쪽 권한에서 마이크를 허용한 뒤 다시 눌러주세요. (${message})`);
+      setStatus(`Microphone permission was blocked. Allow microphone access and try again. (${message})`);
       return;
     }
 
@@ -176,7 +172,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     startedAt.current = performance.now();
     setActiveCut(cutIndex);
     setRecordingDialogue(dialogueId);
-    setStatus(`CUT ${cutIndex + 1} 녹음 중입니다. 끝나면 정지를 누르세요.`);
+    setStatus(`Recording CUT ${cutIndex + 1}. Press stop when finished.`);
 
     const mimeType = getSupportedMimeType();
     let recorder: MediaRecorder;
@@ -185,15 +181,16 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     } catch {
       cleanupRecording();
       setRecordingDialogue('');
-      setStatus('녹음 장치를 시작하지 못했습니다. 다른 앱이 마이크를 사용 중인지 확인해주세요.');
+      setStatus('Could not start the microphone recorder.');
       return;
     }
+
     mediaRecorder.current = recorder;
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) chunks.current.push(event.data);
     };
     recorder.onerror = () => {
-      setStatus('녹음 중 오류가 났습니다. 다시 시도해주세요.');
+      setStatus('Recording failed. Try again.');
       cleanupRecording();
     };
     recorder.onstop = async () => {
@@ -222,7 +219,6 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     const formData = new FormData();
     formData.append('performanceId', activeSession.performanceId);
     formData.append('dialogueId', dialogueId);
-    formData.append('userId', activeSession.userId);
     formData.append('durationMs', String(durationMs));
     formData.append('audio', blob, `${dialogueId}.webm`);
 
@@ -231,7 +227,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       body: formData
     });
     if (!response.ok) {
-      setStatus('브라우저에는 녹음됐지만 서버 저장에 실패했습니다. DB와 recordings 폴더 권한을 확인해주세요.');
+      setStatus('Recorded locally, but saving to your account failed.');
       return;
     }
 
@@ -239,11 +235,11 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       ...current,
       [dialogueId]: { ...current[dialogueId], saved: true }
     }));
-    setStatus('녹음이 저장됐습니다. 새로고침해도 이 테이크를 다시 불러옵니다.');
+    setStatus('Recording saved to your account.');
   }
 
   async function buildRenderJob() {
-    const activeSession = await ensureSession();
+    const activeSession = await ensurePerformance();
     if (!activeSession) return;
 
     const response = await fetch('/api/render-jobs', {
@@ -253,12 +249,12 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     });
     const body = await response.json();
     if (!response.ok) {
-      setStatus('렌더 타임라인을 만들지 못했습니다.');
+      setStatus('Could not create the render timeline.');
       return;
     }
 
     setTimeline(JSON.stringify(body.timeline, null, 2));
-    setStatus('하이퍼랩스 타임라인을 만들었습니다.');
+    setStatus('Render timeline created.');
   }
 
   function playSingle(dialogueId: string, cutIndex: number) {
@@ -266,23 +262,23 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     if (!recording) return;
     stopPreview();
     setActiveCut(cutIndex);
-    new Audio(recording.url).play();
+    void new Audio(recording.url).play();
   }
 
   function playFullPreview() {
     if (recordedCount === 0) {
-      setStatus('아직 녹음된 컷이 없습니다. 컷 하나 이상 먼저 녹음해주세요.');
+      setStatus('Record at least one cut before previewing.');
       return;
     }
 
     stopPreview();
     setPreviewing(true);
-    setStatus('전체 미리보기를 재생합니다.');
+    setStatus('Playing your full preview.');
 
     let cutIndex = 0;
     const playNextCut = () => {
       if (cutIndex >= episode.cuts.length) {
-        stopPreview('전체 미리보기가 끝났습니다.');
+        stopPreview('Full preview finished.');
         return;
       }
 
@@ -298,7 +294,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           cutIndex += 1;
           previewTimer.current = setTimeout(playNextCut, 350);
         };
-        audio.play();
+        void audio.play();
         return;
       }
 
@@ -309,7 +305,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     playNextCut();
   }
 
-  function stopPreview(nextStatus = '미리보기를 정지했습니다.') {
+  function stopPreview(nextStatus = 'Preview stopped.') {
     if (previewTimer.current) {
       clearTimeout(previewTimer.current);
       previewTimer.current = null;
@@ -328,7 +324,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         <div className="phone-head">
           <span>{episode.title}</span>
           <button type="button" onClick={previewing ? () => stopPreview() : playFullPreview}>
-            {previewing ? '정지' : '재생'}
+            {previewing ? 'Stop' : 'Preview'}
           </button>
         </div>
         <div className="phone-scroll">
@@ -345,7 +341,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           ))}
         </div>
         <div className="phone-foot">
-          <strong>{activeDialogue ? `${activeDialogue.characterName}: ${activeDialogue.text}` : '대사 없음'}</strong>
+          <strong>{activeDialogue ? `${activeDialogue.characterName}: ${activeDialogue.text}` : 'No dialogue'}</strong>
           <span>{activeDialogue?.direction}</span>
           <div className="progress"><i style={{ width: `${progress}%` }} /></div>
         </div>
@@ -354,39 +350,49 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       <div className="stack">
         <section className="panel account-panel">
           <div className="panel-head">
-            <h1>계정</h1>
-            <span>{session ? '세션 활성화' : '게스트 모드'}</span>
+            <h2>Actor Account</h2>
+            <span>{isSignedIn ? 'Signed in' : 'Required for saving'}</span>
           </div>
-          <div className="panel-content">
-            <div className="join-form">
-              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Display name" />
-              <input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="handle" />
-              <button className="primary" type="button" onClick={createPerformance}>
-                {session ? '새 버전 만들기' : '녹음 시작'}
-              </button>
-            </div>
-            <p className="account-note">
-              지금은 MVP 계정 흐름입니다. 녹음 시작 시 세션이 자동 생성되고, 저장된 녹음은 새로고침 후 다시 불러옵니다.
-            </p>
+          <div className="panel-content auth-panel">
+            <Show when="signed-out">
+              <div className="auth-actions">
+                <SignInButton mode="modal">
+                  <button type="button">Sign in</button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="primary" type="button">Sign up</button>
+                </SignUpButton>
+              </div>
+            </Show>
+            <Show when="signed-in">
+              <div className="signed-card">
+                <div>
+                  <strong>{user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress || 'Actor'}</strong>
+                  <p>{user?.primaryEmailAddress?.emailAddress}</p>
+                </div>
+                <UserButton />
+              </div>
+            </Show>
+            <p className="account-note">Members record their own version. Admins create and manage the source webtoon episodes.</p>
           </div>
         </section>
 
         <section className="panel">
           <div className="panel-head">
-            <h2>전체 미리보기</h2>
+            <h2>Preview</h2>
             <span>{recordedCount}/{allDialogues.length} saved</span>
           </div>
           <div className="panel-content preview-console">
             <div>
               <strong>{status}</strong>
-              <p>녹음 후 컷 전환과 대사 타이밍을 한 번에 확인합니다.</p>
+              <p>Play the whole episode after recording to check cut transitions and dialogue timing.</p>
             </div>
             <div className="preview-actions">
               <button className="primary" type="button" onClick={playFullPreview} disabled={previewing}>
-                전체 재생
+                Play all
               </button>
               <button type="button" onClick={() => stopPreview()} disabled={!previewing}>
-                정지
+                Stop
               </button>
             </div>
           </div>
@@ -394,7 +400,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
 
         <section className="panel" id="cast">
           <div className="panel-head">
-            <h2>연기 가이드</h2>
+            <h2>Cast Guide</h2>
             <span>{episode.maxSeconds}s max</span>
           </div>
           <div className="panel-content character-grid">
@@ -410,7 +416,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>컷별 녹음</h2>
+            <h2>Record by Cut</h2>
             <span>{recordedCount}/{allDialogues.length}</span>
           </div>
           <div className="panel-content record-list">
@@ -422,13 +428,13 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
                   <div className="record-copy">
                     <strong>{dialogue.characterName}: {dialogue.text}</strong>
                     <p>{dialogue.direction}</p>
-                    <small>{recording ? `${(recording.durationMs / 1000).toFixed(1)}초 ${recording.saved ? '저장됨' : '저장 중'}` : '미녹음'}</small>
+                    <small>{recording ? `${(recording.durationMs / 1000).toFixed(1)}s ${recording.saved ? 'saved' : 'saving'}` : 'not recorded'}</small>
                   </div>
                   <div className="record-actions">
-                    <button className="primary" type="button" onClick={() => toggleRecording(dialogue.id, cutIndex)}>
-                      {recordingDialogue === dialogue.id ? '정지' : '녹음'}
+                    <button className="primary" type="button" onClick={() => toggleRecording(dialogue.id, cutIndex)} disabled={!isSignedIn}>
+                      {recordingDialogue === dialogue.id ? 'Stop' : 'Record'}
                     </button>
-                    <button type="button" disabled={!recording} onClick={() => playSingle(dialogue.id, cutIndex)}>듣기</button>
+                    <button type="button" disabled={!recording} onClick={() => playSingle(dialogue.id, cutIndex)}>Listen</button>
                   </div>
                 </div>
               );
@@ -438,12 +444,12 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>렌더 작업</h2>
-            <button className="primary" type="button" onClick={buildRenderJob}>타임라인 만들기</button>
+            <h2>Render Timeline</h2>
+            <button className="primary" type="button" onClick={buildRenderJob} disabled={!isSignedIn}>Create</button>
           </div>
           <div className="panel-content render-box">
-            <p className="muted">최종 MP4 렌더러는 컷 이미지와 녹음 파일이 담긴 이 타임라인 JSON을 사용합니다.</p>
-            <pre className="timeline-json">{timeline || '아직 생성된 타임라인이 없습니다.'}</pre>
+            <p className="muted">The MP4 renderer will use this timeline with cut images and account recordings.</p>
+            <pre className="timeline-json">{timeline || 'No timeline has been created yet.'}</pre>
           </div>
         </section>
       </div>

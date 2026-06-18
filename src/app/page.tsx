@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 
+import AuthNav from '@/components/AuthNav';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export default async function Home() {
           <a href="#templates">Templates</a>
           <a href="#how">How it works</a>
         </nav>
-        <Link href="/admin" className="market-cta">Create Episode</Link>
+        <AuthNav />
       </header>
 
       <section className="market-hero">
@@ -39,8 +40,8 @@ export default async function Home() {
           <h1>One original webtoon, endless actor versions.</h1>
         </div>
         <p>
-          관리자가 만든 웹툰 컷과 말풍선은 고정됩니다. 참여자는 같은 에피소드를 자기 목소리와
-          연기 스타일로 녹음하고, 서비스는 숏츠용 타임라인을 자동으로 만듭니다.
+          Admins publish fixed webtoon episodes with cut images, dialogue, and role guides.
+          Members sign in, record every speech bubble, and create their own shareable voice version.
         </p>
       </section>
 
@@ -53,8 +54,8 @@ export default async function Home() {
       <section className="market-feature">
         <div className="feature-copy">
           <span>Featured episode</span>
-          <h2>전남친이 면접관이었다</h2>
-          <p>면접장에서 3년 전 사라진 전남친을 면접관으로 마주친다.</p>
+          <h2>Former lover, current interviewer</h2>
+          <p>An interview room turns into a tense reunion when the interviewer is someone from three years ago.</p>
           <Link href="/episodes/ex-interviewer">Record your version</Link>
         </div>
         <div className="feature-gallery" aria-hidden="true">
@@ -102,20 +103,20 @@ export default async function Home() {
           </div>
         </div>
         <div className="template-grid">
-          <div><strong>8-cut shorts</strong><span>Hook, setup, conflict, reversal, cliffhanger.</span></div>
+          <div><strong>Admin originals</strong><span>Admins generate cuts, write dialogue, and publish source episodes.</span></div>
+          <div><strong>Member versions</strong><span>Every member keeps the same webtoon but records a unique acting take.</span></div>
           <div><strong>Role casting</strong><span>Solo acting, duo scenes, or open role submissions.</span></div>
           <div><strong>Hyperlapse render</strong><span>Cut duration follows recorded voice length.</span></div>
-          <div><strong>Admin images</strong><span>Generate consistent episode cuts inside this project.</span></div>
         </div>
       </section>
 
       <section className="how-section" id="how">
         <p>How it works</p>
         <ol>
-          <li>Admin uploads or generates webtoon cuts.</li>
-          <li>Admin publishes dialogue and character voice guides.</li>
+          <li>Admin creates the original webtoon episode.</li>
+          <li>Members choose an episode and sign in.</li>
           <li>Actors record each speech bubble in the browser.</li>
-          <li>The render job creates a vertical shorts timeline.</li>
+          <li>The service saves and renders a personal shorts version.</li>
         </ol>
       </section>
     </main>

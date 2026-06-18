@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 
+import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getRequiredDbUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Login required' }, { status: 401 });
+  }
+
   const { id } = await params;
   const performance = await prisma.performance.findUnique({
-    where: { id },
+    where: { id, userId: user.id },
     include: {
       user: true,
       recordings: {

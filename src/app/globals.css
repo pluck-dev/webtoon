@@ -599,6 +599,18 @@ label {
   color: #fffaf0;
 }
 
+.auth-nav,
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.auth-nav {
+  justify-self: end;
+}
+
 .market-hero {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(280px, 520px);
@@ -946,23 +958,42 @@ label {
 }
 
 .episode-studio-card {
-  margin-top: 10px;
+  margin-top: 18px;
   border: 1px solid #d6d0c4;
   border-radius: 8px;
   background: #fffcf5;
   padding: 14px;
 }
 
-.episode-studio-heading {
-  margin: 0 0 14px;
+.episode-room-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #e1dbd1;
+  padding: 6px 2px 16px;
 }
 
-.episode-studio-heading h2 {
-  font-size: clamp(24px, 3vw, 38px);
+.episode-room-heading p {
+  margin: 0 0 7px;
+  color: #7a6f61;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
-.episode-detail-shell .section-heading {
-  margin-top: 0;
+.episode-room-heading h1 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1;
+}
+
+.episode-room-heading span {
+  display: block;
+  margin-top: 10px;
+  color: #5d564c;
+  line-height: 1.55;
 }
 
 .episode-detail-shell .workspace {
@@ -1057,12 +1088,18 @@ label {
     grid-template-columns: 1fr;
   }
 
+  .episode-room-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
   .market-links {
     justify-content: flex-start;
     overflow-x: auto;
   }
 
-  .market-cta {
+  .market-cta,
+  .auth-nav {
     justify-self: start;
   }
 
