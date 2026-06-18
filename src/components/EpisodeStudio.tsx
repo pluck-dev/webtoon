@@ -56,6 +56,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewAudio = useRef<HTMLAudioElement | null>(null);
   const sessionRef = useRef<SessionState | null>(null);
+  const cutRefs = useRef<(HTMLElement | null)[]>([]);
 
   const activeDialogue = episode.cuts[activeCut]?.dialogues[0];
   const allDialogues = useMemo(() => episode.cuts.flatMap((cut) => cut.dialogues), [episode.cuts]);
@@ -113,6 +114,13 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       void loadPerformance();
     });
   }, [isSignedIn, user?.id, loadPerformance]);
+
+  useEffect(() => {
+    cutRefs.current[activeCut]?.scrollIntoView({
+      behavior: previewing ? 'smooth' : 'auto',
+      block: 'nearest'
+    });
+  }, [activeCut, previewing]);
 
   async function ensurePerformance() {
     if (sessionRef.current) return sessionRef.current;
@@ -329,7 +337,14 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         </div>
         <div className="phone-scroll">
           {episode.cuts.map((cut, index) => (
-            <article className={`cut-panel ${index === activeCut ? 'active' : ''}`} key={cut.id} onClick={() => setActiveCut(index)}>
+            <article
+              className={`cut-panel ${index === activeCut ? 'active' : ''}`}
+              key={cut.id}
+              onClick={() => setActiveCut(index)}
+              ref={(element) => {
+                cutRefs.current[index] = element;
+              }}
+            >
               <img src={cut.imageUrl} alt="" />
               {cut.dialogues.map((dialogue, dialogueIndex) => (
                 <div className={`bubble ${dialogueIndex % 2 === 0 ? 'left' : 'right'}`} key={dialogue.id}>

@@ -1,7 +1,7 @@
-import { ClerkProvider } from "@clerk/nextjs";
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { ClerkProvider } from '@clerk/nextjs';
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Webtoon Voice Studio",
-  description: "Create actor versions of admin-made AI webtoon shorts",
+  title: 'Webtoon Voice Studio',
+  description: 'Create actor versions of admin-made AI webtoon shorts',
+};
+
+const clerkAppearance = {
+  variables: {
+    colorPrimary: '#171512',
+    colorText: '#171512',
+    colorTextSecondary: '#675f54',
+    colorBackground: '#fffcf5',
+    colorInputBackground: '#fffcf5',
+    colorInputText: '#171512',
+    colorDanger: '#ef6f5e',
+    borderRadius: '8px',
+    fontFamily: 'Inter, Pretendard, "Segoe UI", Arial, sans-serif'
+  },
+  elements: {
+    modalBackdrop: 'clerk-modal-backdrop',
+    cardBox: 'clerk-card-box',
+    card: 'clerk-card',
+    headerTitle: 'clerk-title',
+    headerSubtitle: 'clerk-subtitle',
+    socialButtonsBlockButton: 'clerk-social-button',
+    formButtonPrimary: 'clerk-primary-button',
+    formFieldInput: 'clerk-input',
+    footer: 'clerk-footer',
+    footerActionLink: 'clerk-footer-link'
+  }
 };
 
 export default function RootLayout({
@@ -26,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <ClerkProvider>
+        <ClerkProvider appearance={clerkAppearance}>
           {children}
         </ClerkProvider>
       </body>

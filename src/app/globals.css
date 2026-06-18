@@ -611,6 +611,71 @@ label {
   justify-self: end;
 }
 
+.clerk-modal-backdrop {
+  background: rgba(23, 21, 18, .58);
+  backdrop-filter: blur(6px);
+}
+
+.clerk-card-box {
+  border: 1px solid #d6d0c4;
+  border-radius: 8px;
+  box-shadow: 0 28px 90px rgba(23, 21, 18, .28);
+}
+
+.clerk-card {
+  background: #fffcf5;
+  color: #171512;
+}
+
+.clerk-title {
+  color: #171512;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.clerk-subtitle {
+  color: #675f54;
+}
+
+.clerk-social-button,
+.clerk-input {
+  border: 1px solid #d6d0c4;
+  background: #fffaf0;
+  color: #171512;
+  border-radius: 8px;
+}
+
+.clerk-primary-button {
+  min-height: 42px;
+  border-radius: 8px;
+  background: #171512;
+  color: #fffaf0;
+  font-weight: 900;
+}
+
+.clerk-primary-button:hover {
+  background: #2c2721;
+}
+
+.clerk-footer {
+  background: #f3f0e8;
+  border-top: 1px solid #e1dbd1;
+}
+
+.clerk-footer-link {
+  color: #171512;
+  font-weight: 900;
+}
+
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #f3f0e8;
+  padding: 24px;
+}
+
 .market-hero {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(280px, 520px);
