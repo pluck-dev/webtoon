@@ -43,14 +43,20 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const [recordingDialogue, setRecordingDialogue] = useState('');
   const [recordings, setRecordings] = useState<Record<string, RecordingState>>({});
   const [timeline, setTimeline] = useState('');
-  const [status, setStatus] = useState('참여 버전을 만들고 컷별로 녹음하세요.');
+  const [status, setStatus] = useState('로그인 후 컷별 대사를 녹음하세요.');
+  const [previewing, setPreviewing] = useState(false);
+
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const startedAt = useRef(0);
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
 
   const activeDialogue = episode.cuts[activeCut]?.dialogues[0];
-  const progress = ((activeCut + 1) / episode.cuts.length) * 100;
   const allDialogues = useMemo(() => episode.cuts.flatMap((cut) => cut.dialogues), [episode.cuts]);
+  const recordedCount = allDialogues.filter((dialogue) => recordings[dialogue.id]?.saved).length;
+  const progress = ((activeCut + 1) / episode.cuts.length) * 100;
+  const isLoggedIn = Boolean(performanceId && userId);
 
   async function createPerformance() {
     const response = await fetch('/api/performances', {
@@ -60,17 +66,18 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     });
     const body = await response.json();
     if (!response.ok) {
-      setStatus('참여 버전 생성 실패');
+      setStatus('로그인/참여 버전 생성에 실패했습니다.');
       return;
     }
+
     setPerformanceId(body.performance.id);
     setUserId(body.user.id);
-    setStatus(`${body.performance.title} 생성 완료`);
+    setStatus(`${body.user.displayName} 계정으로 참여 중입니다.`);
   }
 
   async function toggleRecording(dialogueId: string, cutIndex: number) {
-    if (!performanceId || !userId) {
-      setStatus('먼저 참여 버전을 만들어야 합니다.');
+    if (!isLoggedIn) {
+      setStatus('먼저 로그인하고 내 참여 버전을 만들어야 합니다.');
       return;
     }
 
@@ -79,13 +86,15 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       return;
     }
 
+    stopPreview();
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     chunks.current = [];
     // eslint-disable-next-line react-hooks/purity
     startedAt.current = performance.now();
     setActiveCut(cutIndex);
     setRecordingDialogue(dialogueId);
-    setStatus(`CUT ${cutIndex + 1} 녹음 중`);
+    setStatus(`CUT ${cutIndex + 1} 녹음 중입니다.`);
 
     const recorder = new MediaRecorder(stream);
     mediaRecorder.current = recorder;
@@ -96,7 +105,11 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       const durationMs = Math.max(Math.round(performance.now() - startedAt.current), 1000);
       const blob = new Blob(chunks.current, { type: recorder.mimeType || 'audio/webm' });
       const url = URL.createObjectURL(blob);
-      setRecordings((current) => ({ ...current, [dialogueId]: { url, durationMs, saved: false } }));
+
+      setRecordings((current) => ({
+        ...current,
+        [dialogueId]: { url, durationMs, saved: false }
+      }));
       setRecordingDialogue('');
       stream.getTracks().forEach((track) => track.stop());
       await uploadRecording(dialogueId, blob, durationMs);
@@ -117,21 +130,23 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       body: formData
     });
     if (!response.ok) {
-      setStatus('녹음 저장 실패');
+      setStatus('녹음 저장에 실패했습니다.');
       return;
     }
+
     setRecordings((current) => ({
       ...current,
       [dialogueId]: { ...current[dialogueId], saved: true }
     }));
-    setStatus('녹음 저장 완료');
+    setStatus('녹음이 저장되었습니다.');
   }
 
   async function buildRenderJob() {
-    if (!performanceId) {
-      setStatus('먼저 참여 버전을 만들어야 합니다.');
+    if (!isLoggedIn) {
+      setStatus('먼저 로그인하고 내 참여 버전을 만들어야 합니다.');
       return;
     }
+
     const response = await fetch('/api/render-jobs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -139,11 +154,76 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     });
     const body = await response.json();
     if (!response.ok) {
-      setStatus('렌더잡 생성 실패');
+      setStatus('타임라인 생성에 실패했습니다.');
       return;
     }
+
     setTimeline(JSON.stringify(body.timeline, null, 2));
-    setStatus('하이퍼랩스 타임라인 생성 완료');
+    setStatus('하이퍼랩스 타임라인이 생성되었습니다.');
+  }
+
+  function playSingle(dialogueId: string, cutIndex: number) {
+    const recording = recordings[dialogueId];
+    if (!recording) return;
+    stopPreview();
+    setActiveCut(cutIndex);
+    const audio = new Audio(recording.url);
+    audio.play();
+  }
+
+  function playFullPreview() {
+    if (recordedCount === 0) {
+      setStatus('재생할 녹음이 없습니다. 먼저 컷별 대사를 녹음하세요.');
+      return;
+    }
+
+    stopPreview();
+    setPreviewing(true);
+    setStatus('전체 재생으로 컷별 녹음을 확인 중입니다.');
+
+    let cutIndex = 0;
+    const playNextCut = () => {
+      if (cutIndex >= episode.cuts.length) {
+        stopPreview('전체 재생이 끝났습니다.');
+        return;
+      }
+
+      const cut = episode.cuts[cutIndex];
+      const dialogue = cut.dialogues[0];
+      const recording = dialogue ? recordings[dialogue.id] : null;
+      setActiveCut(cutIndex);
+
+      if (recording) {
+        const audio = new Audio(recording.url);
+        previewAudio.current = audio;
+        audio.onended = () => {
+          cutIndex += 1;
+          previewTimer.current = setTimeout(playNextCut, 350);
+        };
+        audio.play();
+        return;
+      }
+
+      cutIndex += 1;
+      previewTimer.current = setTimeout(playNextCut, 1400);
+    };
+
+    playNextCut();
+  }
+
+  function stopPreview(nextStatus = '전체 재생이 정지되었습니다.') {
+    if (previewTimer.current) {
+      clearTimeout(previewTimer.current);
+      previewTimer.current = null;
+    }
+    if (previewAudio.current) {
+      previewAudio.current.pause();
+      previewAudio.current = null;
+    }
+    if (previewing) {
+      setStatus(nextStatus);
+    }
+    setPreviewing(false);
   }
 
   return (
@@ -174,15 +254,43 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       </aside>
 
       <div className="stack">
+        <section className="panel account-panel">
+          <div className="panel-head">
+            <h1>계정 로그인</h1>
+            <span>{isLoggedIn ? '로그인됨' : '게스트 시작'}</span>
+          </div>
+          <div className="panel-content">
+            <div className="join-form">
+              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="표시 이름" />
+              <input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="handle" />
+              <button className="primary" type="button" onClick={createPerformance}>
+                {isLoggedIn ? '버전 새로 만들기' : '로그인하고 시작'}
+              </button>
+            </div>
+            <p className="account-note">
+              지금은 MVP용 간단 로그인입니다. 나중에 OAuth/이메일 로그인을 붙이면 이 참여 버전이 실제 계정에 연결됩니다.
+            </p>
+          </div>
+        </section>
+
         <section className="panel">
           <div className="panel-head">
-            <h1>참여 버전 만들기</h1>
-            <span>{status}</span>
+            <h2>전체 재생 검수</h2>
+            <span>{recordedCount}/{allDialogues.length} 녹음 완료</span>
           </div>
-          <div className="panel-content join-form">
-            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="표시 이름" />
-            <input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="handle" />
-            <button className="primary" type="button" onClick={createPerformance}>내 버전 생성</button>
+          <div className="panel-content preview-console">
+            <div>
+              <strong>{status}</strong>
+              <p>녹음이 끝나면 전체 재생으로 컷 전환과 대사 타이밍을 확인하세요.</p>
+            </div>
+            <div className="preview-actions">
+              <button className="primary" type="button" onClick={playFullPreview} disabled={previewing}>
+                전체 재생
+              </button>
+              <button type="button" onClick={() => stopPreview()} disabled={!previewing}>
+                정지
+              </button>
+            </div>
           </div>
         </section>
 
@@ -205,7 +313,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         <section className="panel">
           <div className="panel-head">
             <h2>컷별 녹음</h2>
-            <span>{Object.keys(recordings).length}/{allDialogues.length}</span>
+            <span>{recordedCount}/{allDialogues.length}</span>
           </div>
           <div className="panel-content record-list">
             {episode.cuts.map((cut, cutIndex) => cut.dialogues.map((dialogue) => {
@@ -222,7 +330,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
                     <button className="primary" type="button" onClick={() => toggleRecording(dialogue.id, cutIndex)}>
                       {recordingDialogue === dialogue.id ? '정지' : '녹음'}
                     </button>
-                    <button type="button" disabled={!recording} onClick={() => recording && new Audio(recording.url).play()}>듣기</button>
+                    <button type="button" disabled={!recording} onClick={() => playSingle(dialogue.id, cutIndex)}>듣기</button>
                   </div>
                 </div>
               );

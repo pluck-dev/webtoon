@@ -394,6 +394,36 @@ button:disabled {
   gap: 10px;
 }
 
+.account-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.preview-console {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.preview-console strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.preview-console p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.preview-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 input,
 textarea {
   width: 100%;
@@ -890,6 +920,15 @@ label {
   .join-form,
   .record-card {
     grid-template-columns: 1fr;
+  }
+
+  .preview-console {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .preview-actions {
+    flex-direction: column;
   }
 
   .hero h1 {
