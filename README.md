@@ -4,7 +4,7 @@ Admin-created webtoon episodes, actor-created voice versions.
 
 ## Product shape
 
-- Admin generates 9:16 webtoon cut images with `god-tibo-imagen`.
+- Admin generates 9:16 webtoon cut images with the built-in image runtime.
 - Admin publishes episodes with cuts, characters, and dialogue lines.
 - Actors create their own performance version of the same episode.
 - Actors record each dialogue line in the browser.
@@ -16,7 +16,7 @@ Admin-created webtoon episodes, actor-created voice versions.
 - Prisma
 - Postgres
 - Browser `MediaRecorder`
-- `god-tibo-imagen` CLI for image generation
+- Built-in private Codex image generation runtime
 
 ## Setup
 
@@ -37,11 +37,8 @@ Open:
 
 ## Image Generation
 
-The admin API calls the local `god-tibo-imagen` CLI path from `GTI_CLI_PATH`.
-
-```env
-GTI_CLI_PATH="C:/Users/SIMJAE/Desktop/pluck/god-tibo-imagen/src/cli/generate.js"
-```
+The admin API uses the image generation runtime embedded in this project under
+`src/server/imagegen`. It reuses local Codex auth files from `~/.codex`.
 
 Generated images are saved under `public/generated`.
 

@@ -1,5 +1,8 @@
-import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
 import path from 'node:path';
+
+import { resolveConfig } from '@/server/imagegen/config.js';
+import { createPrivateCodexProvider } from '@/server/imagegen/providers/privateCodexProvider.js';
 
 type GenerateImageInput = {
   prompt: string;
@@ -7,50 +10,42 @@ type GenerateImageInput = {
   referenceImages?: string[];
 };
 
+const EXT_TO_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp'
+};
+
 export async function generateWebtoonImage({ prompt, outputPath, referenceImages = [] }: GenerateImageInput) {
-  const cliPath =
-    process.env.GTI_CLI_PATH ??
-    path.resolve(process.cwd(), '..', 'god-tibo-imagen', 'src', 'cli', 'generate.js');
+  const config = resolveConfig({
+    provider: 'private-codex'
+  });
+  const provider = createPrivateCodexProvider(config);
+  const images = referenceImages.length > 0
+    ? await Promise.all(referenceImages.map((imagePath) => readImageAsDataUrl(imagePath)))
+    : undefined;
 
-  const args = [
-    cliPath,
-    '--provider',
-    'private-codex',
-    '--size',
-    '1024x1536',
-    '--prompt',
+  return provider.generateImage({
     prompt,
-    '--output',
-    outputPath
-  ];
+    model: config.defaultModel,
+    outputPath,
+    debug: true,
+    debugDir: path.join(process.cwd(), '.imagegen-debug'),
+    images,
+    size: '1024x1536'
+  });
+}
 
-  for (const image of referenceImages) {
-    args.push('--image', image);
+async function readImageAsDataUrl(imagePath: string) {
+  const resolved = path.resolve(imagePath);
+  const ext = path.extname(resolved).toLowerCase().replace(/^\./, '');
+  const mime = EXT_TO_MIME[ext];
+  if (!mime) {
+    throw new Error(`Unsupported reference image type: ${ext}`);
   }
 
-  return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    const child = spawn(process.execPath, args, {
-      cwd: process.cwd(),
-      env: process.env,
-      windowsHide: true
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on('data', (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-        return;
-      }
-      reject(new Error(stderr || `Image generation failed with exit code ${code}`));
-    });
-  });
+  const buffer = await fs.readFile(resolved);
+  return `data:${mime};base64,${buffer.toString('base64')}`;
 }
