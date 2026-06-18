@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ACTOR
+}
+
+enum EpisodeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PerformanceStatus {
+  DRAFT
+  READY
+  RENDERING
+  RENDERED
+  FAILED
+}
+
+enum RenderStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  handle       String        @unique
+  displayName  String
+  role         UserRole      @default(ACTOR)
+  performances Performance[]
+  recordings   Recording[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Episode {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  title        String
+  logline      String
+  status       EpisodeStatus @default(DRAFT)
+  maxSeconds   Int           @default(60)
+  thumbnailUrl String?
+  characters   Character[]
+  cuts         Cut[]
+  performances Performance[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Character {
+  id          String     @id @default(cuid())
+  episodeId   String
+  name        String
+  description String
+  voiceGuide  String
+  color       String
+  episode     Episode    @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  dialogues   Dialogue[]
+
+  @@index([episodeId])
+}
+
+model Cut {
+  id         String     @id @default(cuid())
+  episodeId  String
+  order      Int
+  imageUrl   String
+  caption    String
+  cameraHint String?
+  episode    Episode    @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  dialogues  Dialogue[]
+
+  @@unique([episodeId, order])
+  @@index([episodeId])
+}
+
+model Dialogue {
+  id          String      @id @default(cuid())
+  cutId       String
+  characterId String?
+  order       Int
+  text        String
+  direction   String
+  cut         Cut         @relation(fields: [cutId], references: [id], onDelete: Cascade)
+  character   Character?  @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  recordings  Recording[]
+
+  @@unique([cutId, order])
+  @@index([cutId])
+  @@index([characterId])
+}
+
+model Performance {
+  id          String            @id @default(cuid())
+  episodeId   String
+  userId      String
+  title       String
+  status      PerformanceStatus @default(DRAFT)
+  isPublic    Boolean           @default(false)
+  episode     Episode           @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordings  Recording[]
+  renderJobs  RenderJob[]
+  videos      RenderedVideo[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([episodeId])
+  @@index([userId])
+}
+
+model Recording {
+  id            String      @id @default(cuid())
+  performanceId String
+  dialogueId    String
+  userId        String
+  audioUrl      String
+  storageKey    String
+  durationMs    Int
+  takeNumber    Int         @default(1)
+  performance   Performance @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  dialogue      Dialogue    @relation(fields: [dialogueId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@index([performanceId])
+  @@index([dialogueId])
+  @@index([userId])
+}
+
+model RenderJob {
+  id            String      @id @default(cuid())
+  performanceId String
+  status        RenderStatus @default(QUEUED)
+  timeline      Json
+  error         String?
+  performance   Performance @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  video         RenderedVideo?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([performanceId])
+}
+
+model RenderedVideo {
+  id            String      @id @default(cuid())
+  performanceId String
+  renderJobId   String      @unique
+  videoUrl      String
+  durationMs    Int
+  width         Int         @default(1080)
+  height        Int         @default(1920)
+  performance   Performance @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  renderJob     RenderJob   @relation(fields: [renderJobId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@index([performanceId])
+}

@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: webtoon_voice_studio
+    volumes:
+      - webtoon-voice-studio-postgres:/var/lib/postgresql/data
+
+volumes:
+  webtoon-voice-studio-postgres:

@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Webtoon Voice Studio
 
-## Getting Started
+Admin-created webtoon episodes, actor-created voice versions.
 
-First, run the development server:
+## Product shape
+
+- Admin generates 9:16 webtoon cut images with `god-tibo-imagen`.
+- Admin publishes episodes with cuts, characters, and dialogue lines.
+- Actors create their own performance version of the same episode.
+- Actors record each dialogue line in the browser.
+- The app stores recordings and creates a hyperlapse timeline for a future ffmpeg worker.
+
+## Stack
+
+- Next.js App Router
+- Prisma
+- Postgres
+- Browser `MediaRecorder`
+- `god-tibo-imagen` CLI for image generation
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
+docker compose up -d
+npm install
+npm run db:push
+npm run db:seed
+npm run dev -- --port 4175
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- App: http://localhost:4175
+- Admin: http://localhost:4175/admin
+- Sample episode: http://localhost:4175/episodes/ex-interviewer
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Image Generation
 
-## Learn More
+The admin API calls the local `god-tibo-imagen` CLI path from `GTI_CLI_PATH`.
 
-To learn more about Next.js, take a look at the following resources:
+```env
+GTI_CLI_PATH="C:/Users/SIMJAE/Desktop/pluck/god-tibo-imagen/src/cli/generate.js"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Generated images are saved under `public/generated`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Current Rendering Boundary
 
-## Deploy on Vercel
+This project currently creates render jobs and timeline JSON. The next worker should:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Read `RenderJob.timeline`.
+2. Pull cut images and recording audio.
+3. Use ffmpeg to produce a 1080x1920 MP4.
+4. Save the MP4 and create a `RenderedVideo` row.
