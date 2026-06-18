@@ -1126,6 +1126,201 @@ label {
   color: #f7f2e8;
 }
 
+.studio-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.studio-phone {
+  top: 84px;
+  height: calc(100vh - 112px);
+  min-height: 620px;
+}
+
+.studio-stack {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.studio-panel {
+  overflow: hidden;
+  border: 1px solid #d6d0c4;
+  border-radius: 8px;
+  background: #fffaf0;
+  color: #171512;
+}
+
+.studio-panel-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #e1dbd1;
+  padding: 14px 16px;
+}
+
+.studio-panel-head.compact {
+  align-items: center;
+  min-height: 50px;
+}
+
+.studio-panel-head span,
+.studio-panel-head strong {
+  color: #7a6f61;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.studio-panel-head h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.current-take {
+  background: #171512;
+  color: #fffaf0;
+}
+
+.current-take .studio-panel-head {
+  border-bottom-color: rgba(255, 250, 240, .16);
+}
+
+.current-take .studio-panel-head span,
+.current-take .studio-panel-head strong {
+  color: #f0bd62;
+}
+
+.current-line {
+  padding: 18px 16px 6px;
+}
+
+.current-line p {
+  font-size: clamp(22px, 3vw, 36px);
+  font-weight: 900;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
+.current-line small {
+  display: block;
+  margin-top: 10px;
+  color: #d8cfc0;
+  line-height: 1.5;
+}
+
+.take-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.take-record {
+  min-width: 130px;
+}
+
+.studio-status {
+  margin: 0;
+  border-top: 1px solid rgba(255, 250, 240, .14);
+  padding: 12px 16px;
+  color: #d8cfc0;
+  line-height: 1.5;
+}
+
+.studio-status.warn {
+  color: #f0bd62;
+}
+
+.cut-progress {
+  height: 8px;
+  overflow: hidden;
+  background: #e6dfd2;
+}
+
+.cut-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ef6f5e, #f0bd62);
+}
+
+.take-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.take-row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid #e1dbd1;
+  background: #f7f2e8;
+  color: #171512;
+  text-align: left;
+}
+
+.take-row.active {
+  border-color: #171512;
+  background: #fffcf5;
+}
+
+.take-row span {
+  color: #f0bd62;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.take-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.take-row small {
+  color: #675f54;
+  font-weight: 900;
+}
+
+.preview-panel p,
+.video-panel p {
+  margin: 0;
+  padding: 14px 16px 0;
+  color: #675f54;
+  line-height: 1.55;
+}
+
+.video-preview-box {
+  display: grid;
+  gap: 4px;
+  margin: 14px 16px 0;
+  border: 1px dashed #cfc6b8;
+  border-radius: 8px;
+  background: #f7f2e8;
+  padding: 14px;
+}
+
+.video-preview-box span {
+  color: #675f54;
+}
+
+.guide-panel summary {
+  cursor: pointer;
+  padding: 15px 16px;
+  font-weight: 900;
+}
+
+.compact-character-grid {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #e1dbd1;
+  padding: 12px;
+}
+
 @media (max-width: 980px) {
   .shell {
     padding: 16px;
@@ -1149,8 +1344,15 @@ label {
   .market-feature,
   .how-section,
   .episode-hero,
-  .episode-detail-shell .workspace {
+  .episode-detail-shell .workspace,
+  .studio-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .studio-phone {
+    top: 0;
+    height: auto;
+    min-height: 0;
   }
 
   .episode-room-heading {
@@ -1190,6 +1392,10 @@ label {
 
   .preview-actions {
     flex-direction: column;
+  }
+
+  .take-row {
+    grid-template-columns: 1fr;
   }
 
   .hero h1 {

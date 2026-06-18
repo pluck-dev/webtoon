@@ -35,10 +35,10 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
       <header className="market-nav">
         <Link href="/" className="market-brand">Webtoon Voice Studio</Link>
         <nav className="market-links" aria-label="Episode navigation">
-          <Link href="/">Episodes</Link>
-          <Link href="/admin">Admin</Link>
-          <a href="#studio">Studio</a>
-          <a href="#cast">Cast</a>
+          <Link href="/">에피소드</Link>
+          <Link href="/admin">관리자</Link>
+          <a href="#studio">녹음실</a>
+          <a href="#guide">가이드</a>
         </nav>
         <AuthNav />
       </header>
@@ -46,14 +46,14 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
       <section className="episode-studio-card" id="studio">
         <div className="episode-room-heading">
           <div>
-            <p>Recording room</p>
+            <p>녹음 스튜디오</p>
             <h1>{episode.title}</h1>
             <span>{episode.logline}</span>
           </div>
           <div className="episode-meta-row">
-            <span>{episode.cuts.length} cuts</span>
-            <span>{episode.maxSeconds}s max</span>
-            <span>{episode._count.performances} versions</span>
+            <span>{episode.cuts.length}컷</span>
+            <span>{episode.maxSeconds}초 이하</span>
+            <span>{episode._count.performances}개 버전</span>
           </div>
         </div>
         <EpisodeStudio
