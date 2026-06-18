@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { Show, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Episode = {
@@ -348,44 +348,15 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       </aside>
 
       <div className="stack">
-        <section className="panel account-panel">
-          <div className="panel-head">
-            <h2>Actor Account</h2>
-            <span>{isSignedIn ? 'Signed in' : 'Required for saving'}</span>
-          </div>
-          <div className="panel-content auth-panel">
-            <Show when="signed-out">
-              <div className="auth-actions">
-                <SignInButton mode="modal">
-                  <button type="button">Sign in</button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="primary" type="button">Sign up</button>
-                </SignUpButton>
-              </div>
-            </Show>
-            <Show when="signed-in">
-              <div className="signed-card">
-                <div>
-                  <strong>{user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress || 'Actor'}</strong>
-                  <p>{user?.primaryEmailAddress?.emailAddress}</p>
-                </div>
-                <UserButton />
-              </div>
-            </Show>
-            <p className="account-note">Members record their own version. Admins create and manage the source webtoon episodes.</p>
-          </div>
-        </section>
-
         <section className="panel">
           <div className="panel-head">
             <h2>Preview</h2>
-            <span>{recordedCount}/{allDialogues.length} saved</span>
+            <span>{isSignedIn ? `${recordedCount}/${allDialogues.length} saved` : 'Sign in from header'}</span>
           </div>
           <div className="panel-content preview-console">
             <div>
               <strong>{status}</strong>
-              <p>Play the whole episode after recording to check cut transitions and dialogue timing.</p>
+              <p>{isSignedIn ? 'Play the whole episode after recording to check cut transitions and dialogue timing.' : 'Use the header sign-in button to open the Clerk login popup and save recordings to your account.'}</p>
             </div>
             <div className="preview-actions">
               <button className="primary" type="button" onClick={playFullPreview} disabled={previewing}>
