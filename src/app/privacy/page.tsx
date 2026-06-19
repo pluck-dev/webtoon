@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import SiteHeader from '@/components/SiteHeader';
+
 export const metadata = {
   title: '개인정보처리방침 | Webtoon Voice Studio',
   description: 'Webtoon Voice Studio 개인정보처리방침'
@@ -8,19 +10,10 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="market-shell">
-      <header className="market-nav">
-        <Link href="/" className="market-brand">
-          <span className="market-brand-mark">W</span>
-          <span>Webtoon Voice Studio</span>
-        </Link>
-        <nav className="market-links" aria-label="Main navigation">
-          <Link href="/">Episodes</Link>
-          <Link href="/terms">이용약관</Link>
-          <Link href="/privacy" className="footer-link-strong">개인정보처리방침</Link>
-        </nav>
-      </header>
+      <div className="mx-auto w-full max-w-[1240px]">
+        <SiteHeader />
 
-      <article className="legal-article">
+        <article className="legal-article">
         <p className="legal-eyebrow">Legal</p>
         <h1>개인정보처리방침</h1>
         <p className="legal-updated">시행일: 2026년 6월 19일</p>
@@ -115,7 +108,8 @@ export default function PrivacyPage() {
         <p className="legal-back">
           <Link href="/">← 홈으로 돌아가기</Link>
         </p>
-      </article>
+        </article>
+      </div>
     </main>
   );
 }

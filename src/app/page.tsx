@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 
-import AuthNav from '@/components/AuthNav';
 import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
@@ -59,70 +59,56 @@ export default async function Home() {
 
   return (
     <main className="market-shell">
-      <header className="market-nav">
-        <Link href="/" className="market-brand">
-          <span className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-ink text-base font-black text-gold">
-            W
-          </span>
-          <span>Webtoon Voice Studio</span>
-        </Link>
-        <nav className="market-links" aria-label="Main navigation">
-          <Link href="/">Episodes</Link>
-          <a href="#collection">Collection</a>
-          <Link href="/admin">Admin</Link>
-        </nav>
-        <AuthNav />
-      </header>
+      <div className="mx-auto w-full max-w-[1240px]">
+      <SiteHeader />
 
       {/* 히어로 */}
-      <section className="grid items-end gap-9 py-14 pb-8 lg:grid-cols-[minmax(320px,1fr)_minmax(280px,420px)]">
-        <div>
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-card/80 px-3.5 py-2 text-xs font-black tracking-wide text-muted">
-            <i className="h-2 w-2 animate-soft-pulse rounded-full bg-coral" aria-hidden="true" />
-            Voice-over marketplace for AI webtoons
-          </span>
-          <h1 className="text-[clamp(48px,9vw,118px)] font-black leading-[0.9] tracking-tight text-ink">
-            One original webtoon,
-            <br />
-            <em className="italic text-coral">endless</em> actor versions.
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-soft">
-            Admins publish fixed webtoon episodes with cut images, dialogue, and role guides. Members sign in, record
-            every speech bubble, and ship their own shareable voice version.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            <a
-              href="#collection"
-              className="inline-flex min-h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-black text-paper transition-transform hover:-translate-y-0.5"
-            >
-              Browse episodes
-              <span aria-hidden="true">→</span>
-            </a>
-            <Link
-              href="/episodes/ex-interviewer"
-              className="inline-flex min-h-12 items-center rounded-full border border-ink px-6 text-[15px] font-black text-ink transition-colors hover:bg-ink/5"
-            >
-              Try recording
-            </Link>
-          </div>
+      <section className="pb-7 pt-12 md:pt-16">
+        <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-card/80 px-3.5 py-2 text-xs font-black tracking-wide text-muted">
+          <i className="h-2 w-2 animate-soft-pulse rounded-full bg-coral" aria-hidden="true" />
+          Voice-over marketplace for AI webtoons
+        </span>
+        <h1 className="max-w-[16ch] text-[clamp(44px,7.2vw,104px)] font-black leading-[0.92] tracking-tight text-ink">
+          One original webtoon, <em className="italic text-coral">endless</em> actor versions.
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">
+          Admins publish fixed webtoon episodes with cut images, dialogue, and role guides. Members sign in, record
+          every speech bubble, and ship their own shareable voice version.
+        </p>
+        <div className="mt-7 flex flex-wrap gap-2.5">
+          <a
+            href="#collection"
+            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-ink px-6 text-[15px] font-black text-paper transition-transform hover:-translate-y-0.5"
+          >
+            Browse episodes
+            <span aria-hidden="true">→</span>
+          </a>
+          <Link
+            href="/episodes/ex-interviewer"
+            className="inline-flex min-h-12 items-center rounded-full border border-ink px-6 text-[15px] font-black text-ink transition-colors hover:bg-ink/5"
+          >
+            Try recording
+          </Link>
         </div>
-        <aside className="grid grid-cols-2 gap-2.5" aria-label="Marketplace stats">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className={`grid min-h-[104px] content-center gap-1 rounded-2xl border px-5 py-4 ${
-                stat.accent ? 'border-ink bg-ink text-paper' : 'border-line bg-card'
-              }`}
-            >
-              <strong className={`text-[clamp(28px,4vw,40px)] leading-none ${stat.accent ? 'text-gold' : ''}`}>
-                {stat.value}
-              </strong>
-              <span className={`text-xs font-extrabold ${stat.accent ? 'text-paper/70' : 'text-muted'}`}>
-                {stat.label}
-              </span>
-            </div>
-          ))}
-        </aside>
+      </section>
+
+      {/* 통계 밴드 */}
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Marketplace stats">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className={`grid min-h-[120px] content-center gap-1.5 rounded-2xl border px-6 py-5 ${
+              stat.accent ? 'border-ink bg-ink text-paper' : 'border-line bg-card'
+            }`}
+          >
+            <strong className={`text-[clamp(32px,4vw,44px)] leading-none ${stat.accent ? 'text-gold' : 'text-ink'}`}>
+              {stat.value}
+            </strong>
+            <span className={`text-[13px] font-extrabold ${stat.accent ? 'text-paper/70' : 'text-muted'}`}>
+              {stat.label}
+            </span>
+          </div>
+        ))}
       </section>
 
       {/* 자동 스크롤 이미지 보드 */}
@@ -287,6 +273,7 @@ export default async function Home() {
       </section>
 
       <SiteFooter />
+      </div>
     </main>
   );
 }
