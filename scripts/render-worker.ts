@@ -91,11 +91,19 @@ async function processJob(job: RenderJob) {
     });
 
     const durationMs = Math.round((composition.durationInFrames / composition.fps) * 1000);
-    await prisma.renderedVideo.create({
-      data: {
+    // 재렌더(같은 잡 재처리) 시에도 unique 제약(renderJobId)으로 실패하지 않도록 upsert
+    await prisma.renderedVideo.upsert({
+      where: { renderJobId: job.id },
+      // private 버킷 경로 저장 — 재생은 서명 URL로
+      create: {
         performanceId: job.performanceId,
         renderJobId: job.id,
-        // private 버킷 경로 저장 — 재생은 서명 URL로
+        videoUrl: storageKey,
+        durationMs,
+        width: composition.width,
+        height: composition.height
+      },
+      update: {
         videoUrl: storageKey,
         durationMs,
         width: composition.width,

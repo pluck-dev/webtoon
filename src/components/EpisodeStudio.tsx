@@ -130,8 +130,21 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         };
       }
       setRecordings(restored);
+
+      // 이미 만든 영상이 있으면 복원 (재진입해도 다시 안 만들어도 됨)
+      if (body.video?.url) {
+        setVideoUrl(body.video.url);
+        setVideoReady(true);
+      }
+
       const count = Object.keys(restored).length;
-      setStatus(count > 0 ? `저장된 녹음 ${count}개를 불러왔습니다.` : '준비 완료. 첫 컷부터 녹음해보세요.');
+      setStatus(
+        body.video?.url
+          ? '저장된 녹음과 만들어 둔 영상을 불러왔어요.'
+          : count > 0
+            ? `저장된 녹음 ${count}개를 불러왔습니다.`
+            : '준비 완료. 첫 컷부터 녹음해보세요.'
+      );
     } finally {
       setLoadingRecordings(false);
     }

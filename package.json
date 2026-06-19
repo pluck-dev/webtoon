@@ -23,6 +23,7 @@
     "@prisma/client": "6.19.0",
     "@remotion/bundler": "^4.0.481",
     "@remotion/cli": "^4.0.481",
+    "@remotion/google-fonts": "^4.0.481",
     "@remotion/renderer": "^4.0.481",
     "@supabase/supabase-js": "^2.108.2",
     "next": "16.2.9",

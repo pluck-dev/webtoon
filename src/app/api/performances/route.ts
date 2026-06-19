@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
-import { BUCKET_RECORDINGS, createSignedUrl } from '@/lib/supabase';
+import { BUCKET_RECORDINGS, BUCKET_VIDEOS, createSignedUrl } from '@/lib/supabase';
 
 // 비공개 녹음의 storageKey를 임시 재생용 서명 URL로 바꾼다 (본인 확인은 호출 측 쿼리에서 보장)
 async function withSignedAudio<T extends { storageKey: string; audioUrl: string }>(recordings: T[]) {
@@ -35,12 +35,14 @@ export async function GET(request: Request) {
     where: { episodeId, userId: user.id },
     orderBy: { updatedAt: 'desc' },
     include: {
-      recordings: { orderBy: { createdAt: 'desc' } }
+      recordings: { orderBy: { createdAt: 'desc' } },
+      // 이미 만든 영상이 있으면 재진입 시 복원할 수 있게 최신 1개를 함께 보낸다
+      videos: { orderBy: { createdAt: 'desc' }, take: 1 }
     }
   });
 
   if (!performance) {
-    return NextResponse.json({ performance: null, recordings: [] });
+    return NextResponse.json({ performance: null, recordings: [], video: null });
   }
 
   const latestByDialogue = new Map<string, (typeof performance.recordings)[number]>();
@@ -48,9 +50,18 @@ export async function GET(request: Request) {
     if (!latestByDialogue.has(recording.dialogueId)) latestByDialogue.set(recording.dialogueId, recording);
   }
 
+  const latestVideo = performance.videos[0];
+  const video = latestVideo
+    ? {
+        url: await createSignedUrl(BUCKET_VIDEOS, latestVideo.videoUrl, 60 * 60),
+        durationMs: latestVideo.durationMs
+      }
+    : null;
+
   return NextResponse.json({
     performance,
-    recordings: await withSignedAudio(Array.from(latestByDialogue.values()))
+    recordings: await withSignedAudio(Array.from(latestByDialogue.values())),
+    video
   });
 }
 

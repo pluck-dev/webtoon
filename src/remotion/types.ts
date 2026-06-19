@@ -8,6 +8,9 @@ export type RenderBubble = {
   speaker: string;
   text: string;
   color: string;
+  // 이 대사가 화면에 보일 구간(컷 내부 프레임 기준) — 음성과 동기
+  startInFrames: number;
+  durationInFrames: number;
 };
 
 export type RenderAudio = {

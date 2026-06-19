@@ -60,20 +60,26 @@ export async function buildRenderInput(performanceId: string): Promise<RenderInp
     const bubbles: RenderCut['bubbles'] = [];
 
     for (const dialogue of cut.dialogues) {
+      const recording = dialogue.recordings[0];
+      // 녹음이 있으면 그 길이, 없으면 기본 1.5초 동안 자막 표시
+      const durationInFrames = recording ? msToFrames(recording.durationMs) : msToFrames(1500);
+
+      // 자막은 자기 음성 구간에만 보이도록 타이밍을 부여(순차 표시)
       bubbles.push({
         speaker: dialogue.character?.name ?? '',
         text: dialogue.text,
-        color: dialogue.character?.color ?? '#7c5cff'
+        color: dialogue.character?.color ?? '#7c5cff',
+        startInFrames: cursor,
+        durationInFrames
       });
 
-      const recording = dialogue.recordings[0];
       if (recording) {
-        const durationInFrames = msToFrames(recording.durationMs);
         // 2시간 유효한 서명 URL (렌더 시간 여유)
         const src = await createSignedUrl(BUCKET_RECORDINGS, recording.storageKey, 60 * 60 * 2);
         audios.push({ src, startInFrames: cursor, durationInFrames });
-        cursor += durationInFrames;
       }
+
+      cursor += durationInFrames;
     }
 
     // 컷 길이는 timeline(maxSeconds로 축소될 수 있음)을 따르되,
