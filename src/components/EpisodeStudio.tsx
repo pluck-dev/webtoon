@@ -372,29 +372,47 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       return;
     }
 
-    for (;;) {
+    // 워커가 처리할 때까지 폴링. 단발 네트워크 오류엔 중단하지 않고, 최대 5분까지 기다린다.
+    const maxAttempts = 100; // 3s * 100 ≈ 5분
+    let consecutiveErrors = 0;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
-      const poll = await fetch(`/api/render-jobs/${jobId}`);
-      if (!poll.ok) {
-        setRendering(false);
-        setStatus('영상 상태 확인에 실패했습니다.');
-        return;
+
+      let state: { status?: string; video?: { url?: string } } | null = null;
+      try {
+        const poll = await fetch(`/api/render-jobs/${jobId}`);
+        if (!poll.ok) throw new Error('poll not ok');
+        state = await poll.json();
+        consecutiveErrors = 0;
+      } catch {
+        // Clerk/네트워크 일시 오류는 무시하고 계속 폴링 (연속 실패가 길어지면 중단)
+        consecutiveErrors += 1;
+        if (consecutiveErrors >= 8) {
+          setRendering(false);
+          setStatus('영상 상태 확인이 계속 실패해요. 잠시 후 마이페이지에서 확인해 주세요.');
+          return;
+        }
+        continue;
       }
-      const state = await poll.json();
-      if (state.status === 'DONE' && state.video?.url) {
+
+      if (state?.status === 'DONE' && state.video?.url) {
         setVideoUrl(state.video.url);
         setVideoReady(true);
         setRendering(false);
         setStatus('영상 생성이 완료됐습니다.');
         return;
       }
-      if (state.status === 'FAILED') {
+      if (state?.status === 'FAILED') {
         setRendering(false);
         setStatus('영상 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
-      setStatus(state.status === 'RUNNING' ? '영상을 렌더링하는 중입니다...' : '대기열에서 처리 대기 중입니다...');
+      setStatus(state?.status === 'RUNNING' ? '영상을 렌더링하는 중입니다…' : '대기열에서 차례를 기다리는 중…');
     }
+
+    // 타임아웃
+    setRendering(false);
+    setStatus('렌더가 평소보다 오래 걸리고 있어요. 마이페이지에서 완료되면 확인할 수 있어요.');
   }
 
   function playSingle(dialogueId: string, cutIndex: number) {
@@ -554,7 +572,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
               type="button"
               disabled={!activeRecording?.url}
               onClick={() => activeDialogue && playSingle(activeDialogue.id, activeCut)}
-              className="text-paper/80 underline-offset-2 hover:underline disabled:opacity-30"
+              className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-paper transition-colors hover:bg-white/20 disabled:opacity-30"
             >
               ▷ 내 녹음 듣기
             </button>
@@ -694,14 +712,22 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           <div className="grid gap-1 mx-4 mt-[14px] border border-dashed border-[#cfc6b8] rounded-lg bg-[#f7f2e8] p-[14px]">
             {videoUrl ? (
               <video src={videoUrl} controls playsInline style={{ width: '100%', borderRadius: 12 }} />
+            ) : rendering ? (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#cfc6b8] border-t-coral" />
+                  <strong className="text-ink">{status.includes('렌더링') ? '영상을 렌더링하는 중…' : '대기열에서 차례를 기다리는 중…'}</strong>
+                </div>
+                {/* 진행 바 (indeterminate) */}
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e6dfd2]">
+                  <span className="block h-full w-full animate-pulse rounded-full bg-gradient-to-r from-coral to-[#f0bd62]" />
+                </div>
+                <span className="mt-1 text-[#675f54]">보통 30초~1분 정도 걸려요. 이 화면을 떠나도 마이페이지에서 확인할 수 있어요.</span>
+              </>
             ) : (
               <>
                 <strong className="text-ink">
-                  {rendering
-                    ? '영상을 만드는 중입니다...'
-                    : videoReady
-                      ? '영상 패키지가 준비됐습니다.'
-                      : `${allDialogues.length - recordedCount}개 컷 녹음이 남았습니다.`}
+                  {videoReady ? '영상 패키지가 준비됐습니다.' : `${allDialogues.length - recordedCount}개 컷 녹음이 남았습니다.`}
                 </strong>
                 <span className="text-[#675f54]">{timeline ? '컷별 녹음 싱크와 전환 정보가 저장됐습니다.' : '녹음 완료 후 영상 생성 버튼을 누르세요.'}</span>
               </>

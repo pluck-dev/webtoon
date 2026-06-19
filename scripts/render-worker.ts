@@ -60,14 +60,33 @@ async function processJob(job: RenderJob) {
       serveUrl,
       codec: 'h264',
       outputLocation: outputPath,
-      inputProps
+      inputProps,
+      // 파일 크기를 줄여 Storage(무료 플랜 50MB) 한도 안에 들어오게 한다.
+      // CRF가 높을수록 용량↓ (웹툰 컷은 정적이라 화질 저하 거의 없음)
+      crf: 26,
+      x264Preset: 'medium'
     });
 
     const buffer = await fs.readFile(outputPath);
+    // 50MB(무료 플랜 한도) 초과 시 더 강한 압축으로 한 번 재시도
+    let finalBuffer = buffer;
+    if (buffer.byteLength > 49_000_000) {
+      console.log(`용량 초과(${(buffer.byteLength / 1e6).toFixed(1)}MB) → CRF 32로 재인코딩`);
+      await renderMedia({
+        composition,
+        serveUrl,
+        codec: 'h264',
+        outputLocation: outputPath,
+        inputProps,
+        crf: 32,
+        x264Preset: 'medium'
+      });
+      finalBuffer = await fs.readFile(outputPath);
+    }
     const { storageKey } = await uploadToBucket({
       bucket: BUCKET_VIDEOS,
       key: `${job.performanceId}/${job.id}.mp4`,
-      body: buffer,
+      body: finalBuffer,
       contentType: 'video/mp4'
     });
 
