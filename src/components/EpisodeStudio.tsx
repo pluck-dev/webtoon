@@ -49,7 +49,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const [recordingDialogue, setRecordingDialogue] = useState('');
   const [recordings, setRecordings] = useState<Record<string, RecordingState>>({});
   const [timeline, setTimeline] = useState<unknown>(null);
-  const [status, setStatus] = useState('헤더에서 로그인하면 녹음이 계정에 저장됩니다.');
+  const [status, setStatus] = useState('로그인하면 녹음이 내 계정에 자동 저장돼요.');
   const [previewing, setPreviewing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         setRecordings({});
         setTimeline(null);
         setVideoReady(false);
-        setStatus('헤더에서 로그인하면 녹음이 계정에 저장됩니다.');
+        setStatus('로그인하면 녹음이 내 계정에 자동 저장돼요.');
       });
       return;
     }
@@ -209,7 +209,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     stopPreview();
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus('이 브라우저는 마이크 녹음을 지원하지 않습니다. Chrome 또는 Edge에서 localhost로 접속하세요.');
+      setStatus('이 브라우저는 마이크 녹음을 지원하지 않아요. Chrome 또는 Edge 최신 버전에서 다시 시도해 주세요.');
       return;
     }
 
@@ -221,10 +221,9 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       setStatus('마이크 권한을 요청하는 중입니다.');
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicBlocked(false);
-    } catch (error) {
-      const message = error instanceof DOMException ? error.name : 'unknown';
+    } catch {
       setMicBlocked(true);
-      setStatus(`마이크 권한이 차단됐습니다. 주소창 권한에서 마이크를 허용하세요. (${message})`);
+      setStatus('마이크 권한이 차단됐어요. 브라우저 주소창의 권한 설정에서 마이크를 허용해 주세요.');
       return;
     }
 
@@ -376,7 +375,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       }
       if (state.status === 'FAILED') {
         setRendering(false);
-        setStatus(`영상 생성 실패: ${state.error ?? '알 수 없는 오류'}`);
+        setStatus('영상 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
       setStatus(state.status === 'RUNNING' ? '영상을 렌더링하는 중입니다...' : '대기열에서 처리 대기 중입니다...');
@@ -654,7 +653,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           {/* studio-status.warn */}
           {!isSignedIn && (
             <p className="border-t border-[rgba(255,250,240,.14)] px-4 py-3 text-[#f0bd62] leading-[1.5]">
-              헤더의 로그인/회원가입 버튼을 누르면 Clerk 팝업이 열립니다.
+              로그인하면 녹음을 저장하고 나만의 더빙 버전을 만들 수 있어요.
             </p>
           )}
         </section>
