@@ -36,11 +36,14 @@ export async function POST(request: Request) {
   // 버킷이 private이므로 공개 URL은 저장하지 않고, storageKey(경로)만 저장한다.
   // 실제 재생 URL은 조회 시 본인 확인 후 서명 URL로 발급한다.
   const fileName = `${performanceId}-${dialogueId}-${Date.now()}.webm`;
+  // Supabase Storage 버킷은 코덱 파라미터가 붙은 MIME(예: audio/webm;codecs=opus)을
+  // 거부하므로 기본 타입만 추출해 전달한다 (파일 바이트는 그대로라 재생 영향 없음).
+  const baseContentType = (audio.type || 'audio/webm').split(';')[0].trim() || 'audio/webm';
   const { storageKey } = await uploadToBucket({
     bucket: BUCKET_RECORDINGS,
     key: `${performanceId}/${fileName}`,
     body: await audio.arrayBuffer(),
-    contentType: audio.type || 'audio/webm'
+    contentType: baseContentType
   });
 
   const recording = await prisma.recording.create({
