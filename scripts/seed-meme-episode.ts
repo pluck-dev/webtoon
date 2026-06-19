@@ -92,9 +92,9 @@ async function main() {
     const present = charsInCut(cut);
     const refs = present.map((n) => charRef.get(n)).filter(Boolean) as string[];
     const idLine = present.map((n, i) => `reference image ${i + 1} = the character "${n}"`).join('; ');
-    const lock =
-      `CRITICAL CHARACTER LOCK: ${idLine}. Draw ONLY the listed character(s), each with the EXACT same face, hairstyle, outfit and colors as their reference image. ` +
-      `Never redesign, swap, merge, or substitute a character's appearance between panels. Keep the same art style throughout. `;
+    // generic 일관성 규칙은 provider(CONSISTENCY_DIRECTIVE)에서 항시 적용됨.
+    // 여기서는 이 컷에 등장하는 캐릭터 매핑만 명시한다.
+    const lock = `Characters in THIS panel: ${idLine}. Draw ONLY the listed character(s) and match each one's reference image exactly. `;
     const tmp = path.join(os.tmpdir(), `${ep.slug}-${cut.order}.png`);
     const t = Date.now();
     await provider.generateImage({

@@ -12,6 +12,16 @@ import { extractImageGeneration } from '../codex/extractImageGeneration.js';
 import { parseSseText } from '../codex/streamResponsesSse.js';
 import { saveImage } from '../fs/saveImage.js';
 
+// 모든 이미지 생성 프롬프트에 항시 prepend되는 일관성 규칙.
+// 한 캐릭터는 같은 에피소드 안에서 절대 외형이 바뀌면 안 된다(주인공이 다른 캐릭터로 둔갑 금지).
+export const CONSISTENCY_DIRECTIVE = [
+  'CONSISTENCY RULES (ALWAYS, NON-NEGOTIABLE):',
+  '- Each named character has ONE fixed visual design. Keep the SAME face, hairstyle, body type, outfit and colors for that character across every panel of the same episode.',
+  '- NEVER redesign, swap, merge, age, or substitute a character. The protagonist must look like the same person in every cut.',
+  '- If reference images are provided, the characters and art style MUST match them exactly; reference image order maps to the characters named in the prompt.',
+  '- Keep one single art style throughout. Do not mix styles.'
+].join('\n');
+
 function classifyFailure({ status, body }) {
   if (status === 401) {
     const error = new Error('Unauthorized from private Codex backend. Your local ChatGPT auth may be expired.');
@@ -126,10 +136,12 @@ export function createPrivateCodexProvider(config) {
     async generateImage({ prompt, model, outputPath, dryRun = false, debug = false, debugDir, fetchImpl = globalThis.fetch, images, size }) {
       const session = await loadCodexSession(config);
       const validation = validateCodexSession(session);
+      // 모든 이미지 생성에 항시 적용되는 캐릭터/화풍 일관성 규칙.
+      // (어떤 호출 경로로도 빠지지 않도록 공통 통로인 여기서 강제한다)
       const request = buildResponsesRequest({
         baseUrl: config.baseUrl,
         session,
-        prompt,
+        prompt: `${CONSISTENCY_DIRECTIVE}\n\n${prompt}`,
         model,
         originator: config.defaultOriginator,
         images,
