@@ -25,7 +25,7 @@ export default function SiteHeader() {
           Collection
         </a>
         <Link href="/mypage" className={navLinkClass}>
-          마이페이지
+          My Page
         </Link>
         <Link href="/admin" className={navLinkClass}>
           Admin

@@ -59,7 +59,7 @@
 /* ── 베이스 (레이어로 감싸 Tailwind utilities가 우선하도록) ── */
 @layer base {
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --bg: #101317;
   --surface: #171d23;
   --surface-2: #202832;

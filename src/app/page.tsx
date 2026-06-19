@@ -63,7 +63,7 @@ export default async function Home() {
       <SiteHeader />
 
       {/* 히어로 */}
-      <section className="pb-7 pt-12 md:pt-16">
+      <section className="pb-7 pt-14 md:pt-20">
         <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-card/80 px-3.5 py-2 text-xs font-black tracking-wide text-muted">
           <i className="h-2 w-2 animate-soft-pulse rounded-full bg-coral" aria-hidden="true" />
           Voice-over marketplace for AI webtoons
@@ -97,7 +97,7 @@ export default async function Home() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className={`grid min-h-[120px] content-center gap-1.5 rounded-2xl border px-6 py-5 ${
+            className={`grid min-h-[128px] content-center gap-1.5 rounded-2xl border px-6 py-6 ${
               stat.accent ? 'border-ink bg-ink text-paper' : 'border-line bg-card'
             }`}
           >
@@ -143,13 +143,13 @@ export default async function Home() {
       </section>
 
       {/* 피처드 에피소드 */}
-      <section className="mb-10 grid items-stretch gap-4 rounded-2xl border border-line bg-card p-3.5 md:grid-cols-[minmax(260px,390px)_minmax(0,1fr)]">
-        <div className="flex min-h-[420px] flex-col justify-end p-6">
+      <section className="mb-10 grid items-stretch gap-4 rounded-2xl border border-line bg-card p-3.5 md:grid-cols-[minmax(300px,440px)_minmax(0,1fr)]">
+        <div className="flex min-h-[340px] flex-col justify-end p-6">
           <span className={kicker}>Featured episode</span>
-          <h2 className="text-[clamp(30px,4vw,56px)] font-black leading-none text-ink">
+          <h2 className="text-[clamp(26px,3.2vw,44px)] font-black leading-[1.08] tracking-tight text-ink">
             Former lover, current interviewer
           </h2>
-          <p className="mb-6 mt-3.5 leading-relaxed text-ink-soft">
+          <p className="mb-6 mt-4 leading-relaxed text-ink-soft">
             An interview room turns into a tense reunion when the interviewer is someone from three years ago.
           </p>
           <Link
@@ -161,7 +161,7 @@ export default async function Home() {
         </div>
         <div className="relative grid grid-cols-[1.2fr_1fr_1fr] gap-2.5" aria-hidden="true">
           {['/sample/interview-cut-01.png', '/sample/interview-cut-02.png', '/sample/interview-cut-03.png'].map((src) => (
-            <img key={src} src={src} alt="" className="h-full min-h-[420px] w-full rounded-md object-cover" />
+            <img key={src} src={src} alt="" className="h-full min-h-[340px] w-full rounded-md object-cover" />
           ))}
           <span className="absolute right-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-ink/85 px-3 py-2 text-xs font-black text-paper backdrop-blur">
             <i className="h-2 w-2 animate-soft-pulse rounded-full bg-teal" aria-hidden="true" />
@@ -194,7 +194,7 @@ export default async function Home() {
       </section>
 
       {/* 에피소드 그리드 */}
-      <section className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {episodes.map((episode, index) => {
           const tags = episodeTags[episode.slug] ?? ['Drama'];
           return (
