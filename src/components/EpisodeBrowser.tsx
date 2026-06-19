@@ -155,9 +155,9 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
             <Link
               key={episode.id}
               href={`/episodes/${episode.slug}`}
-              className="group grid overflow-hidden rounded-2xl border border-line bg-card transition duration-200 hover:-translate-y-1 hover:border-ink hover:shadow-[0_22px_50px_rgba(23,21,18,.16)]"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card transition duration-200 hover:-translate-y-1 hover:border-ink hover:shadow-[0_22px_50px_rgba(23,21,18,.16)]"
             >
-              <div className="relative overflow-hidden bg-[#ded8cc]">
+              <div className="relative shrink-0 overflow-hidden bg-[#ded8cc]">
                 <img
                   src={episode.thumbnailUrl ?? '/sample/interview-cut-01.png'}
                   alt={`${episode.title} 썸네일`}
@@ -175,18 +175,18 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
                   </span>
                 </div>
               </div>
-              <div className="grid gap-3 p-4">
+              <div className="flex flex-1 flex-col gap-3 p-4">
                 <div className="flex flex-wrap gap-1.5">
                   <span className="rounded-full border border-line-soft bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-muted">
                     {CATEGORY_LABELS[episode.category]}
                   </span>
                 </div>
                 <div className="flex items-start justify-between gap-3.5">
-                  <h3 className="text-[22px] leading-tight text-ink">{episode.title}</h3>
+                  <h3 className="min-w-0 flex-1 truncate text-[22px] leading-tight text-ink">{episode.title}</h3>
                   <p className="whitespace-nowrap text-xs font-black text-faint">{episode.cutCount}컷</p>
                 </div>
-                <p className="leading-snug text-ink-soft">{episode.logline}</p>
-                <div className="flex justify-between gap-2.5 border-t border-line-soft pt-3 text-xs font-black text-muted">
+                <p className="line-clamp-2 leading-snug text-ink-soft">{episode.logline}</p>
+                <div className="mt-auto flex justify-between gap-2.5 border-t border-line-soft pt-3 text-xs font-black text-muted">
                   <span>{episode.versionCount}개 버전</span>
                   <span className="text-coral">열기 ↗</span>
                 </div>
