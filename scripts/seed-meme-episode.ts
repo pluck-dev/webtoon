@@ -55,37 +55,54 @@ async function main() {
   const provider = createPrivateCodexProvider(config);
 
   const toDataUrl = (p: string) => `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
-
-  // 화풍 프리픽스 추출(컷 프롬프트는 "<style> — <scene>" 형식)
   const stylePrefix = ep.cuts[0].imgPrompt.split(' — ')[0];
-  const charLine = ep.characters.map((c) => `${c.name} (${c.description.split('.')[0]})`).join('; ');
+  const names = ep.characters.map((c) => c.name);
 
-  // 1) 캐릭터/화풍 앵커 1장 — 이후 모든 컷의 일관성 기준
-  console.log('  · 캐릭터/화풍 앵커 생성 중...');
-  const anchorTmp = path.join(os.tmpdir(), `${ep.slug}-anchor.png`);
-  await provider.generateImage({
-    prompt: `${stylePrefix} — character reference sheet / model sheet, full body and face close-up of ${ep.characters.length} distinct Korean characters: ${charLine}. neutral poses and expressions, clean plain background, locked consistent character design (faces, hairstyles, outfits, colors)`,
-    model: config.defaultModel,
-    outputPath: anchorTmp,
-    size: '1024x1536'
-  });
-  const anchorDataUrl = toDataUrl(anchorTmp);
-  // 앵커도 Storage에 보관(레퍼런스/재생성용)
-  await uploadToBucket({ bucket: BUCKET_IMAGES, key: `${ep.slug}/_anchor.png`, body: fs.readFileSync(anchorTmp), contentType: 'image/png' });
-  console.log('  ✓ 앵커 완료 — 이제 모든 컷을 이 캐릭터/화풍으로 고정');
+  // 1) 캐릭터별 "단독" 레퍼런스 — 한 장에 한 캐릭터만(다른 캐릭터 섞지 않음) → 정체성 고정
+  console.log('  · 캐릭터별 단독 레퍼런스 생성 중...');
+  const charRef = new Map<string, string>(); // name -> dataUrl
+  // Storage 키는 ASCII만 허용 → 캐릭터 인덱스 사용 (한글 이름 키 금지)
+  for (const [i, c] of ep.characters.entries()) {
+    const tmp = path.join(os.tmpdir(), `${ep.slug}-ref-${i}.png`);
+    await provider.generateImage({
+      prompt: `${stylePrefix} — single-character reference of ONE character ONLY: ${c.name}. ${c.description} Front-facing face plus upper body, plain neutral background, no other characters in frame, locked consistent design (face, hairstyle, outfit, colors).`,
+      model: config.defaultModel,
+      outputPath: tmp,
+      size: '1024x1536'
+    });
+    charRef.set(c.name, toDataUrl(tmp));
+    await uploadToBucket({ bucket: BUCKET_IMAGES, key: `${ep.slug}/_ref-${i}.png`, body: fs.readFileSync(tmp), contentType: 'image/png' });
+    fs.unlinkSync(tmp);
+    console.log(`    ✓ ref: ${c.name}`);
+  }
 
-  const CONSISTENCY = 'CRITICAL: keep the EXACT same art style and the SAME character designs (same faces, hairstyles, outfits, colors, proportions) as the reference image across every panel. Do not redesign the characters. ';
+  // 컷에 실제 등장하는 캐릭터 = 그 컷 대사 화자 + 캡션에 이름이 언급된 캐릭터 (없으면 주인공)
+  const protagonist = names[0];
+  function charsInCut(cut: Cut): string[] {
+    // 대사 화자가 가장 신뢰도 높은 신호 → 우선. (캡션의 일반명사 오인 방지)
+    const speakers = [...new Set(cut.dialogues.map((d) => d.speaker).filter((s) => names.includes(s)))];
+    if (speakers.length) return speakers;
+    // 화자 없는 나레이션 컷이면 캡션에 이름 언급된 캐릭터, 그것도 없으면 주인공
+    const inCaption = names.filter((n) => cut.caption.includes(n));
+    return inCaption.length ? inCaption : [protagonist];
+  }
 
-  // 2) 각 컷 — 앵커를 레퍼런스로 참조해 일관성 유지하며 생성 (동시 3개)
+  // 2) 각 컷 — 등장 캐릭터의 단독 레퍼런스만 전달 + 정체성 명시 (동시 3개)
   const cutUrls = await pool(ep.cuts, CONCURRENCY, async (cut) => {
+    const present = charsInCut(cut);
+    const refs = present.map((n) => charRef.get(n)).filter(Boolean) as string[];
+    const idLine = present.map((n, i) => `reference image ${i + 1} = the character "${n}"`).join('; ');
+    const lock =
+      `CRITICAL CHARACTER LOCK: ${idLine}. Draw ONLY the listed character(s), each with the EXACT same face, hairstyle, outfit and colors as their reference image. ` +
+      `Never redesign, swap, merge, or substitute a character's appearance between panels. Keep the same art style throughout. `;
     const tmp = path.join(os.tmpdir(), `${ep.slug}-${cut.order}.png`);
     const t = Date.now();
     await provider.generateImage({
-      prompt: CONSISTENCY + cut.imgPrompt,
+      prompt: lock + cut.imgPrompt,
       model: config.defaultModel,
       outputPath: tmp,
       size: '1024x1536',
-      images: [anchorDataUrl]
+      images: refs
     });
     const buffer = fs.readFileSync(tmp);
     const { publicUrl } = await uploadToBucket({
@@ -95,10 +112,9 @@ async function main() {
       contentType: 'image/png'
     });
     fs.unlinkSync(tmp);
-    console.log(`  ✓ CUT ${cut.order} (${((Date.now() - t) / 1000).toFixed(0)}s)`);
+    console.log(`  ✓ CUT ${cut.order} [${present.join(',')}] (${((Date.now() - t) / 1000).toFixed(0)}s)`);
     return { order: cut.order, url: publicUrl };
   });
-  fs.unlinkSync(anchorTmp);
   const urlByOrder = new Map(cutUrls.map((c) => [c.order, c.url]));
 
   // 재실행 가능하게 기존 동일 slug 삭제(cascade)
