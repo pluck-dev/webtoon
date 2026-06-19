@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import AuthNav from '@/components/AuthNav';
+import SiteHeader from '@/components/SiteHeader';
 import EpisodeStudio from '@/components/EpisodeStudio';
 
 export const dynamic = 'force-dynamic';
@@ -31,29 +30,24 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
   if (!episode) notFound();
 
   return (
-    <main className="market-shell episode-detail-shell">
-      <header className="market-nav">
-        <Link href="/" className="market-brand">Webtoon Voice Studio</Link>
-        <nav className="market-links" aria-label="Episode navigation">
-          <Link href="/">에피소드</Link>
-          <Link href="/admin">관리자</Link>
-          <a href="#studio">녹음실</a>
-          <a href="#guide">가이드</a>
-        </nav>
-        <AuthNav />
-      </header>
+    <main className="market-shell">
+      <SiteHeader />
 
-      <section className="episode-studio-card" id="studio">
-        <div className="episode-room-heading">
+      <div className="mx-auto w-full max-w-[1240px]">
+      <section
+        className="mt-[18px] rounded-lg border border-line bg-card p-[14px]"
+        id="studio"
+      >
+        <div className="mb-[14px] flex items-end justify-between gap-[18px] border-b border-line-soft pb-4 pt-[6px] px-0.5">
           <div>
-            <p>녹음 스튜디오</p>
-            <h1>{episode.title}</h1>
-            <span>{episode.logline}</span>
+            <p className="mb-[7px] text-[12px] font-black uppercase text-muted">녹음 스튜디오</p>
+            <h1 className="m-0 text-[clamp(30px,4vw,56px)] leading-none">{episode.title}</h1>
+            <span className="mt-[10px] block text-[#5d564c] leading-[1.55]">{episode.logline}</span>
           </div>
-          <div className="episode-meta-row">
-            <span>{episode.cuts.length}컷</span>
-            <span>{episode.maxSeconds}초 이하</span>
-            <span>{episode._count.performances}개 버전</span>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-line bg-[#f7f2e8] px-[11px] py-2 text-[12px] font-black text-[#5d564c]">{episode.cuts.length}컷</span>
+            <span className="rounded-full border border-line bg-[#f7f2e8] px-[11px] py-2 text-[12px] font-black text-[#5d564c]">{episode.maxSeconds}초 이하</span>
+            <span className="rounded-full border border-line bg-[#f7f2e8] px-[11px] py-2 text-[12px] font-black text-[#5d564c]">{episode._count.performances}개 버전</span>
           </div>
         </div>
         <EpisodeStudio
@@ -83,6 +77,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
           }}
         />
       </section>
+      </div>
     </main>
   );
 }

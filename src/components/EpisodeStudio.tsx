@@ -445,92 +445,149 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   }
 
   return (
-    <section className="studio-workspace">
-      <aside className="phone studio-phone">
-        <div className="phone-head">
+    <section className="grid gap-4 [grid-template-columns:minmax(320px,390px)_minmax(0,1fr)]">
+
+      {/* ── 왼쪽: 폰 목업 (dark device frame – 라이트 오버라이드 대상 아님) ── */}
+      <aside className="sticky top-[84px] h-[calc(100vh-112px)] min-h-[620px] overflow-hidden border border-[#3a4650] rounded-[28px] bg-[#080b0d] shadow-[0_24px_70px_rgba(0,0,0,.42)]">
+
+        {/* phone-head */}
+        <div className="relative z-[2] flex items-center justify-between min-h-[56px] px-4 border-b border-[#252d35] bg-[rgba(8,11,13,.94)] backdrop-blur-[12px] text-[#f0bd62] text-xs font-black">
           <span>{previewing ? '전체 미리보기 재생 중' : episode.title}</span>
-          <button type="button" onClick={previewing ? () => stopPreview() : playFullPreview}>
+          <button
+            type="button"
+            onClick={previewing ? () => stopPreview() : playFullPreview}
+            className="min-h-[40px] border border-[#3a4650] rounded-lg bg-[#141a20] text-[#f5f0e8] px-[13px]"
+          >
             {previewing ? '정지' : '미리보기'}
           </button>
         </div>
-        <div className="phone-scroll">
+
+        {/* phone-scroll */}
+        <div className="h-[calc(100%-154px)] overflow-auto p-2">
           {episode.cuts.map((cut, index) => (
             <article
-              className={`cut-panel ${index === activeCut ? 'active' : ''}`}
+              className={
+                'relative min-h-[520px] overflow-hidden border-4 border-[#050607] rounded-[5px] mb-2 bg-[#1a2027]' +
+                (index === activeCut ? ' outline outline-[3px] outline-[#f0bd62] -outline-offset-[7px]' : '')
+              }
               key={cut.id}
               onClick={() => setActiveCut(index)}
               ref={(element) => {
                 cutRefs.current[index] = element;
               }}
             >
-              <img src={cut.imageUrl} alt="" />
+              <img src={cut.imageUrl} alt="" className="block w-full h-full min-h-[520px] object-cover" />
               {cut.dialogues.map((dialogue, dialogueIndex) => (
-                <div className={`bubble ${dialogueIndex % 2 === 0 ? 'left' : 'right'}`} key={dialogue.id}>
+                <div
+                  className={
+                    'absolute z-[1] max-w-[78%] border-[3px] border-[#080b0d] rounded-[22px] bg-[#fffdf6] text-[#151515] px-4 py-[13px] leading-[1.4] text-lg font-black break-keep' +
+                    (dialogueIndex % 2 === 0 ? ' left-[18px] top-[28px]' : ' right-[18px] bottom-[54px]')
+                  }
+                  key={dialogue.id}
+                >
                   {dialogue.text}
                 </div>
               ))}
-              <div className="caption">CUT {cut.order}. {cut.caption}</div>
+              {/* caption */}
+              <div className="absolute left-[14px] right-[14px] bottom-3 z-[1] border-2 border-[#050607] bg-[rgba(5,6,7,.84)] text-[#f5f0e8] px-[11px] py-[9px] font-extrabold leading-[1.4]">
+                CUT {cut.order}. {cut.caption}
+              </div>
             </article>
           ))}
         </div>
-        <div className="phone-foot">
-          <strong>{activeDialogue ? `${activeDialogue.characterName}: ${activeDialogue.text}` : '대사 없음'}</strong>
-          <span>{activeDialogue?.direction}</span>
-          <div className="progress"><i style={{ width: `${((activeCut + 1) / episode.cuts.length) * 100}%` }} /></div>
+
+        {/* phone-foot */}
+        <div className="relative z-[2] grid gap-[10px] px-4 py-[14px] border-t border-[#252d35] bg-[rgba(8,11,13,.94)] backdrop-blur-[12px]">
+          <strong className="block">{activeDialogue ? `${activeDialogue.characterName}: ${activeDialogue.text}` : '대사 없음'}</strong>
+          <span className="block mt-1 text-[#aeb8bf] text-xs">{activeDialogue?.direction}</span>
+          {/* progress (dark phone 내부 – 어두운 배경 유지) */}
+          <div className="h-2 overflow-hidden rounded-full bg-[#2a3138]">
+            <i className="block h-full bg-gradient-to-r from-coral to-[#f0bd62]" style={{ width: `${((activeCut + 1) / episode.cuts.length) * 100}%` }} />
+          </div>
         </div>
       </aside>
 
-      <div className="studio-stack">
-        <section className="studio-panel current-take">
-          <div className="studio-panel-head">
+      {/* ── 오른쪽: 패널 스택 (라이트 테마 베이크인) ── */}
+      <div className="grid content-start gap-3">
+
+        {/* current-take: dark ink 패널 */}
+        <section className="overflow-hidden border border-line rounded-lg bg-ink text-[#fffaf0]">
+
+          {/* studio-panel-head (current-take) */}
+          <div className="flex items-end justify-between gap-[14px] border-b border-[rgba(255,250,240,.16)] px-4 py-[14px]">
             <div>
-              <span>현재 녹음</span>
-              <h2>CUT {activeCutData?.order}. {activeDialogue?.characterName ?? '대사 없음'}</h2>
+              <span className="text-[#f0bd62] text-xs font-black">현재 녹음</span>
+              <h2 className="mt-1 text-lg">CUT {activeCutData?.order}. {activeDialogue?.characterName ?? '대사 없음'}</h2>
             </div>
-            <strong>{recordedCount}/{allDialogues.length}</strong>
+            <strong className="text-[#f0bd62] text-xs font-black">{recordedCount}/{allDialogues.length}</strong>
           </div>
 
-          {/* 한 컷에 대사가 여러 개면 녹음할 대사를 고른다 */}
+          {/* dialogue-tabs */}
           {activeCutData && activeCutData.dialogues.length > 1 && (
-            <div className="dialogue-tabs">
-              {activeCutData.dialogues.map((dialogue, index) => (
-                <button
-                  key={dialogue.id}
-                  type="button"
-                  className={`dialogue-tab ${dialogue.id === activeDialogue?.id ? 'active' : ''} ${recordings[dialogue.id]?.saved ? 'done' : ''}`}
-                  onClick={() => setActiveDialogueId(dialogue.id)}
-                  disabled={Boolean(recordingDialogue)}
-                >
-                  대사 {index + 1}{recordings[dialogue.id]?.saved ? ' ✓' : ''}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-[6px] px-4 pt-3">
+              {activeCutData.dialogues.map((dialogue, index) => {
+                const isActive = dialogue.id === activeDialogue?.id;
+                const isDone = Boolean(recordings[dialogue.id]?.saved);
+                return (
+                  <button
+                    key={dialogue.id}
+                    type="button"
+                    className={
+                      'rounded-full px-[14px] py-[6px] text-[13px] font-extrabold border min-h-0' +
+                      (isActive && isDone
+                        ? ' bg-[#6fcf97] border-[#6fcf97] text-ink'
+                        : isActive
+                          ? ' bg-[#f0bd62] border-[#f0bd62] text-ink'
+                          : isDone
+                            ? ' bg-transparent border-[#6fcf97] text-[#6fcf97]'
+                            : ' bg-transparent border-[rgba(255,250,240,.28)] text-[#fffaf0]')
+                    }
+                    onClick={() => setActiveDialogueId(dialogue.id)}
+                    disabled={Boolean(recordingDialogue)}
+                  >
+                    대사 {index + 1}{recordings[dialogue.id]?.saved ? ' ✓' : ''}
+                  </button>
+                );
+              })}
             </div>
           )}
 
+          {/* current-line / current-line.empty */}
           {activeDialogue ? (
-            <div className="current-line">
-              <p>{activeDialogue.text}</p>
-              <small>{activeDialogue.direction}</small>
+            <div className="px-4 pt-[18px] pb-[6px]">
+              <p className="text-[clamp(22px,3vw,36px)] font-black leading-[1.2] break-keep">{activeDialogue.text}</p>
+              <small className="block mt-[10px] text-[#d8cfc0] leading-[1.5]">{activeDialogue.direction}</small>
             </div>
           ) : (
-            <div className="current-line empty">
-              <p>이 컷에는 녹음할 대사가 없습니다.</p>
-              <small>다음 컷으로 이동해 녹음을 이어가세요.</small>
+            <div className="px-4 pt-[18px] pb-[6px]">
+              <p className="text-[20px] text-[#d8cfc0] font-bold leading-[1.2]">이 컷에는 녹음할 대사가 없습니다.</p>
+              <small className="block mt-[10px] text-[#d8cfc0] leading-[1.5]">다음 컷으로 이동해 녹음을 이어가세요.</small>
             </div>
           )}
 
+          {/* mic-blocked */}
           {micBlocked && (
-            <div className="mic-blocked">
+            <div className="flex flex-wrap items-center gap-[10px] mx-4 mt-3 px-[14px] py-3 border border-coral rounded-lg bg-[rgba(239,111,94,.14)] text-[#ffd9d2] leading-[1.5]">
               <span>마이크가 차단돼 있습니다. 주소창 권한에서 마이크를 허용한 뒤 다시 시도하세요.</span>
-              <button type="button" onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}>
+              <button
+                type="button"
+                className="ml-auto border border-coral rounded-[6px] bg-coral text-ink px-3 py-[6px] font-extrabold min-h-0"
+                onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}
+              >
                 다시 시도
               </button>
             </div>
           )}
 
-          <div className="take-actions">
+          {/* take-actions */}
+          <div className="flex flex-wrap gap-2 px-4 py-[14px]">
             <button
-              className={`primary take-record ${recordingDialogue === activeDialogue?.id ? 'recording' : ''}`}
+              className={
+                'min-w-[130px] min-h-[40px] rounded-lg px-[13px] font-black border-0' +
+                (recordingDialogue === activeDialogue?.id
+                  ? ' bg-coral border-coral text-white animate-soft-pulse'
+                  : ' bg-ink text-[#fffaf0]')
+              }
               type="button"
               onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}
               disabled={
@@ -552,63 +609,104 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
               type="button"
               disabled={!activeRecording?.url}
               onClick={() => activeDialogue && playSingle(activeDialogue.id, activeCut)}
+              className="min-h-[40px] border border-[rgba(255,250,240,.28)] rounded-lg bg-transparent text-[#fffaf0] px-[13px]"
             >
               내 녹음 듣기
             </button>
-            <button type="button" onClick={() => setActiveCut(nextCutIndex)} disabled={activeCut === episode.cuts.length - 1}>
+            <button
+              type="button"
+              onClick={() => setActiveCut(nextCutIndex)}
+              disabled={activeCut === episode.cuts.length - 1}
+              className="min-h-[40px] border border-[rgba(255,250,240,.28)] rounded-lg bg-transparent text-[#fffaf0] px-[13px]"
+            >
               다음 컷
             </button>
           </div>
 
-          {/* 현재 테이크 저장 상태 */}
-          {activeRecording?.saving && <p className="take-state saving">계정에 저장하는 중...</p>}
+          {/* 현재 테이크 저장 상태 – take-state */}
+          {activeRecording?.saving && (
+            <p className="flex items-center gap-[10px] px-4 pt-2 font-extrabold text-[#f0bd62]">
+              계정에 저장하는 중...
+            </p>
+          )}
           {activeRecording?.error && (
-            <p className="take-state error">
+            <p className="flex items-center gap-[10px] px-4 pt-2 font-extrabold text-coral">
               저장 실패
-              <button type="button" onClick={() => activeDialogue && retryUpload(activeDialogue.id)}>
+              <button
+                type="button"
+                className="border border-coral rounded-[6px] bg-transparent text-coral px-[10px] py-1 font-extrabold min-h-0"
+                onClick={() => activeDialogue && retryUpload(activeDialogue.id)}
+              >
                 다시 저장
               </button>
             </p>
           )}
           {activeRecording?.saved && (
-            <p className="take-state ok">저장됨 · {(activeRecording.durationMs / 1000).toFixed(1)}초</p>
+            <p className="flex items-center gap-[10px] px-4 pt-2 font-extrabold text-[#6fcf97]">
+              저장됨 · {(activeRecording.durationMs / 1000).toFixed(1)}초
+            </p>
           )}
 
-          <p className="studio-status">{status}</p>
-          {!isSignedIn && <p className="studio-status warn">헤더의 로그인/회원가입 버튼을 누르면 Clerk 팝업이 열립니다.</p>}
+          {/* studio-status */}
+          <p className="border-t border-[rgba(255,250,240,.14)] px-4 py-3 text-[#d8cfc0] leading-[1.5]">
+            {status}
+          </p>
+          {/* studio-status.warn */}
+          {!isSignedIn && (
+            <p className="border-t border-[rgba(255,250,240,.14)] px-4 py-3 text-[#f0bd62] leading-[1.5]">
+              헤더의 로그인/회원가입 버튼을 누르면 Clerk 팝업이 열립니다.
+            </p>
+          )}
         </section>
 
-        <section className="studio-panel cut-tracker">
-          <div className="studio-panel-head compact">
-            <h2>컷별 녹음 진행</h2>
-            <span>{Math.round(progress)}%</span>
+        {/* cut-tracker 패널 (라이트 bg-paper) */}
+        <section className="overflow-hidden border border-line rounded-lg bg-paper text-ink">
+          {/* studio-panel-head compact */}
+          <div className="flex items-center justify-between gap-[14px] min-h-[50px] border-b border-line-soft px-4">
+            <h2 className="text-lg">컷별 녹음 진행</h2>
+            <span className="text-muted text-xs font-black">{Math.round(progress)}%</span>
           </div>
-          <div className="cut-progress"><i style={{ width: `${progress}%` }} /></div>
-          {loadingRecordings && <p className="take-loading">저장된 녹음을 불러오는 중...</p>}
-          <div className="take-list">
+          {/* cut-progress */}
+          <div className="h-2 overflow-hidden bg-[#e6dfd2]">
+            <i className="block h-full bg-gradient-to-r from-coral to-[#f0bd62]" style={{ width: `${progress}%` }} />
+          </div>
+          {/* take-loading */}
+          {loadingRecordings && (
+            <p className="px-3 pt-[10px] text-[#675f54] font-bold">
+              저장된 녹음을 불러오는 중...
+            </p>
+          )}
+          {/* take-list */}
+          <div className="grid gap-2 p-3">
             {episode.cuts.map((cut, cutIndex) => cut.dialogues.map((dialogue) => {
               const recording = recordings[dialogue.id];
               const isRec = recordingDialogue === dialogue.id;
               let badge = '미녹음';
-              let badgeClass = '';
+              let badgeClass = 'text-ink-soft';
               if (isRec) {
                 badge = '● 녹음 중';
-                badgeClass = 'rec';
+                badgeClass = 'text-coral';
               } else if (recording?.saving) {
                 badge = '저장 중';
-                badgeClass = 'saving';
+                badgeClass = 'text-[#c79a3a]';
               } else if (recording?.error) {
                 badge = '저장 실패';
-                badgeClass = 'error';
+                badgeClass = 'text-coral';
               } else if (recording?.saved) {
                 badge = `${(recording.durationMs / 1000).toFixed(1)}초`;
-                badgeClass = 'ok';
+                badgeClass = 'text-[#2f9e6b]';
               } else if (recording?.url) {
                 badge = '로컬만';
               }
+              const isActive = dialogue.id === activeDialogue?.id;
               return (
                 <button
-                  className={`take-row ${dialogue.id === activeDialogue?.id ? 'active' : ''}`}
+                  className={
+                    'grid [grid-template-columns:70px_1fr_auto] items-center gap-[10px] w-full min-h-[56px] border rounded text-left' +
+                    (isActive
+                      ? ' border-ink bg-card'
+                      : ' border-line-soft bg-[#f7f2e8]')
+                  }
                   type="button"
                   onClick={() => {
                     setActiveCut(cutIndex);
@@ -616,62 +714,96 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
                   }}
                   key={dialogue.id}
                 >
-                  <span>CUT {cut.order}</span>
-                  <strong>{dialogue.text}</strong>
-                  <small className={`take-badge ${badgeClass}`}>{badge}</small>
+                  <span className="text-[#f0bd62] text-xs font-black pl-[10px]">CUT {cut.order}</span>
+                  <strong className="overflow-hidden text-ellipsis whitespace-nowrap text-ink">{dialogue.text}</strong>
+                  <small className={`font-black pr-[10px] ${badgeClass}`}>{badge}</small>
                 </button>
               );
             }))}
           </div>
         </section>
 
-        <section className="studio-panel preview-panel">
-          <div className="studio-panel-head compact">
-            <h2>전체 영상 미리보기</h2>
-            <span>{previewing ? '재생 중' : '컷 전환 확인'}</span>
+        {/* preview-panel (라이트 bg-paper) */}
+        <section className="overflow-hidden border border-line rounded-lg bg-paper text-ink">
+          {/* studio-panel-head compact */}
+          <div className="flex items-center justify-between gap-[14px] min-h-[50px] border-b border-line-soft px-4">
+            <h2 className="text-lg">전체 영상 미리보기</h2>
+            <span className="text-muted text-xs font-black">{previewing ? '재생 중' : '컷 전환 확인'}</span>
           </div>
-          <p>녹음 길이에 맞춰 현재 컷이 유지되고, 다음 컷으로 자연스럽게 넘어갑니다.</p>
-          <div className="take-actions">
-            <button className="primary" type="button" onClick={playFullPreview} disabled={previewing || recordedCount === 0}>
+          <p className="px-4 pt-[14px] text-[#675f54] leading-[1.55]">
+            녹음 길이에 맞춰 현재 컷이 유지되고, 다음 컷으로 자연스럽게 넘어갑니다.
+          </p>
+          {/* take-actions */}
+          <div className="flex flex-wrap gap-2 px-4 py-[14px]">
+            <button
+              className="min-h-[40px] border-0 rounded-lg bg-ink text-[#fffaf0] font-black px-[13px]"
+              type="button"
+              onClick={playFullPreview}
+              disabled={previewing || recordedCount === 0}
+            >
               전체 재생
             </button>
-            <button type="button" onClick={() => stopPreview()} disabled={!previewing}>
+            <button
+              type="button"
+              onClick={() => stopPreview()}
+              disabled={!previewing}
+              className="min-h-[40px] border border-line rounded-lg bg-card text-ink px-[13px]"
+            >
               정지
             </button>
           </div>
         </section>
 
-        <section className="studio-panel video-panel">
-          <div className="studio-panel-head compact">
-            <h2>영상 생성</h2>
-            <span>{videoReady ? '생성 준비 완료' : allRecorded ? '생성 가능' : '녹음 필요'}</span>
+        {/* video-panel (라이트 bg-paper) */}
+        <section className="overflow-hidden border border-line rounded-lg bg-paper text-ink">
+          {/* studio-panel-head compact */}
+          <div className="flex items-center justify-between gap-[14px] min-h-[50px] border-b border-line-soft px-4">
+            <h2 className="text-lg">영상 생성</h2>
+            <span className="text-muted text-xs font-black">{videoReady ? '생성 준비 완료' : allRecorded ? '생성 가능' : '녹음 필요'}</span>
           </div>
-          <p>컷 이미지, 말풍선, 녹음 파일을 묶어 1분 미만 쇼츠 영상으로 생성합니다.</p>
-          <div className="video-preview-box">
+          <p className="px-4 pt-[14px] text-[#675f54] leading-[1.55]">
+            컷 이미지, 말풍선, 녹음 파일을 묶어 1분 미만 쇼츠 영상으로 생성합니다.
+          </p>
+          {/* video-preview-box */}
+          <div className="grid gap-1 mx-4 mt-[14px] border border-dashed border-[#cfc6b8] rounded-lg bg-[#f7f2e8] p-[14px]">
             {videoUrl ? (
               <video src={videoUrl} controls playsInline style={{ width: '100%', borderRadius: 12 }} />
             ) : (
               <>
-                <strong>
+                <strong className="text-ink">
                   {rendering
                     ? '영상을 만드는 중입니다...'
                     : videoReady
                       ? '영상 패키지가 준비됐습니다.'
                       : `${allDialogues.length - recordedCount}개 컷 녹음이 남았습니다.`}
                 </strong>
-                <span>{timeline ? '컷별 녹음 싱크와 전환 정보가 저장됐습니다.' : '녹음 완료 후 영상 생성 버튼을 누르세요.'}</span>
+                <span className="text-[#675f54]">{timeline ? '컷별 녹음 싱크와 전환 정보가 저장됐습니다.' : '녹음 완료 후 영상 생성 버튼을 누르세요.'}</span>
               </>
             )}
           </div>
-          <div className="take-actions">
-            <button className="primary" type="button" onClick={buildVideoJob} disabled={!isSignedIn || !allRecorded || rendering}>
+          {/* take-actions */}
+          <div className="flex flex-wrap gap-2 px-4 py-[14px]">
+            <button
+              className="min-h-[40px] border-0 rounded-lg bg-ink text-[#fffaf0] font-black px-[13px]"
+              type="button"
+              onClick={buildVideoJob}
+              disabled={!isSignedIn || !allRecorded || rendering}
+            >
               {rendering ? '생성 중...' : '영상 생성'}
             </button>
-            <button type="button" disabled={!videoUrl}>
+            <button
+              type="button"
+              disabled={!videoUrl}
+              className="min-h-[40px] border border-line rounded-lg bg-card text-ink px-[13px]"
+            >
               공유하기
             </button>
+            {/* take-actions a */}
             <a
-              className={videoUrl ? '' : 'disabled-link'}
+              className={
+                'inline-flex items-center justify-center min-h-[40px] px-4 border border-ink rounded-[6px] bg-card text-ink font-extrabold no-underline' +
+                (!videoUrl ? ' pointer-events-none opacity-45' : '')
+              }
               href={videoUrl ?? undefined}
               download={videoUrl ? `webtoon-${episode.id}.mp4` : undefined}
               aria-disabled={!videoUrl}
@@ -681,14 +813,20 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           </div>
         </section>
 
-        <details className="studio-panel guide-panel">
-          <summary>캐스트 가이드 보기</summary>
-          <div className="compact-character-grid">
+        {/* guide-panel */}
+        <details className="overflow-hidden border border-line rounded-lg bg-paper text-ink">
+          <summary className="cursor-pointer px-4 py-[15px] font-black">캐스트 가이드 보기</summary>
+          {/* compact-character-grid */}
+          <div className="grid gap-[10px] border-t border-line-soft p-3">
             {episode.characters.map((character) => (
-              <div className="character" key={character.id} style={{ borderColor: character.color }}>
-                <strong>{character.name}</strong>
-                <p>{character.description}</p>
-                <small>{character.voiceGuide}</small>
+              <div
+                className="border rounded-lg bg-[#f7f2e8] p-[14px]"
+                key={character.id}
+                style={{ borderColor: character.color }}
+              >
+                <strong className="block mb-[6px] text-[#f0bd62]">{character.name}</strong>
+                <p className="text-[#675f54] leading-[1.5]">{character.description}</p>
+                <small className="text-[#675f54] leading-[1.5]">{character.voiceGuide}</small>
               </div>
             ))}
           </div>

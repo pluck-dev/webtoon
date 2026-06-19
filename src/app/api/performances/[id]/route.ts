@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
@@ -45,4 +46,34 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     user: performance.user,
     recordings
   });
+}
+
+const patchSchema = z.object({
+  isPublic: z.boolean()
+});
+
+// 공연 공개/비공개 토글 (본인 소유만)
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getRequiredDbUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Login required' }, { status: 401 });
+  }
+
+  const parsed = patchSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'isPublic(boolean)가 필요합니다' }, { status: 400 });
+  }
+
+  const { id } = await params;
+  const performance = await prisma.performance.findUnique({ where: { id } });
+  if (!performance || performance.userId !== user.id) {
+    return NextResponse.json({ error: 'Performance not found' }, { status: 404 });
+  }
+
+  const updated = await prisma.performance.update({
+    where: { id },
+    data: { isPublic: parsed.data.isPublic }
+  });
+
+  return NextResponse.json({ performance: { id: updated.id, isPublic: updated.isPublic } });
 }
