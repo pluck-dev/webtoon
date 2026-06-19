@@ -6,10 +6,10 @@ import { useState } from 'react';
 import AuthNav from '@/components/AuthNav';
 
 const navLinks: { href: string; label: string; external?: boolean }[] = [
-  { href: '/', label: 'Episodes' },
-  { href: '/#collection', label: 'Collection', external: true },
-  { href: '/mypage', label: 'My Page' },
-  { href: '/admin', label: 'Admin' }
+  { href: '/', label: '작품' },
+  { href: '/#collection', label: '컬렉션', external: true },
+  { href: '/mypage', label: '마이페이지' },
+  { href: '/admin', label: '관리자' }
 ];
 
 const navLinkClass =

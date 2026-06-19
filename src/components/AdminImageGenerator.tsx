@@ -28,10 +28,10 @@ export default function AdminImageGenerator() {
         body: JSON.stringify({ slug, prompt })
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error ? JSON.stringify(body.error) : 'generation failed');
+      if (!response.ok) throw new Error(body.error ? JSON.stringify(body.error) : '생성 실패');
       setImageUrl(body.imageUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'unknown error');
+      setError(err instanceof Error ? err.message : '알 수 없는 오류');
     } finally {
       setBusy(false);
     }
@@ -62,12 +62,12 @@ export default function AdminImageGenerator() {
         onClick={generate}
         disabled={busy}
       >
-        {busy ? '생성 중...' : 'CLI로 PNG 생성'}
+        {busy ? '생성 중...' : '이미지 생성'}
       </button>
       {error ? <p className="text-[#ff8b7b]">{error}</p> : null}
       {imageUrl ? (
         <div className="grid gap-2">
-          <img src={imageUrl} alt="generated webtoon cut" className="w-full max-w-[260px] rounded-lg border border-[#34404a]" />
+          <img src={imageUrl} alt="생성된 컷" className="w-full max-w-[260px] rounded-lg border border-[#34404a]" />
           <code className="text-[#5cc8ba]">{imageUrl}</code>
         </div>
       ) : null}

@@ -11,11 +11,11 @@ export default function AuthNav() {
             className="min-h-[40px] rounded-lg border border-line bg-card px-[13px] text-sm font-bold text-ink transition-colors hover:bg-ink/5"
             type="button"
           >
-            Sign in
+            로그인
           </button>
         </SignInButton>
         <SignUpButton mode="modal">
-          <button className="min-h-[40px] rounded-lg border-0 bg-[#ef6f5e] px-[13px] font-black text-[#190b09]" type="button">Sign up</button>
+          <button className="min-h-[40px] rounded-lg border-0 bg-[#ef6f5e] px-[13px] font-black text-[#190b09]" type="button">회원가입</button>
         </SignUpButton>
       </Show>
       <Show when="signed-in">

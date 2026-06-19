@@ -13,11 +13,11 @@ export default function SiteFooter() {
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <Link href="/" className="flex items-center gap-3">
           <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-ink text-base font-black text-gold">
-            W
+            더
           </span>
           <span className="grid">
-            <strong className="text-base">Webtoon Voice Studio</strong>
-            <span className="text-[13px] text-muted">One original webtoon, endless actor versions.</span>
+            <strong className="text-base">더빙고</strong>
+            <span className="text-[13px] text-muted">짧은 상황을 내 목소리로 연기하는 더빙 놀이터.</span>
           </span>
         </Link>
         <nav className="flex flex-wrap justify-end gap-2" aria-label="Footer navigation">
@@ -25,13 +25,13 @@ export default function SiteFooter() {
             href="/#collection"
             className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
           >
-            Episodes
+            작품
           </a>
           <Link
             href="/admin"
             className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
           >
-            Admin
+            관리자
           </Link>
           <Link
             href="/terms"
