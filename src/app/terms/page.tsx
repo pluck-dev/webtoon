@@ -14,7 +14,7 @@ export default function TermsPage() {
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
 
         <article className="legal-article">
-        <p className="legal-eyebrow">Legal</p>
+        <p className="legal-eyebrow">법적 고지</p>
         <h1>이용약관</h1>
         <p className="legal-updated">시행일: 2026년 6월 19일</p>
 
