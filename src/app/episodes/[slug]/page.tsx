@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
@@ -5,6 +6,34 @@ import SiteHeader from '@/components/SiteHeader';
 import EpisodeStudio from '@/components/EpisodeStudio';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const episode = await prisma.episode.findUnique({
+    where: { slug },
+    select: { title: true, logline: true, thumbnailUrl: true }
+  });
+
+  if (!episode) return { title: '에피소드를 찾을 수 없어요' };
+
+  const image = episode.thumbnailUrl ?? '/sample/interview-cut-01.png';
+  return {
+    title: episode.title,
+    description: episode.logline,
+    openGraph: {
+      type: 'article',
+      title: episode.title,
+      description: episode.logline,
+      images: [image]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: episode.title,
+      description: episode.logline,
+      images: [image]
+    }
+  };
+}
 
 export default async function EpisodePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

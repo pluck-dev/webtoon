@@ -14,8 +14,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Webtoon Voice Studio',
-  description: 'Create actor versions of admin-made AI webtoon shorts',
+  metadataBase: new URL('https://webtoon-voice-studio.vercel.app'),
+  title: {
+    default: 'Webtoon Voice Studio — AI 웹툰 보이스 마켓플레이스',
+    template: '%s · Webtoon Voice Studio'
+  },
+  description: '관리자가 만든 AI 웹툰 에피소드에 내 목소리를 입혀 나만의 더빙 숏폼을 만드세요.',
+  keywords: ['웹툰', '더빙', 'AI 웹툰', '보이스', '숏폼', 'voice acting'],
+  openGraph: {
+    type: 'website',
+    siteName: 'Webtoon Voice Studio',
+    title: 'Webtoon Voice Studio — AI 웹툰 보이스 마켓플레이스',
+    description: '하나의 원작 웹툰, 무한한 배우 버전. 모든 말풍선을 내 목소리로 녹음하세요.',
+    images: ['/sample/interview-cut-01.png']
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Webtoon Voice Studio',
+    description: '하나의 원작 웹툰, 무한한 배우 버전.',
+    images: ['/sample/interview-cut-01.png']
+  }
 };
 
 const clerkAppearance = {
