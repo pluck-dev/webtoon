@@ -21,6 +21,13 @@ enum EpisodeStatus {
   ARCHIVED
 }
 
+// 카테고리 = 화풍 + 시나리오 톤 (실제 모션 아님, 애니메이션은 애니 화풍)
+enum EpisodeCategory {
+  WEBTOON
+  ROLEPLAY
+  ANIMATION
+}
+
 enum PerformanceStatus {
   DRAFT
   READY
@@ -54,8 +61,9 @@ model Episode {
   slug         String        @unique
   title        String
   logline      String
-  status       EpisodeStatus @default(DRAFT)
-  maxSeconds   Int           @default(60)
+  status       EpisodeStatus   @default(DRAFT)
+  category     EpisodeCategory @default(WEBTOON)
+  maxSeconds   Int             @default(60)
   thumbnailUrl String?
   characters   Character[]
   cuts         Cut[]
@@ -80,10 +88,11 @@ model Character {
 model Cut {
   id         String     @id @default(cuid())
   episodeId  String
-  order      Int
-  imageUrl   String
-  caption    String
-  cameraHint String?
+  order       Int
+  imageUrl    String
+  caption     String
+  cameraHint  String?
+  imagePrompt String?
   episode    Episode    @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   dialogues  Dialogue[]
 
