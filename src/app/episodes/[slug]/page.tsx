@@ -81,10 +81,10 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
 
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
       <section
-        className="mt-[18px] rounded-lg border border-line bg-card p-[14px]"
+        className="mt-3 rounded-2xl p-0 sm:mt-[18px] sm:border sm:border-line sm:bg-card sm:p-[14px]"
         id="studio"
       >
-        <div className="mb-[14px] flex items-end justify-between gap-[18px] border-b border-line-soft pb-4 pt-[6px] px-0.5">
+        <div className="mb-[14px] hidden items-end justify-between gap-[18px] border-b border-line-soft pb-4 pt-[6px] px-0.5 lg:flex">
           <div>
             <p className="mb-[7px] text-[12px] font-black uppercase text-muted">녹음 스튜디오</p>
             <h1 className="m-0 text-[clamp(30px,4vw,56px)] leading-none">{episode.title}</h1>

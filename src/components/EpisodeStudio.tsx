@@ -81,6 +81,20 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const activeRecording = activeDialogue ? recordings[activeDialogue.id] : null;
   const nextCutIndex = Math.min(activeCut + 1, episode.cuts.length - 1);
 
+  // 모바일 퍼포머 모드: 전체 대사를 순서대로 탐색
+  const flatLines = useMemo(
+    () => episode.cuts.flatMap((cut, cutIndex) => cut.dialogues.map((dialogue) => ({ cutIndex, dialogue }))),
+    [episode.cuts]
+  );
+  const currentLineIndex = flatLines.findIndex((line) => line.dialogue.id === activeDialogue?.id);
+  const goToLine = (index: number) => {
+    const line = flatLines[index];
+    if (!line) return;
+    setActiveCut(line.cutIndex);
+    setActiveDialogueId(line.dialogue.id);
+  };
+  const isRecordingActive = recordingDialogue === activeDialogue?.id;
+
   const loadPerformance = useCallback(async () => {
     setLoadingRecordings(true);
     try {
@@ -444,7 +458,128 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   }
 
   return (
-    <section className="grid gap-4 lg:[grid-template-columns:minmax(360px,440px)_minmax(0,1fr)]">
+    <>
+      {/* ════════ 모바일 퍼포머 모드 (장면 메인 + 하단 플로팅 자막/녹음) ════════ */}
+      <div className="lg:hidden">
+        {/* 장면 캔버스 */}
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-[#3a4650] bg-[#080b0d]">
+          {activeCutData && (
+            <img src={activeCutData.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          )}
+          {activeCutData?.dialogues.map((dialogue, dialogueIndex) => (
+            <div
+              key={dialogue.id}
+              className={
+                'absolute z-[1] max-w-[78%] rounded-[20px] border-[3px] border-[#080b0d] bg-[#fffdf6] px-3.5 py-2.5 text-[15px] font-black leading-snug text-[#151515] break-keep ' +
+                (dialogue.id === activeDialogue?.id ? 'ring-2 ring-gold ' : 'opacity-60 ') +
+                (dialogueIndex % 2 === 0 ? 'left-3 top-4' : 'right-3 bottom-24')
+              }
+            >
+              {dialogue.text}
+            </div>
+          ))}
+          <div className="absolute left-3 top-3 z-[2] rounded-full bg-black/55 px-3 py-1.5 text-xs font-black text-paper backdrop-blur">
+            CUT {activeCutData?.order} / {episode.cuts.length}
+          </div>
+          <div className="absolute right-3 top-3 z-[2] rounded-full bg-black/55 px-3 py-1.5 text-xs font-black text-gold backdrop-blur">
+            {recordedCount}/{allDialogues.length} 완료
+          </div>
+          <div className="absolute inset-x-0 bottom-0 z-[1] bg-gradient-to-t from-black/85 to-transparent p-3 pt-10">
+            <p className="text-xs font-bold text-paper/80">
+              {activeCutData ? `CUT ${activeCutData.order}. ${activeCutData.caption}` : ''}
+            </p>
+          </div>
+        </div>
+
+        {/* 하단 플로팅 자막 + 컨트롤 */}
+        <div className="sticky bottom-3 z-10 mt-3 rounded-2xl border border-[#2a2a2a] bg-ink p-4 text-paper shadow-[0_-10px_34px_rgba(0,0,0,.28)]">
+          <div className="mb-3 min-h-[64px]">
+            <span className="text-xs font-black text-gold">
+              {activeDialogue?.characterName ?? '대사 없음'}
+              {activeDialogue?.direction ? ` · ${activeDialogue.direction}` : ''}
+            </span>
+            <p className="mt-1 text-[clamp(20px,5.5vw,28px)] font-black leading-tight break-keep">
+              {activeDialogue?.text ?? '이 컷에는 녹음할 대사가 없어요. 다음으로 이동하세요.'}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => goToLine(currentLineIndex - 1)}
+              disabled={currentLineIndex <= 0 || isRecordingActive}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[rgba(255,250,240,.28)] text-lg text-paper disabled:opacity-35"
+              aria-label="이전 대사"
+            >
+              ◀
+            </button>
+
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}
+                disabled={
+                  !isSignedIn ||
+                  !activeDialogue ||
+                  Boolean(activeRecording?.saving) ||
+                  (Boolean(recordingDialogue) && !isRecordingActive)
+                }
+                className={
+                  'grid h-[72px] w-[72px] place-items-center rounded-full text-2xl font-black shadow-lg disabled:opacity-45 ' +
+                  (isRecordingActive ? 'animate-soft-pulse bg-coral text-white' : 'bg-gold text-ink')
+                }
+                aria-label={isRecordingActive ? '녹음 정지' : '녹음 시작'}
+              >
+                {isRecordingActive ? '■' : activeRecording?.saving ? '⋯' : activeRecording ? '↺' : '●'}
+              </button>
+              <span className="text-xs font-black text-paper/70">
+                {isRecordingActive
+                  ? `정지 ${formatClock(elapsedMs)}`
+                  : activeRecording?.saved
+                    ? '다시 녹음'
+                    : '녹음'}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToLine(currentLineIndex + 1)}
+              disabled={currentLineIndex >= flatLines.length - 1 || isRecordingActive}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[rgba(255,250,240,.28)] text-lg text-paper disabled:opacity-35"
+              aria-label="다음 대사"
+            >
+              ▶
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-[rgba(255,250,240,.14)] pt-3 text-xs">
+            <button
+              type="button"
+              disabled={!activeRecording?.url}
+              onClick={() => activeDialogue && playSingle(activeDialogue.id, activeCut)}
+              className="font-extrabold text-paper/80 underline-offset-2 hover:underline disabled:opacity-35"
+            >
+              ▷ 내 녹음 듣기
+            </button>
+            <span className="font-extrabold">
+              {!isSignedIn ? (
+                <span className="text-gold">로그인 후 저장</span>
+              ) : activeRecording?.saving ? (
+                <span className="text-gold">저장 중…</span>
+              ) : activeRecording?.error ? (
+                <span className="text-coral">저장 실패</span>
+              ) : activeRecording?.saved ? (
+                <span className="text-[#6fcf97]">저장됨 ✓</span>
+              ) : (
+                <span className="text-paper/50">미녹음</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ════════ 데스크톱 스튜디오 (2열) ════════ */}
+      <section className="hidden gap-4 lg:grid lg:[grid-template-columns:minmax(360px,440px)_minmax(0,1fr)]">
 
       {/* ── 폰 목업 미리보기 (모바일에선 녹음 패널 아래로) ── */}
       <aside className="order-2 h-[56vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#3a4650] bg-[#080b0d] shadow-[0_24px_70px_rgba(0,0,0,.42)] lg:order-1 lg:sticky lg:top-[76px] lg:h-[calc(100vh-100px)] lg:min-h-[620px]">
@@ -831,7 +966,8 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           </div>
         </details>
       </div>
-    </section>
+      </section>
+    </>
   );
 }
 
