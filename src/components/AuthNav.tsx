@@ -7,7 +7,12 @@ export default function AuthNav() {
     <div className="flex items-center justify-end gap-2">
       <Show when="signed-out">
         <SignInButton mode="modal">
-          <button type="button">Sign in</button>
+          <button
+            className="min-h-[40px] rounded-lg border border-line bg-card px-[13px] text-sm font-bold text-ink transition-colors hover:bg-ink/5"
+            type="button"
+          >
+            Sign in
+          </button>
         </SignInButton>
         <SignUpButton mode="modal">
           <button className="min-h-[40px] rounded-lg border-0 bg-[#ef6f5e] px-[13px] font-black text-[#190b09]" type="button">Sign up</button>

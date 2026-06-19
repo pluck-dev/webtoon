@@ -20,7 +20,12 @@ export default async function AdminPage() {
         <div className="flex flex-wrap gap-2">
           {user ? <UserButton /> : (
             <SignInButton mode="modal">
-              <button type="button">Sign in</button>
+              <button
+                className="min-h-[40px] rounded-lg border border-[#34404a] bg-[#141a20] px-[13px] text-sm font-bold text-[#f5f0e8]"
+                type="button"
+              >
+                Sign in
+              </button>
             </SignInButton>
           )}
         </div>

@@ -41,11 +41,20 @@ export default function AdminImageGenerator() {
     <div className="mt-3 grid gap-3">
       <label className="grid gap-[7px] font-extrabold text-[#d9e0dd]">
         파일 슬러그
-        <input value={slug} onChange={(event) => setSlug(event.target.value)} />
+        <input
+          className="w-full rounded-lg border border-[#34404a] bg-[#11161c] px-3 py-2.5 text-[#f5f0e8]"
+          value={slug}
+          onChange={(event) => setSlug(event.target.value)}
+        />
       </label>
       <label className="grid gap-[7px] font-extrabold text-[#d9e0dd]">
         이미지 프롬프트
-        <textarea rows={9} value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        <textarea
+          className="w-full resize-y rounded-lg border border-[#34404a] bg-[#11161c] px-3 py-2.5 leading-relaxed text-[#f5f0e8]"
+          rows={9}
+          value={prompt}
+          onChange={(event) => setPrompt(event.target.value)}
+        />
       </label>
       <button
         className="min-h-[40px] rounded-lg border-0 bg-[#ef6f5e] px-[13px] font-black text-[#190b09] disabled:cursor-not-allowed disabled:opacity-55"
