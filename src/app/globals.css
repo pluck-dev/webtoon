@@ -1582,6 +1582,137 @@ label {
   font-weight: 900;
 }
 
+/* === 녹음 UX 상태 === */
+.dialogue-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px 0;
+}
+
+.dialogue-tab {
+  border: 1px solid rgba(255, 250, 240, .28);
+  background: transparent;
+  color: #fffaf0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.dialogue-tab.active {
+  background: #f0bd62;
+  border-color: #f0bd62;
+  color: #171512;
+}
+
+.dialogue-tab.done {
+  border-color: #6fcf97;
+  color: #6fcf97;
+}
+
+.dialogue-tab.active.done {
+  background: #6fcf97;
+  border-color: #6fcf97;
+  color: #171512;
+}
+
+.current-line.empty p {
+  font-size: 20px;
+  color: #d8cfc0;
+  font-weight: 700;
+}
+
+.mic-blocked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 0;
+  padding: 12px 14px;
+  border: 1px solid #ef6f5e;
+  border-radius: 8px;
+  background: rgba(239, 111, 94, .14);
+  color: #ffd9d2;
+  line-height: 1.5;
+}
+
+.mic-blocked button {
+  margin-left: auto;
+  border: 1px solid #ef6f5e;
+  background: #ef6f5e;
+  color: #171512;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 800;
+}
+
+.take-record.recording {
+  background: #ef6f5e;
+  border-color: #ef6f5e;
+  color: #fff;
+  animation: take-pulse 1s ease-in-out infinite;
+}
+
+@keyframes take-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 111, 94, .55); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 111, 94, 0); }
+}
+
+.take-state {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 0;
+  font-weight: 800;
+}
+
+.take-state.saving { color: #f0bd62; }
+.take-state.ok { color: #6fcf97; }
+.take-state.error { color: #ef6f5e; }
+
+.take-state.error button {
+  border: 1px solid #ef6f5e;
+  background: transparent;
+  color: #ef6f5e;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-weight: 800;
+}
+
+.take-loading {
+  margin: 0;
+  padding: 10px 12px 0;
+  color: #675f54;
+  font-weight: 700;
+}
+
+.take-badge.rec { color: #ef6f5e; }
+.take-badge.saving { color: #c79a3a; }
+.take-badge.error { color: #ef6f5e; }
+.take-badge.ok { color: #2f9e6b; }
+
+/* 영상 패널 다운로드 링크를 버튼처럼 보이게 */
+.take-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #171512;
+  border-radius: 6px;
+  background: #fffcf5;
+  color: #171512;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.take-actions a.disabled-link {
+  pointer-events: none;
+  opacity: .45;
+}
+
 .preview-panel p,
 .video-panel p {
   margin: 0;

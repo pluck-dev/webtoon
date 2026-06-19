@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getRequiredDbUser } from '@/lib/clerk-user';
 import { generateWebtoonImage } from '@/lib/imagegen';
+import { BUCKET_IMAGES, uploadToBucket } from '@/lib/supabase';
 
 const schema = z.object({
   prompt: z.string().min(20),
@@ -26,19 +28,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const generatedDir = path.join(process.cwd(), 'public', 'generated');
-  await fs.mkdir(generatedDir, { recursive: true });
-
+  // 이미지 생성기는 디스크 경로로 출력하므로 임시 디렉터리에 먼저 쓴 뒤 Storage로 업로드한다
   const fileName = `${parsed.data.slug}-${Date.now()}.png`;
-  const outputPath = path.join(generatedDir, fileName);
-  await generateWebtoonImage({
-    prompt: parsed.data.prompt,
-    outputPath,
-    referenceImages: parsed.data.referenceImages
-  });
+  const tmpPath = path.join(os.tmpdir(), fileName);
 
-  return NextResponse.json({
-    imageUrl: `/generated/${fileName}`,
-    fileName
-  });
+  try {
+    await generateWebtoonImage({
+      prompt: parsed.data.prompt,
+      outputPath: tmpPath,
+      referenceImages: parsed.data.referenceImages
+    });
+
+    const buffer = await fs.readFile(tmpPath);
+    const { publicUrl, storageKey } = await uploadToBucket({
+      bucket: BUCKET_IMAGES,
+      key: `${parsed.data.slug}/${fileName}`,
+      body: buffer,
+      contentType: 'image/png'
+    });
+
+    return NextResponse.json({ imageUrl: publicUrl, fileName, storageKey });
+  } finally {
+    // 임시 파일 정리 (실패해도 무시)
+    await fs.unlink(tmpPath).catch(() => {});
+  }
 }

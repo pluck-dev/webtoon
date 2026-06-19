@@ -1,9 +1,8 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { NextResponse } from 'next/server';
 
 import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
+import { BUCKET_RECORDINGS, uploadToBucket } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   const user = await getRequiredDbUser();
@@ -29,14 +28,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Performance not found' }, { status: 404 });
   }
 
-  const dir = path.join(process.cwd(), 'public', 'recordings');
-  await fs.mkdir(dir, { recursive: true });
-  const fileName = `${performanceId}-${dialogueId}-${Date.now()}.webm`;
-  const filePath = path.join(dir, fileName);
-  await fs.writeFile(filePath, Buffer.from(await audio.arrayBuffer()));
-
   const takeNumber = await prisma.recording.count({
     where: { performanceId, dialogueId, userId: user.id }
+  });
+
+  // 녹음 음성을 비공개 Supabase Storage 버킷에 업로드한다.
+  // 버킷이 private이므로 공개 URL은 저장하지 않고, storageKey(경로)만 저장한다.
+  // 실제 재생 URL은 조회 시 본인 확인 후 서명 URL로 발급한다.
+  const fileName = `${performanceId}-${dialogueId}-${Date.now()}.webm`;
+  const { storageKey } = await uploadToBucket({
+    bucket: BUCKET_RECORDINGS,
+    key: `${performanceId}/${fileName}`,
+    body: await audio.arrayBuffer(),
+    contentType: audio.type || 'audio/webm'
   });
 
   const recording = await prisma.recording.create({
@@ -45,8 +49,9 @@ export async function POST(request: Request) {
       dialogueId,
       userId: user.id,
       durationMs,
-      audioUrl: `/recordings/${fileName}`,
-      storageKey: fileName,
+      // audioUrl에는 직접 재생 가능한 URL 대신 storage 경로를 보관한다
+      audioUrl: storageKey,
+      storageKey,
       takeNumber: takeNumber + 1
     }
   });

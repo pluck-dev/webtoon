@@ -3,6 +3,17 @@ import { z } from 'zod';
 
 import { getRequiredDbUser } from '@/lib/clerk-user';
 import { prisma } from '@/lib/prisma';
+import { BUCKET_RECORDINGS, createSignedUrl } from '@/lib/supabase';
+
+// 비공개 녹음의 storageKey를 임시 재생용 서명 URL로 바꾼다 (본인 확인은 호출 측 쿼리에서 보장)
+async function withSignedAudio<T extends { storageKey: string; audioUrl: string }>(recordings: T[]) {
+  return Promise.all(
+    recordings.map(async (recording) => ({
+      ...recording,
+      audioUrl: await createSignedUrl(BUCKET_RECORDINGS, recording.storageKey)
+    }))
+  );
+}
 
 const schema = z.object({
   episodeId: z.string().min(1)
@@ -39,7 +50,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     performance,
-    recordings: Array.from(latestByDialogue.values())
+    recordings: await withSignedAudio(Array.from(latestByDialogue.values()))
   });
 }
 

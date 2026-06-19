@@ -33,6 +33,9 @@ type RecordingState = {
   url: string;
   durationMs: number;
   saved: boolean;
+  saving?: boolean;
+  error?: boolean;
+  blob?: Blob;
 };
 
 type SessionState = {
@@ -49,6 +52,12 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const [status, setStatus] = useState('헤더에서 로그인하면 녹음이 계정에 저장됩니다.');
   const [previewing, setPreviewing] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const [activeDialogueId, setActiveDialogueId] = useState('');
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [micBlocked, setMicBlocked] = useState(false);
+  const [loadingRecordings, setLoadingRecordings] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -58,9 +67,13 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const previewAudio = useRef<HTMLAudioElement | null>(null);
   const sessionRef = useRef<SessionState | null>(null);
   const cutRefs = useRef<(HTMLElement | null)[]>([]);
+  const elapsedTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeCutData = episode.cuts[activeCut];
-  const activeDialogue = activeCutData?.dialogues[0];
+  // 컷에 대사가 여러 개여도 선택된 대사를 녹음 대상으로 삼는다 (기본: 컷 첫 대사)
+  const activeDialogue =
+    activeCutData?.dialogues.find((dialogue) => dialogue.id === activeDialogueId) ??
+    activeCutData?.dialogues[0];
   const allDialogues = useMemo(() => episode.cuts.flatMap((cut) => cut.dialogues), [episode.cuts]);
   const recordedCount = allDialogues.filter((dialogue) => recordings[dialogue.id]?.saved).length;
   const allRecorded = recordedCount === allDialogues.length && allDialogues.length > 0;
@@ -69,38 +82,44 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const nextCutIndex = Math.min(activeCut + 1, episode.cuts.length - 1);
 
   const loadPerformance = useCallback(async () => {
-    const response = await fetch(`/api/performances?episodeId=${episode.id}`);
-    if (response.status === 401) {
-      setStatus('저장된 녹음을 불러오려면 로그인하세요.');
-      return;
-    }
+    setLoadingRecordings(true);
+    try {
+      const response = await fetch(`/api/performances?episodeId=${episode.id}`);
+      if (response.status === 401) {
+        setStatus('저장된 녹음을 불러오려면 로그인하세요.');
+        return;
+      }
 
-    const body = await response.json().catch(() => null);
-    if (!response.ok) {
-      setStatus('저장된 녹음 버전을 불러오지 못했습니다.');
-      return;
-    }
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        setStatus('저장된 녹음 버전을 불러오지 못했습니다.');
+        return;
+      }
 
-    if (!body?.performance) {
-      setStatus('준비 완료. 첫 컷부터 녹음해보세요.');
-      return;
-    }
+      if (!body?.performance) {
+        setStatus('준비 완료. 첫 컷부터 녹음해보세요.');
+        return;
+      }
 
-    sessionRef.current = {
-      performanceId: body.performance.id,
-      userId: body.performance.userId
-    };
-
-    const restored: Record<string, RecordingState> = {};
-    for (const recording of body.recordings ?? []) {
-      restored[recording.dialogueId] = {
-        url: recording.audioUrl,
-        durationMs: recording.durationMs,
-        saved: true
+      sessionRef.current = {
+        performanceId: body.performance.id,
+        userId: body.performance.userId
       };
+
+      const restored: Record<string, RecordingState> = {};
+      for (const recording of body.recordings ?? []) {
+        restored[recording.dialogueId] = {
+          url: recording.audioUrl,
+          durationMs: recording.durationMs,
+          saved: true
+        };
+      }
+      setRecordings(restored);
+      const count = Object.keys(restored).length;
+      setStatus(count > 0 ? `저장된 녹음 ${count}개를 불러왔습니다.` : '준비 완료. 첫 컷부터 녹음해보세요.');
+    } finally {
+      setLoadingRecordings(false);
     }
-    setRecordings(restored);
-    setStatus(`저장된 녹음 ${Object.keys(restored).length}개를 불러왔습니다.`);
   }, [episode.id]);
 
   useEffect(() => {
@@ -126,6 +145,11 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       block: 'nearest'
     });
   }, [activeCut, previewing]);
+
+  // 언마운트 시 경과 타이머 정리
+  useEffect(() => () => {
+    if (elapsedTimer.current) clearInterval(elapsedTimer.current);
+  }, []);
 
   async function ensurePerformance() {
     if (sessionRef.current) return sessionRef.current;
@@ -153,9 +177,32 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     return nextSession;
   }
 
+  function startElapsedTimer() {
+    startedAt.current = performance.now();
+    setElapsedMs(0);
+    if (elapsedTimer.current) clearInterval(elapsedTimer.current);
+    elapsedTimer.current = setInterval(() => {
+      setElapsedMs(performance.now() - startedAt.current);
+    }, 100);
+  }
+
+  function stopElapsedTimer() {
+    if (elapsedTimer.current) {
+      clearInterval(elapsedTimer.current);
+      elapsedTimer.current = null;
+    }
+    setElapsedMs(0);
+  }
+
   async function toggleRecording(dialogueId: string, cutIndex: number) {
+    // 같은 대사 녹음 중이면 정지
     if (recordingDialogue === dialogueId) {
       mediaRecorder.current?.stop();
+      return;
+    }
+    // 다른 대사를 녹음 중이면 동시 녹음을 막는다
+    if (recordingDialogue) {
+      setStatus('다른 대사를 녹음 중입니다. 먼저 정지한 뒤 시작하세요.');
       return;
     }
 
@@ -173,17 +220,20 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     try {
       setStatus('마이크 권한을 요청하는 중입니다.');
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicBlocked(false);
     } catch (error) {
       const message = error instanceof DOMException ? error.name : 'unknown';
+      setMicBlocked(true);
       setStatus(`마이크 권한이 차단됐습니다. 주소창 권한에서 마이크를 허용하세요. (${message})`);
       return;
     }
 
     chunks.current = [];
     activeStream.current = stream;
-    startedAt.current = performance.now();
     setActiveCut(cutIndex);
+    setActiveDialogueId(dialogueId);
     setRecordingDialogue(dialogueId);
+    startElapsedTimer();
     setStatus(`CUT ${cutIndex + 1} 녹음 중입니다. 끝나면 정지를 누르세요.`);
 
     const mimeType = getSupportedMimeType();
@@ -192,6 +242,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     } catch {
       cleanupRecording();
+      stopElapsedTimer();
       setRecordingDialogue('');
       setStatus('녹음 장치를 시작하지 못했습니다.');
       return;
@@ -203,6 +254,8 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     };
     recorder.onerror = () => {
       setStatus('녹음 중 오류가 났습니다. 다시 시도하세요.');
+      stopElapsedTimer();
+      setRecordingDialogue('');
       cleanupRecording();
     };
     recorder.onstop = async () => {
@@ -210,13 +263,16 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
       const blob = new Blob(chunks.current, { type: recorder.mimeType || 'audio/webm' });
       const url = URL.createObjectURL(blob);
 
-      setRecordings((current) => ({
-        ...current,
-        [dialogueId]: { url, durationMs, saved: false }
-      }));
-      setVideoReady(false);
+      stopElapsedTimer();
       setRecordingDialogue('');
       cleanupRecording();
+      // 즉시 로컬 재생 가능 상태 + 저장 중 표시
+      setRecordings((current) => ({
+        ...current,
+        [dialogueId]: { url, durationMs, saved: false, saving: true, error: false, blob }
+      }));
+      setVideoReady(false);
+      setVideoUrl(null);
       await uploadRecording(activeSession, dialogueId, blob, durationMs);
     };
     recorder.start();
@@ -235,20 +291,39 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     formData.append('durationMs', String(durationMs));
     formData.append('audio', blob, `${dialogueId}.webm`);
 
-    const response = await fetch('/api/recordings', {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) {
-      setStatus('브라우저에는 녹음됐지만 계정 저장에 실패했습니다.');
+    setStatus('녹음을 계정에 저장하는 중입니다...');
+    try {
+      const response = await fetch('/api/recordings', { method: 'POST', body: formData });
+      if (!response.ok) throw new Error('upload failed');
+      setRecordings((current) => ({
+        ...current,
+        [dialogueId]: { ...current[dialogueId], saved: true, saving: false, error: false }
+      }));
+      setStatus('녹음이 계정에 저장됐습니다.');
+    } catch {
+      // 로컬 녹음은 유지하고 저장 실패만 표시 → 재시도 가능
+      setRecordings((current) => ({
+        ...current,
+        [dialogueId]: { ...current[dialogueId], saved: false, saving: false, error: true }
+      }));
+      setStatus('계정 저장에 실패했습니다. 테이크의 "다시 저장"으로 재시도하세요.');
+    }
+  }
+
+  // 저장 실패한 테이크를 같은 blob으로 재업로드한다
+  async function retryUpload(dialogueId: string) {
+    const recording = recordings[dialogueId];
+    if (!recording?.blob) {
+      setStatus('재시도할 데이터가 없습니다. 다시 녹음해 주세요.');
       return;
     }
-
+    const activeSession = await ensurePerformance();
+    if (!activeSession) return;
     setRecordings((current) => ({
       ...current,
-      [dialogueId]: { ...current[dialogueId], saved: true }
+      [dialogueId]: { ...current[dialogueId], saving: true, error: false }
     }));
-    setStatus('녹음이 계정에 저장됐습니다.');
+    await uploadRecording(activeSession, dialogueId, recording.blob, recording.durationMs);
   }
 
   async function buildVideoJob() {
@@ -271,8 +346,41 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
     }
 
     setTimeline(body.timeline);
-    setVideoReady(true);
-    setStatus('영상 생성 준비가 끝났습니다. 전체 미리보기로 컷 전환과 싱크를 확인하세요.');
+    setVideoUrl(null);
+    setRendering(true);
+    setStatus('영상 생성 대기열에 등록됐습니다. 렌더가 끝나면 자동으로 표시됩니다.');
+
+    // 워커가 처리할 때까지 잡 상태를 폴링한다 (앱은 막히지 않음)
+    const jobId = body.job?.id as string | undefined;
+    if (!jobId) {
+      setRendering(false);
+      setVideoReady(true);
+      return;
+    }
+
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const poll = await fetch(`/api/render-jobs/${jobId}`);
+      if (!poll.ok) {
+        setRendering(false);
+        setStatus('영상 상태 확인에 실패했습니다.');
+        return;
+      }
+      const state = await poll.json();
+      if (state.status === 'DONE' && state.video?.url) {
+        setVideoUrl(state.video.url);
+        setVideoReady(true);
+        setRendering(false);
+        setStatus('영상 생성이 완료됐습니다.');
+        return;
+      }
+      if (state.status === 'FAILED') {
+        setRendering(false);
+        setStatus(`영상 생성 실패: ${state.error ?? '알 수 없는 오류'}`);
+        return;
+      }
+      setStatus(state.status === 'RUNNING' ? '영상을 렌더링하는 중입니다...' : '대기열에서 처리 대기 중입니다...');
+    }
   }
 
   function playSingle(dialogueId: string, cutIndex: number) {
@@ -377,30 +485,95 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           <div className="studio-panel-head">
             <div>
               <span>현재 녹음</span>
-              <h2>CUT {activeCutData?.order}. {activeDialogue?.characterName}</h2>
+              <h2>CUT {activeCutData?.order}. {activeDialogue?.characterName ?? '대사 없음'}</h2>
             </div>
             <strong>{recordedCount}/{allDialogues.length}</strong>
           </div>
-          <div className="current-line">
-            <p>{activeDialogue?.text}</p>
-            <small>{activeDialogue?.direction}</small>
-          </div>
+
+          {/* 한 컷에 대사가 여러 개면 녹음할 대사를 고른다 */}
+          {activeCutData && activeCutData.dialogues.length > 1 && (
+            <div className="dialogue-tabs">
+              {activeCutData.dialogues.map((dialogue, index) => (
+                <button
+                  key={dialogue.id}
+                  type="button"
+                  className={`dialogue-tab ${dialogue.id === activeDialogue?.id ? 'active' : ''} ${recordings[dialogue.id]?.saved ? 'done' : ''}`}
+                  onClick={() => setActiveDialogueId(dialogue.id)}
+                  disabled={Boolean(recordingDialogue)}
+                >
+                  대사 {index + 1}{recordings[dialogue.id]?.saved ? ' ✓' : ''}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeDialogue ? (
+            <div className="current-line">
+              <p>{activeDialogue.text}</p>
+              <small>{activeDialogue.direction}</small>
+            </div>
+          ) : (
+            <div className="current-line empty">
+              <p>이 컷에는 녹음할 대사가 없습니다.</p>
+              <small>다음 컷으로 이동해 녹음을 이어가세요.</small>
+            </div>
+          )}
+
+          {micBlocked && (
+            <div className="mic-blocked">
+              <span>마이크가 차단돼 있습니다. 주소창 권한에서 마이크를 허용한 뒤 다시 시도하세요.</span>
+              <button type="button" onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}>
+                다시 시도
+              </button>
+            </div>
+          )}
+
           <div className="take-actions">
             <button
-              className="primary take-record"
+              className={`primary take-record ${recordingDialogue === activeDialogue?.id ? 'recording' : ''}`}
               type="button"
               onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}
-              disabled={!isSignedIn || !activeDialogue}
+              disabled={
+                !isSignedIn ||
+                !activeDialogue ||
+                Boolean(activeRecording?.saving) ||
+                (Boolean(recordingDialogue) && recordingDialogue !== activeDialogue?.id)
+              }
             >
-              {recordingDialogue === activeDialogue?.id ? '녹음 정지' : activeRecording ? '다시 녹음' : '녹음 시작'}
+              {recordingDialogue === activeDialogue?.id
+                ? `■ 정지 ${formatClock(elapsedMs)}`
+                : activeRecording?.saving
+                  ? '저장 중...'
+                  : activeRecording
+                    ? '다시 녹음'
+                    : '녹음 시작'}
             </button>
-            <button type="button" disabled={!activeRecording} onClick={() => activeDialogue && playSingle(activeDialogue.id, activeCut)}>
+            <button
+              type="button"
+              disabled={!activeRecording?.url}
+              onClick={() => activeDialogue && playSingle(activeDialogue.id, activeCut)}
+            >
               내 녹음 듣기
             </button>
             <button type="button" onClick={() => setActiveCut(nextCutIndex)} disabled={activeCut === episode.cuts.length - 1}>
               다음 컷
             </button>
           </div>
+
+          {/* 현재 테이크 저장 상태 */}
+          {activeRecording?.saving && <p className="take-state saving">계정에 저장하는 중...</p>}
+          {activeRecording?.error && (
+            <p className="take-state error">
+              저장 실패
+              <button type="button" onClick={() => activeDialogue && retryUpload(activeDialogue.id)}>
+                다시 저장
+              </button>
+            </p>
+          )}
+          {activeRecording?.saved && (
+            <p className="take-state ok">저장됨 · {(activeRecording.durationMs / 1000).toFixed(1)}초</p>
+          )}
+
           <p className="studio-status">{status}</p>
           {!isSignedIn && <p className="studio-status warn">헤더의 로그인/회원가입 버튼을 누르면 Clerk 팝업이 열립니다.</p>}
         </section>
@@ -411,19 +584,41 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="cut-progress"><i style={{ width: `${progress}%` }} /></div>
+          {loadingRecordings && <p className="take-loading">저장된 녹음을 불러오는 중...</p>}
           <div className="take-list">
             {episode.cuts.map((cut, cutIndex) => cut.dialogues.map((dialogue) => {
               const recording = recordings[dialogue.id];
+              const isRec = recordingDialogue === dialogue.id;
+              let badge = '미녹음';
+              let badgeClass = '';
+              if (isRec) {
+                badge = '● 녹음 중';
+                badgeClass = 'rec';
+              } else if (recording?.saving) {
+                badge = '저장 중';
+                badgeClass = 'saving';
+              } else if (recording?.error) {
+                badge = '저장 실패';
+                badgeClass = 'error';
+              } else if (recording?.saved) {
+                badge = `${(recording.durationMs / 1000).toFixed(1)}초`;
+                badgeClass = 'ok';
+              } else if (recording?.url) {
+                badge = '로컬만';
+              }
               return (
                 <button
-                  className={`take-row ${cutIndex === activeCut ? 'active' : ''}`}
+                  className={`take-row ${dialogue.id === activeDialogue?.id ? 'active' : ''}`}
                   type="button"
-                  onClick={() => setActiveCut(cutIndex)}
+                  onClick={() => {
+                    setActiveCut(cutIndex);
+                    setActiveDialogueId(dialogue.id);
+                  }}
                   key={dialogue.id}
                 >
                   <span>CUT {cut.order}</span>
                   <strong>{dialogue.text}</strong>
-                  <small>{recording ? `${(recording.durationMs / 1000).toFixed(1)}초 저장됨` : '미녹음'}</small>
+                  <small className={`take-badge ${badgeClass}`}>{badge}</small>
                 </button>
               );
             }))}
@@ -453,19 +648,36 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
           </div>
           <p>컷 이미지, 말풍선, 녹음 파일을 묶어 1분 미만 쇼츠 영상으로 생성합니다.</p>
           <div className="video-preview-box">
-            <strong>{videoReady ? '영상 패키지가 준비됐습니다.' : `${allDialogues.length - recordedCount}개 컷 녹음이 남았습니다.`}</strong>
-            <span>{timeline ? '컷별 녹음 싱크와 전환 정보가 저장됐습니다.' : '녹음 완료 후 영상 생성 버튼을 누르세요.'}</span>
+            {videoUrl ? (
+              <video src={videoUrl} controls playsInline style={{ width: '100%', borderRadius: 12 }} />
+            ) : (
+              <>
+                <strong>
+                  {rendering
+                    ? '영상을 만드는 중입니다...'
+                    : videoReady
+                      ? '영상 패키지가 준비됐습니다.'
+                      : `${allDialogues.length - recordedCount}개 컷 녹음이 남았습니다.`}
+                </strong>
+                <span>{timeline ? '컷별 녹음 싱크와 전환 정보가 저장됐습니다.' : '녹음 완료 후 영상 생성 버튼을 누르세요.'}</span>
+              </>
+            )}
           </div>
           <div className="take-actions">
-            <button className="primary" type="button" onClick={buildVideoJob} disabled={!isSignedIn || !allRecorded}>
-              영상 생성
+            <button className="primary" type="button" onClick={buildVideoJob} disabled={!isSignedIn || !allRecorded || rendering}>
+              {rendering ? '생성 중...' : '영상 생성'}
             </button>
-            <button type="button" disabled={!videoReady}>
+            <button type="button" disabled={!videoUrl}>
               공유하기
             </button>
-            <button type="button" disabled={!videoReady}>
+            <a
+              className={videoUrl ? '' : 'disabled-link'}
+              href={videoUrl ?? undefined}
+              download={videoUrl ? `webtoon-${episode.id}.mp4` : undefined}
+              aria-disabled={!videoUrl}
+            >
               다운로드
-            </button>
+            </a>
           </div>
         </section>
 
@@ -489,4 +701,12 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
 function getSupportedMimeType() {
   const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
   return candidates.find((candidate) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(candidate));
+}
+
+// 경과 시간을 m:ss 로 표기
+function formatClock(ms: number) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
