@@ -17,7 +17,7 @@ export default async function MyPage() {
 
   return (
     <main className="market-shell">
-      <div className="mx-auto w-full max-w-[1240px]">
+      <div className="mx-auto w-full max-w-[1440px]">
         <SiteHeader />
 
         <section className="py-10">
