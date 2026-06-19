@@ -75,7 +75,7 @@ export default function PrivacyPage() {
           <h2>제5조 (이용자의 권리와 행사 방법)</h2>
           <ol>
             <li>이용자는 언제든지 자신의 개인정보를 조회·수정하거나 삭제, 처리정지를 요청할 수 있습니다.</li>
-            <li>권리 행사는 이메일(hello@pluck.co.kr)을 통해 요청할 수 있으며, 회사는 지체 없이 조치합니다.</li>
+            <li>권리 행사는 이메일(admin@pluck.co.kr)을 통해 요청할 수 있으며, 회사는 지체 없이 조치합니다.</li>
           </ol>
         </section>
 
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
           <p>회사는 개인정보 처리에 관한 업무를 총괄하는 개인정보 보호책임자를 다음과 같이 지정합니다.</p>
           <ul>
             <li>개인정보 보호책임자: 심재형</li>
-            <li>이메일: <a href="mailto:hello@pluck.co.kr">hello@pluck.co.kr</a></li>
+            <li>이메일: <a href="mailto:admin@pluck.co.kr">admin@pluck.co.kr</a></li>
           </ul>
         </section>
 
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
           <p>상호: 플럭 (Pluck)</p>
           <p>대표: 심재형</p>
           <p>사업자등록번호: 709-19-02368</p>
-          <p>이메일: <a href="mailto:hello@pluck.co.kr">hello@pluck.co.kr</a></p>
+          <p>이메일: <a href="mailto:admin@pluck.co.kr">admin@pluck.co.kr</a></p>
         </section>
 
         <p className="legal-back">

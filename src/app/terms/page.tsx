@@ -106,7 +106,7 @@ export default function TermsPage() {
           <p>상호: 플럭 (Pluck)</p>
           <p>대표: 심재형</p>
           <p>사업자등록번호: 709-19-02368</p>
-          <p>이메일: <a href="mailto:hello@pluck.co.kr">hello@pluck.co.kr</a></p>
+          <p>이메일: <a href="mailto:admin@pluck.co.kr">admin@pluck.co.kr</a></p>
         </section>
 
         <p className="legal-back">
