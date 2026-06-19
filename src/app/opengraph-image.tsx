@@ -1,5 +1,8 @@
 import { ImageResponse } from 'next/og';
 
+// 빌드 시 정적 프리렌더하지 않고 요청 시 생성한다(폰트 fetch가 빌드 프리렌더에서 실패하므로).
+export const dynamic = 'force-dynamic';
+
 // 홈 링크 공유 시(카톡 등) 뜨는 브랜드 OG 카드
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
