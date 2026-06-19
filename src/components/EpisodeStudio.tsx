@@ -444,10 +444,10 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
   }
 
   return (
-    <section className="grid gap-4 [grid-template-columns:minmax(320px,390px)_minmax(0,1fr)]">
+    <section className="grid gap-4 lg:[grid-template-columns:minmax(360px,440px)_minmax(0,1fr)]">
 
-      {/* ── 왼쪽: 폰 목업 (dark device frame – 라이트 오버라이드 대상 아님) ── */}
-      <aside className="sticky top-[84px] h-[calc(100vh-112px)] min-h-[620px] overflow-hidden border border-[#3a4650] rounded-[28px] bg-[#080b0d] shadow-[0_24px_70px_rgba(0,0,0,.42)]">
+      {/* ── 폰 목업 미리보기 (모바일에선 녹음 패널 아래로) ── */}
+      <aside className="order-2 h-[56vh] min-h-[420px] overflow-hidden rounded-[28px] border border-[#3a4650] bg-[#080b0d] shadow-[0_24px_70px_rgba(0,0,0,.42)] lg:order-1 lg:sticky lg:top-[76px] lg:h-[calc(100vh-100px)] lg:min-h-[620px]">
 
         {/* phone-head */}
         <div className="relative z-[2] flex items-center justify-between min-h-[56px] px-4 border-b border-[#252d35] bg-[rgba(8,11,13,.94)] backdrop-blur-[12px] text-[#f0bd62] text-xs font-black">
@@ -506,8 +506,8 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
         </div>
       </aside>
 
-      {/* ── 오른쪽: 패널 스택 (라이트 테마 베이크인) ── */}
-      <div className="grid content-start gap-3">
+      {/* ── 녹음 패널 스택 (모바일에선 최상단으로) ── */}
+      <div className="order-1 grid content-start gap-3 lg:order-2">
 
         {/* current-take: dark ink 패널 */}
         <section className="overflow-hidden border border-line rounded-lg bg-ink text-[#fffaf0]">

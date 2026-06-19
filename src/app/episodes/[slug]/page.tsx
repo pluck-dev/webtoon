@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
-import SiteHeader from '@/components/SiteHeader';
+import AuthNav from '@/components/AuthNav';
 import EpisodeStudio from '@/components/EpisodeStudio';
 
 export const dynamic = 'force-dynamic';
@@ -60,7 +61,23 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="market-shell">
-      <SiteHeader />
+      {/* 녹음 집중용 미니멀 스튜디오 바 */}
+      <header className="sticky top-0 z-20 border-b border-line bg-cream/85 backdrop-blur-md">
+        <div className="mx-auto flex min-h-[56px] w-full max-w-[1760px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+          <Link
+            href="/"
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-extrabold text-ink-soft transition-colors hover:text-ink"
+          >
+            <span aria-hidden="true">←</span>
+            <span className="hidden sm:inline">에피소드 목록</span>
+            <span className="sm:hidden">목록</span>
+          </Link>
+          <strong className="min-w-0 flex-1 truncate text-center text-sm font-black text-ink sm:text-base">
+            {episode.title}
+          </strong>
+          <AuthNav />
+        </div>
+      </header>
 
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
       <section
