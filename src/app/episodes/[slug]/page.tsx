@@ -33,7 +33,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
     <main className="market-shell">
       <SiteHeader />
 
-      <div className="mx-auto w-full max-w-[1440px]">
+      <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
       <section
         className="mt-[18px] rounded-lg border border-line bg-card p-[14px]"
         id="studio"

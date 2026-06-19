@@ -121,7 +121,6 @@ button:disabled {
     radial-gradient(90% 60% at 0% 8%, rgba(92, 200, 186, .1), transparent 46%),
     #f3f0e8;
   color: #171512;
-  padding: 18px;
 }
 
 /* ── Clerk 인증 모달 테마 (appearance 프로퍼티로 연결) ── */
