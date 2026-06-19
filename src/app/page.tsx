@@ -24,14 +24,6 @@ const marqueeImages = [
   '/generated/last-delivery-04.png'
 ];
 
-// 슬러그별 장르 태그 (카드 오버레이용)
-const episodeTags: Record<string, string[]> = {
-  'ex-interviewer': ['Romance', 'Office'],
-  'borrowed-tomorrow': ['Mystery', 'Youth'],
-  'moonlit-audit': ['Thriller', 'Noir'],
-  'last-delivery': ['Thriller', 'Rain']
-};
-
 const kicker = 'mb-2.5 text-xs font-black uppercase tracking-wider text-muted';
 
 export default async function Home() {
@@ -64,7 +56,8 @@ export default async function Home() {
     maxSeconds: episode.maxSeconds,
     cutCount: episode._count.cuts,
     versionCount: episode._count.performances,
-    tags: episodeTags[episode.slug] ?? ['Drama']
+    format: episode.format,
+    category: episode.category
   }));
 
   // 최신 에피소드를 Featured로 사용

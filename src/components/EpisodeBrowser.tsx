@@ -4,6 +4,15 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  FORMAT_LABELS,
+  FORMAT_ORDER,
+  type EpisodeCategory,
+  type EpisodeFormat
+} from '@/lib/taxonomy';
+
 export type BrowserEpisode = {
   id: string;
   slug: string;
@@ -13,67 +22,132 @@ export type BrowserEpisode = {
   maxSeconds: number;
   cutCount: number;
   versionCount: number;
-  tags: string[];
+  format: EpisodeFormat;
+  category: EpisodeCategory;
 };
 
 export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[] }) {
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    episodes.forEach((episode) => episode.tags.forEach((tag) => set.add(tag)));
-    return ['All', ...Array.from(set)];
+  const [format, setFormat] = useState<EpisodeFormat>('SHORT');
+  const [category, setCategory] = useState<EpisodeCategory | 'ALL'>('ALL');
+
+  // 대분류(format)별 개수
+  const formatCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    episodes.forEach((episode) => {
+      map[episode.format] = (map[episode.format] ?? 0) + 1;
+    });
+    return map;
   }, [episodes]);
 
-  const [active, setActive] = useState('All');
+  // 현재 대분류에 속한 에피소드
+  const inFormat = useMemo(
+    () => episodes.filter((episode) => episode.format === format),
+    [episodes, format]
+  );
+
+  // 현재 대분류 안에서 화풍별 개수 (필터 칩 카운트)
+  const categoryCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    inFormat.forEach((episode) => {
+      map[episode.category] = (map[episode.category] ?? 0) + 1;
+    });
+    return map;
+  }, [inFormat]);
 
   const filtered = useMemo(
-    () => (active === 'All' ? episodes : episodes.filter((episode) => episode.tags.includes(active))),
-    [active, episodes]
+    () => (category === 'ALL' ? inFormat : inFormat.filter((episode) => episode.category === category)),
+    [inFormat, category]
   );
 
   return (
     <>
-      {/* 카테고리 필터 */}
-      <section className="flex gap-2 overflow-x-auto py-3 pb-6" aria-label="Episode categories">
-        {categories.map((category) => {
-          const isActive = category === active;
+      {/* 대분류 탭: 숏츠 / 시리즈 */}
+      <section id="collection" className="mt-10 flex gap-2 border-b border-line" aria-label="콘텐츠 대분류">
+        {FORMAT_ORDER.map((key) => {
+          const isActive = key === format;
           return (
             <button
               type="button"
-              key={category}
+              key={key}
               aria-pressed={isActive}
-              onClick={() => setActive(category)}
-              className={`min-h-[38px] shrink-0 rounded-full border px-3.5 text-[13px] font-extrabold transition-colors ${
-                isActive ? 'border-ink bg-ink text-paper' : 'border-line bg-card/70 text-ink hover:bg-ink/5'
+              onClick={() => {
+                setFormat(key);
+                setCategory('ALL');
+              }}
+              className={`-mb-px border-b-2 px-4 pb-3 pt-1 text-lg font-black transition-colors ${
+                isActive ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-ink'
               }`}
             >
-              {category}
+              {FORMAT_LABELS[key]}
+              <span className="ml-1.5 text-sm font-extrabold text-muted">{formatCounts[key] ?? 0}</span>
             </button>
           );
         })}
       </section>
 
-      {/* 컬렉션 헤딩 */}
-      <section id="collection" className="mb-3.5 mt-9 flex items-end justify-between gap-5">
-        <div>
-          <p className="mb-2.5 text-xs font-black uppercase tracking-wider text-muted">Episode collection</p>
-          <h2 className="max-w-3xl text-[clamp(28px,4vw,54px)] font-black leading-none text-ink">
-            Pick a webtoon and perform it your way
-          </h2>
-        </div>
-        <span className="shrink-0 font-black text-muted">{filtered.length} shown</span>
+      {/* 화풍 필터: 전체 / 웹툰체 / 상황극 / 애니메이션 */}
+      <section className="flex gap-2 overflow-x-auto py-5" aria-label="화풍 필터">
+        {(['ALL', ...CATEGORY_ORDER] as const).map((key) => {
+          const isActive = key === category;
+          const label = key === 'ALL' ? '전체' : CATEGORY_LABELS[key];
+          const count = key === 'ALL' ? inFormat.length : (categoryCounts[key] ?? 0);
+          return (
+            <button
+              type="button"
+              key={key}
+              aria-pressed={isActive}
+              onClick={() => setCategory(key)}
+              className={`min-h-[38px] shrink-0 rounded-full border px-4 text-[13px] font-extrabold transition-colors ${
+                isActive ? 'border-ink bg-ink text-paper' : 'border-line bg-card/70 text-ink hover:bg-ink/5'
+              }`}
+            >
+              {label}
+              <span className={`ml-1.5 ${isActive ? 'text-paper/60' : 'text-faint'}`}>{count}</span>
+            </button>
+          );
+        })}
       </section>
 
-      {/* 그리드 */}
+      {/* 헤딩 */}
+      <section className="mb-3.5 flex items-end justify-between gap-5">
+        <div>
+          <p className="mb-2.5 text-xs font-black uppercase tracking-wider text-muted">
+            {FORMAT_LABELS[format]} 컬렉션
+          </p>
+          <h2 className="max-w-3xl text-[clamp(28px,4vw,54px)] font-black leading-none text-ink">
+            짧은 상황, 당신의 목소리로 연기하세요
+          </h2>
+        </div>
+        <span className="shrink-0 font-black text-muted">{filtered.length}편</span>
+      </section>
+
+      {/* 그리드 / 빈 상태 */}
       {filtered.length === 0 ? (
         <div className="grid place-items-center rounded-2xl border border-dashed border-line bg-card py-16 text-center">
-          <p className="text-lg font-black text-ink">해당 카테고리의 에피소드가 아직 없어요.</p>
-          <button
-            type="button"
-            onClick={() => setActive('All')}
-            className="mt-4 inline-flex min-h-10 items-center rounded-full border border-ink px-4 text-sm font-black text-ink transition-colors hover:bg-ink/5"
-          >
-            전체 보기
-          </button>
+          {format === 'SERIES' ? (
+            <>
+              <p className="text-lg font-black text-ink">시리즈물은 곧 공개됩니다.</p>
+              <p className="mt-1.5 text-muted">지금은 숏츠 단편을 즐겨보세요.</p>
+              <button
+                type="button"
+                onClick={() => setFormat('SHORT')}
+                className="mt-4 inline-flex min-h-10 items-center rounded-full border border-ink px-4 text-sm font-black text-ink transition-colors hover:bg-ink/5"
+              >
+                숏츠 보러가기
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-black text-ink">이 화풍의 에피소드가 아직 없어요.</p>
+              <button
+                type="button"
+                onClick={() => setCategory('ALL')}
+                className="mt-4 inline-flex min-h-10 items-center rounded-full border border-ink px-4 text-sm font-black text-ink transition-colors hover:bg-ink/5"
+              >
+                전체 보기
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -93,33 +167,28 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="absolute bottom-2.5 left-2.5 rounded-full bg-ink/85 px-2.5 py-1.5 text-xs font-black text-paper backdrop-blur">
-                  {episode.maxSeconds}s shorts
+                  {episode.maxSeconds}s
                 </span>
                 <div className="absolute inset-0 flex items-end bg-gradient-to-b from-transparent via-transparent to-ink/80 p-3.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <span className="translate-y-2 text-sm font-black text-gold transition-transform duration-300 group-hover:translate-y-0">
-                    Record your version →
+                    내 목소리로 연기하기 →
                   </span>
                 </div>
               </div>
               <div className="grid gap-3 p-4">
                 <div className="flex flex-wrap gap-1.5">
-                  {episode.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-line-soft bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-muted"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  <span className="rounded-full border border-line-soft bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-muted">
+                    {CATEGORY_LABELS[episode.category]}
+                  </span>
                 </div>
                 <div className="flex items-start justify-between gap-3.5">
                   <h3 className="text-[22px] leading-tight text-ink">{episode.title}</h3>
-                  <p className="whitespace-nowrap text-xs font-black text-faint">{episode.cutCount} cuts</p>
+                  <p className="whitespace-nowrap text-xs font-black text-faint">{episode.cutCount}컷</p>
                 </div>
                 <p className="leading-snug text-ink-soft">{episode.logline}</p>
                 <div className="flex justify-between gap-2.5 border-t border-line-soft pt-3 text-xs font-black text-muted">
-                  <span>{episode.versionCount} versions</span>
-                  <span className="text-coral">Open ↗</span>
+                  <span>{episode.versionCount}개 버전</span>
+                  <span className="text-coral">열기 ↗</span>
                 </div>
               </div>
             </Link>
