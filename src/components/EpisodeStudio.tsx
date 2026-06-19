@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Episode = {
@@ -45,6 +45,7 @@ type SessionState = {
 
 export default function EpisodeStudio({ episode }: { episode: Episode }) {
   const { isSignedIn, user } = useUser();
+  const { openSignIn } = useClerk();
   const [activeCut, setActiveCut] = useState(0);
   const [recordingDialogue, setRecordingDialogue] = useState('');
   const [recordings, setRecordings] = useState<Record<string, RecordingState>>({});
@@ -515,9 +516,15 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
             </button>
             <button
               type="button"
-              onClick={() => activeDialogue && toggleRecording(activeDialogue.id, activeCut)}
+              onClick={() => {
+                // 로그인 안 됐으면 막지 말고 로그인 팝업으로 유도
+                if (!isSignedIn) {
+                  openSignIn();
+                  return;
+                }
+                if (activeDialogue) toggleRecording(activeDialogue.id, activeCut);
+              }}
               disabled={
-                !isSignedIn ||
                 !activeDialogue ||
                 Boolean(activeRecording?.saving) ||
                 (Boolean(recordingDialogue) && !isRecordingActive)
@@ -526,7 +533,7 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
                 'grid h-[60px] w-[60px] shrink-0 place-items-center rounded-full text-2xl font-black shadow-lg transition-transform active:scale-95 disabled:opacity-45 ' +
                 (isRecordingActive ? 'animate-soft-pulse bg-coral text-white' : 'bg-gold text-ink')
               }
-              aria-label={isRecordingActive ? '녹음 정지' : '녹음 시작'}
+              aria-label={isRecordingActive ? '녹음 정지' : isSignedIn ? '녹음 시작' : '로그인하고 녹음'}
             >
               {isRecordingActive ? '■' : activeRecording?.saving ? '⋯' : activeRecording ? '↺' : '●'}
             </button>
@@ -555,7 +562,9 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
               {isRecordingActive ? (
                 <span className="text-coral">● 녹음 중 {formatClock(elapsedMs)}</span>
               ) : !isSignedIn ? (
-                <span className="text-gold">로그인 후 저장</span>
+                <button type="button" onClick={() => openSignIn()} className="text-gold underline underline-offset-2">
+                  로그인하고 저장하기
+                </button>
               ) : activeRecording?.saving ? (
                 <span className="text-gold">저장 중…</span>
               ) : activeRecording?.error ? (
@@ -703,10 +712,10 @@ export default function EpisodeStudio({ episode }: { episode: Episode }) {
             <button
               className="min-h-[40px] border-0 rounded-lg bg-ink text-[#fffaf0] font-black px-[13px]"
               type="button"
-              onClick={buildVideoJob}
-              disabled={!isSignedIn || !allRecorded || rendering}
+              onClick={() => (isSignedIn ? buildVideoJob() : openSignIn())}
+              disabled={(isSignedIn && !allRecorded) || rendering}
             >
-              {rendering ? '생성 중...' : '영상 생성'}
+              {rendering ? '생성 중...' : isSignedIn ? '영상 생성' : '로그인하고 영상 만들기'}
             </button>
             <button
               type="button"
