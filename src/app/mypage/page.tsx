@@ -17,8 +17,8 @@ export default async function MyPage() {
 
   return (
     <main className="market-shell">
+      <SiteHeader />
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
-        <SiteHeader />
 
         <section className="py-10">
         <h1 className="text-3xl font-black text-ink">마이페이지</h1>

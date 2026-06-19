@@ -85,8 +85,8 @@ export default async function Home() {
 
   return (
     <main className="market-shell">
-      <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
       <SiteHeader />
+      <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
 
       {/* 히어로 */}
       <section className="pb-7 pt-14 md:pt-20">

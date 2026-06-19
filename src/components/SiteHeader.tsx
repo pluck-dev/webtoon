@@ -20,6 +20,7 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-cream/85 backdrop-blur-md">
+      <div className="mx-auto w-full max-w-[1760px] px-4 sm:px-6 lg:px-10">
       <div className="flex min-h-16 items-center justify-between gap-4">
         <Link href="/" className="inline-flex items-center gap-2.5 text-xl font-black text-ink">
           <span className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-ink text-base font-black text-gold">
@@ -97,6 +98,7 @@ export default function SiteHeader() {
           )}
         </nav>
       )}
+      </div>
     </header>
   );
 }

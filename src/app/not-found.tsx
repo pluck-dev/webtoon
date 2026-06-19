@@ -5,8 +5,8 @@ import SiteHeader from '@/components/SiteHeader';
 export default function NotFound() {
   return (
     <main className="market-shell">
+      <SiteHeader />
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
-        <SiteHeader />
 
         <section className="grid min-h-[60vh] place-items-center py-16 text-center">
           <div className="max-w-md">

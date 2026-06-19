@@ -10,8 +10,8 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="market-shell">
+      <SiteHeader />
       <div className="mx-auto w-full max-w-[1760px] px-4 py-4 sm:px-6 lg:px-10">
-        <SiteHeader />
 
         <article className="legal-article">
         <p className="legal-eyebrow">Legal</p>
