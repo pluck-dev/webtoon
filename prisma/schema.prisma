@@ -21,7 +21,13 @@ enum EpisodeStatus {
   ARCHIVED
 }
 
-// 카테고리 = 화풍 + 시나리오 톤 (실제 모션 아님, 애니메이션은 애니 화풍)
+// 대분류(구성) — 숏츠(완결 단편) / 시리즈(작품→회차). 콘텐츠 확장의 최상위 축.
+enum EpisodeFormat {
+  SHORT
+  SERIES
+}
+
+// 화풍(중분류) — 웹툰체 / 상황극 / 애니메이션. 그림 스타일 축. (format과 독립)
 enum EpisodeCategory {
   WEBTOON
   ROLEPLAY
@@ -62,6 +68,7 @@ model Episode {
   title        String
   logline      String
   status       EpisodeStatus   @default(DRAFT)
+  format       EpisodeFormat   @default(SHORT)
   category     EpisodeCategory @default(WEBTOON)
   maxSeconds   Int             @default(60)
   thumbnailUrl String?
