@@ -1,13 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from 'next/link';
 
+import EpisodeBrowser from '@/components/EpisodeBrowser';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
-
-const categories = ['All', 'Romance', 'Office', 'Revenge', 'Horror', 'Comedy', 'Open Casting'];
 
 // 자동 스크롤 인스피레이션 보드용 정적 컷 이미지
 const marqueeImages = [
@@ -42,6 +41,11 @@ export default async function Home() {
     include: {
       _count: {
         select: { cuts: true, performances: true }
+      },
+      cuts: {
+        take: 3,
+        orderBy: { order: 'asc' },
+        select: { imageUrl: true }
       }
     }
   });
@@ -49,6 +53,28 @@ export default async function Home() {
   const totalCuts = episodes.reduce((sum, episode) => sum + episode._count.cuts, 0);
   const totalVersions = episodes.reduce((sum, episode) => sum + episode._count.performances, 0);
   const marqueeLoop = [...marqueeImages, ...marqueeImages];
+
+  // 그리드/필터에 전달할 직렬화 데이터
+  const browserEpisodes = episodes.map((episode) => ({
+    id: episode.id,
+    slug: episode.slug,
+    title: episode.title,
+    logline: episode.logline,
+    thumbnailUrl: episode.thumbnailUrl,
+    maxSeconds: episode.maxSeconds,
+    cutCount: episode._count.cuts,
+    versionCount: episode._count.performances,
+    tags: episodeTags[episode.slug] ?? ['Drama']
+  }));
+
+  // 최신 에피소드를 Featured로 사용
+  const featured = episodes[0];
+  const featuredImages = (featured?.cuts ?? [])
+    .map((cut) => cut.imageUrl)
+    .filter(Boolean);
+  while (featuredImages.length < 3 && featured?.thumbnailUrl) {
+    featuredImages.push(featured.thumbnailUrl);
+  }
 
   const stats = [
     { value: String(episodes.length), label: 'Published episodes', accent: false },
@@ -125,50 +151,38 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 카테고리 */}
-      <section className="flex gap-2 overflow-x-auto py-3 pb-6" aria-label="Episode categories">
-        {categories.map((category, index) => (
-          <button
-            type="button"
-            key={category}
-            className={`min-h-[38px] shrink-0 rounded-full border px-3.5 text-[13px] font-extrabold transition-colors ${
-              index === 0
-                ? 'border-ink bg-ink text-paper'
-                : 'border-line bg-card/70 text-ink hover:bg-ink/5'
-            }`}
-          >
-            {category}
-          </button>
-        ))}
-      </section>
-
-      {/* 피처드 에피소드 */}
-      <section className="mb-10 grid items-stretch gap-4 rounded-2xl border border-line bg-card p-3.5 md:grid-cols-[minmax(300px,440px)_minmax(0,1fr)]">
-        <div className="flex min-h-[340px] flex-col justify-end p-6">
-          <span className={kicker}>Featured episode</span>
-          <h2 className="text-[clamp(26px,3.2vw,44px)] font-black leading-[1.08] tracking-tight text-ink">
-            Former lover, current interviewer
-          </h2>
-          <p className="mb-6 mt-4 leading-relaxed text-ink-soft">
-            An interview room turns into a tense reunion when the interviewer is someone from three years ago.
-          </p>
-          <Link
-            href="/episodes/ex-interviewer"
-            className="inline-flex min-h-[42px] w-fit items-center rounded-full bg-ink px-4 font-black text-paper transition-transform hover:-translate-y-0.5"
-          >
-            Record your version
-          </Link>
-        </div>
-        <div className="relative grid grid-cols-[1.2fr_1fr_1fr] gap-2.5" aria-hidden="true">
-          {['/sample/interview-cut-01.png', '/sample/interview-cut-02.png', '/sample/interview-cut-03.png'].map((src) => (
-            <img key={src} src={src} alt="" className="h-full min-h-[340px] w-full rounded-md object-cover" />
-          ))}
-          <span className="absolute right-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-ink/85 px-3 py-2 text-xs font-black text-paper backdrop-blur">
-            <i className="h-2 w-2 animate-soft-pulse rounded-full bg-teal" aria-hidden="true" />
-            Live casting
-          </span>
-        </div>
-      </section>
+      {/* 피처드 에피소드 (최신 에피소드 자동 노출) */}
+      {featured && (
+        <section className="mb-10 grid items-stretch gap-4 rounded-2xl border border-line bg-card p-3.5 md:grid-cols-[minmax(300px,440px)_minmax(0,1fr)]">
+          <div className="flex min-h-[340px] flex-col justify-end p-6">
+            <span className={kicker}>Featured episode</span>
+            <h2 className="text-[clamp(26px,3.2vw,44px)] font-black leading-[1.08] tracking-tight text-ink">
+              {featured.title}
+            </h2>
+            <p className="mb-6 mt-4 leading-relaxed text-ink-soft">{featured.logline}</p>
+            <Link
+              href={`/episodes/${featured.slug}`}
+              className="inline-flex min-h-[42px] w-fit items-center rounded-full bg-ink px-4 font-black text-paper transition-transform hover:-translate-y-0.5"
+            >
+              Record your version
+            </Link>
+          </div>
+          <div className="relative grid grid-cols-[1.2fr_1fr_1fr] gap-2.5" aria-hidden="true">
+            {featuredImages.slice(0, 3).map((src, index) => (
+              <img
+                key={`${src}-${index}`}
+                src={src}
+                alt=""
+                className="h-full min-h-[340px] w-full rounded-md object-cover"
+              />
+            ))}
+            <span className="absolute right-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-ink/85 px-3 py-2 text-xs font-black text-paper backdrop-blur">
+              <i className="h-2 w-2 animate-soft-pulse rounded-full bg-teal" aria-hidden="true" />
+              Live casting
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* 텍스트 티커 */}
       <div className="my-11 mb-2 overflow-hidden border-y border-ink py-3.5" aria-hidden="true">
@@ -182,70 +196,8 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* 컬렉션 헤딩 */}
-      <section id="collection" className="mb-3.5 mt-9 flex items-end justify-between gap-5">
-        <div>
-          <p className={kicker}>Episode collection</p>
-          <h2 className="max-w-3xl text-[clamp(28px,4vw,54px)] font-black leading-none text-ink">
-            Pick a webtoon and perform it your way
-          </h2>
-        </div>
-        <span className="shrink-0 font-black text-muted">{episodes.length} published</span>
-      </section>
-
-      {/* 에피소드 그리드 */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {episodes.map((episode, index) => {
-          const tags = episodeTags[episode.slug] ?? ['Drama'];
-          return (
-            <Link
-              key={episode.id}
-              href={`/episodes/${episode.slug}`}
-              className="group grid overflow-hidden rounded-2xl border border-line bg-card transition duration-200 hover:-translate-y-1 hover:border-ink hover:shadow-[0_22px_50px_rgba(23,21,18,.16)]"
-            >
-              <div className="relative overflow-hidden bg-[#ded8cc]">
-                <img
-                  src={episode.thumbnailUrl ?? '/sample/interview-cut-01.png'}
-                  alt=""
-                  className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <span className="absolute left-3 top-2.5 text-[13px] font-black tracking-wide text-paper [text-shadow:0_1px_8px_rgba(0,0,0,.55)]">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span className="absolute bottom-2.5 left-2.5 rounded-full bg-ink/85 px-2.5 py-1.5 text-xs font-black text-paper backdrop-blur">
-                  {episode.maxSeconds}s shorts
-                </span>
-                <div className="absolute inset-0 flex items-end bg-gradient-to-b from-transparent via-transparent to-ink/80 p-3.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                  <span className="translate-y-2 text-sm font-black text-gold transition-transform duration-300 group-hover:translate-y-0">
-                    Record your version →
-                  </span>
-                </div>
-              </div>
-              <div className="grid gap-3 p-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-line-soft bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-muted"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-start justify-between gap-3.5">
-                  <h3 className="text-[22px] leading-tight text-ink">{episode.title}</h3>
-                  <p className="whitespace-nowrap text-xs font-black text-faint">{episode._count.cuts} cuts</p>
-                </div>
-                <p className="leading-snug text-ink-soft">{episode.logline}</p>
-                <div className="flex justify-between gap-2.5 border-t border-line-soft pt-3 text-xs font-black text-muted">
-                  <span>{episode._count.performances} versions</span>
-                  <span className="text-coral">Open ↗</span>
-                </div>
-              </div>
-            </Link>
-          );
-        })}
-      </section>
+      {/* 컬렉션: 카테고리 필터 + 그리드 */}
+      <EpisodeBrowser episodes={browserEpisodes} />
 
       {/* CTA 밴드 */}
       <section className="mt-12 grid gap-5 overflow-hidden rounded-2xl bg-ink px-7 py-12 text-paper md:grid-cols-[1fr_auto] md:items-center">
