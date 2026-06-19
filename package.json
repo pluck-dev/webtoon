@@ -19,6 +19,7 @@
     "remotion:preview": "remotion studio src/remotion/index.ts"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.9.1",
     "@clerk/nextjs": "^7.5.5",
     "@prisma/client": "6.19.0",
     "@remotion/bundler": "^4.0.481",

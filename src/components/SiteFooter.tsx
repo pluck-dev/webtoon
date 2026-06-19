@@ -21,12 +21,12 @@ export default function SiteFooter() {
           </span>
         </Link>
         <nav className="flex flex-wrap justify-end gap-2" aria-label="Footer navigation">
-          <a
+          <Link
             href="/#collection"
             className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
           >
             작품
-          </a>
+          </Link>
           <Link
             href="/admin"
             className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
