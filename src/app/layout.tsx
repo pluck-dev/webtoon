@@ -16,23 +16,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://webtoon-voice-studio.vercel.app'),
   title: {
-    default: 'Webtoon Voice Studio — AI 웹툰 보이스 마켓플레이스',
-    template: '%s · Webtoon Voice Studio'
+    default: '더빙고 — 짧은 상황을 내 목소리로 연기하는 더빙 놀이터',
+    template: '%s · 더빙고'
   },
-  description: '관리자가 만든 AI 웹툰 에피소드에 내 목소리를 입혀 나만의 더빙 숏폼을 만드세요.',
-  keywords: ['웹툰', '더빙', 'AI 웹툰', '보이스', '숏폼', 'voice acting'],
+  description: '짧은 상황극에 내 목소리를 입혀 더빙 숏폼을 만드세요. 웹툰체·상황극·애니 화풍 컷에 누구나 성우가 됩니다.',
+  keywords: ['더빙', '더빙고', '상황극', '성우', '보이스', '숏폼', 'voice acting', 'dubbing'],
   openGraph: {
     type: 'website',
-    siteName: 'Webtoon Voice Studio',
-    title: 'Webtoon Voice Studio — AI 웹툰 보이스 마켓플레이스',
-    description: '하나의 원작 웹툰, 무한한 배우 버전. 모든 말풍선을 내 목소리로 녹음하세요.',
-    images: ['/sample/interview-cut-01.png']
+    siteName: '더빙고',
+    title: '더빙고 — 짧은 상황을 내 목소리로',
+    description: '짧은 상황극을 내 목소리로 연기하는 더빙 놀이터. 누구나 성우가 됩니다.'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Webtoon Voice Studio',
-    description: '하나의 원작 웹툰, 무한한 배우 버전.',
-    images: ['/sample/interview-cut-01.png']
+    title: '더빙고',
+    description: '짧은 상황을 내 목소리로 연기하는 더빙 놀이터.'
   }
 };
 

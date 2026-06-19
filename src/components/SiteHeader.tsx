@@ -24,9 +24,9 @@ export default function SiteHeader() {
       <div className="flex min-h-16 items-center justify-between gap-4">
         <Link href="/" className="inline-flex items-center gap-2.5 text-xl font-black text-ink">
           <span className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-ink text-base font-black text-gold">
-            W
+            더
           </span>
-          <span className="whitespace-nowrap">Webtoon Voice Studio</span>
+          <span className="whitespace-nowrap">더빙고</span>
         </Link>
 
         {/* 데스크톱 내비 */}
