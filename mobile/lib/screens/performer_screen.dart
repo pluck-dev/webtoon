@@ -4,9 +4,11 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../cloud.dart';
 import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
+import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
   final String episodeId;
@@ -25,6 +27,12 @@ class _PerformerScreenState extends State<PerformerScreen> {
   int _index = 0;
   bool _recording = false;
   final Map<String, String> _takes = {}; // dialogueId → 로컬 파일 경로
+  final Set<String> _saved = {}; // 클라우드 저장된 dialogueId
+  final Set<String> _uploading = {}; // 업로드 중
+  String? _userId;
+  String? _performanceId;
+  bool _rendering = false;
+  int _recordStartMs = 0;
 
   @override
   void initState() {
@@ -36,8 +44,81 @@ class _PerformerScreenState extends State<PerformerScreen> {
     try {
       final detail = await Repo.fetchEpisodeDetail(widget.episodeId);
       if (mounted) setState(() => _detail = detail);
+      // 클라우드: 유저/공연 보장 + 저장된 녹음 복원
+      final userId = await Cloud.ensureUser();
+      final perfId = await Cloud.getOrCreatePerformance(widget.episodeId, userId);
+      final saved = await Cloud.loadSavedRecordings(perfId);
+      if (mounted) {
+        setState(() {
+          _userId = userId;
+          _performanceId = perfId;
+          _saved.addAll(saved.keys);
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _loadError = '$e');
+    }
+  }
+
+  Future<void> _uploadTake(String dialogueId, String path, int durationMs) async {
+    final perfId = _performanceId, userId = _userId;
+    if (perfId == null || userId == null) return;
+    setState(() => _uploading.add(dialogueId));
+    try {
+      await Cloud.uploadRecording(
+        performanceId: perfId,
+        dialogueId: dialogueId,
+        userId: userId,
+        filePath: path,
+        durationMs: durationMs,
+      );
+      if (mounted) setState(() => _saved.add(dialogueId));
+    } catch (_) {
+      if (mounted) _toast('클라우드 저장에 실패했어요. 다시 녹음해 주세요.');
+    } finally {
+      if (mounted) setState(() => _uploading.remove(dialogueId));
+    }
+  }
+
+  Future<void> _makeVideo() async {
+    final perfId = _performanceId;
+    if (perfId == null || _rendering) return;
+    setState(() => _rendering = true);
+    try {
+      final jobId = await Cloud.createRenderJob(perfId);
+      // 폴링 (최대 5분)
+      for (var i = 0; i < 100; i++) {
+        await Future.delayed(const Duration(seconds: 3));
+        ({String status, String? videoUrl}) r;
+        try {
+          r = await Cloud.fetchRender(jobId);
+        } catch (_) {
+          continue;
+        }
+        if (r.status == 'DONE' && r.videoUrl != null) {
+          if (mounted) {
+            setState(() => _rendering = false);
+            showVideoSheet(context, r.videoUrl!);
+          }
+          return;
+        }
+        if (r.status == 'FAILED') {
+          if (mounted) {
+            setState(() => _rendering = false);
+            _toast('영상 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
+          }
+          return;
+        }
+      }
+      if (mounted) {
+        setState(() => _rendering = false);
+        _toast('영상이 평소보다 오래 걸려요. 잠시 후 다시 확인해 주세요.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _rendering = false);
+        _toast('영상 생성을 시작하지 못했어요.');
+      }
     }
   }
 
@@ -56,10 +137,15 @@ class _PerformerScreenState extends State<PerformerScreen> {
     if (line == null) return;
     if (_recording) {
       final path = await _recorder.stop();
+      final durationMs = DateTime.now().millisecondsSinceEpoch - _recordStartMs;
       setState(() {
         _recording = false;
         if (path != null) _takes[line.dialogue.id] = path;
       });
+      // 정지 즉시 클라우드 업로드
+      if (path != null) {
+        await _uploadTake(line.dialogue.id, path, durationMs < 300 ? 300 : durationMs);
+      }
       return;
     }
     if (!await _recorder.hasPermission()) {
@@ -70,6 +156,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/take_${line.dialogue.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
     await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    _recordStartMs = DateTime.now().millisecondsSinceEpoch;
     setState(() => _recording = true);
   }
 
@@ -118,10 +205,28 @@ class _PerformerScreenState extends State<PerformerScreen> {
       );
     }
 
-    final doneCount = _lines.where((l) => _takes.containsKey(l.dialogue.id)).length;
+    final doneCount = _lines.where((l) => _saved.contains(l.dialogue.id)).length;
+    final allSaved = _lines.isNotEmpty && doneCount == _lines.length;
 
     return Scaffold(
       backgroundColor: AppColors.deviceDark,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: (allSaved && !_recording)
+          ? Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.32),
+              child: FloatingActionButton.extended(
+                onPressed: _rendering ? null : _makeVideo,
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.ink,
+                icon: _rendering
+                    ? const SizedBox(
+                        width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.ink))
+                    : const Icon(Icons.movie_creation_rounded),
+                label: Text(_rendering ? '영상 만드는 중…' : '영상 만들기',
+                    style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+              ),
+            )
+          : null,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -256,13 +361,22 @@ class _PerformerScreenState extends State<PerformerScreen> {
                     style: GoogleFonts.notoSansKr(
                         color: hasTake ? Colors.white70 : Colors.white24, fontWeight: FontWeight.w800, fontSize: 13)),
               ),
-              Text(
-                _recording ? '● 녹음 중' : hasTake ? '녹음됨 ✓' : '미녹음',
-                style: GoogleFonts.notoSansKr(
-                    color: _recording ? AppColors.coral : hasTake ? const Color(0xFF6FCF97) : Colors.white38,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13),
-              ),
+              Builder(builder: (_) {
+                final id = line.dialogue.id;
+                final up = _uploading.contains(id);
+                final saved = _saved.contains(id);
+                final (String label, Color c) = _recording
+                    ? ('● 녹음 중', AppColors.coral)
+                    : up
+                        ? ('저장 중…', AppColors.gold)
+                        : saved
+                            ? ('클라우드 저장됨 ✓', const Color(0xFF6FCF97))
+                            : hasTake
+                                ? ('녹음됨', Colors.white70)
+                                : ('미녹음', Colors.white38);
+                return Text(label,
+                    style: GoogleFonts.notoSansKr(color: c, fontWeight: FontWeight.w800, fontSize: 13));
+              }),
             ],
           ),
         ],

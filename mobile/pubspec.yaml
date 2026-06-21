@@ -40,6 +40,7 @@ dependencies:
   google_fonts: ^6.2.1          # Noto Sans KR
   google_sign_in: ^6.2.2        # 구글 로그인(선택)
   path_provider: ^2.1.5         # 녹음 임시 파일 경로
+  uuid: ^4.5.1                  # insert용 id 생성
 
 # record 5.2.1 의존 세트 버그 우회:
 # record_android 1.5.2는 record_platform_interface ^1.5.0(startStream/hasPermission(request))을 요구하지만
