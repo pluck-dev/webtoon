@@ -1,0 +1,318 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+
+import '../config.dart';
+import '../models.dart';
+import '../repo.dart';
+
+class PerformerScreen extends StatefulWidget {
+  final String episodeId;
+  const PerformerScreen({super.key, required this.episodeId});
+
+  @override
+  State<PerformerScreen> createState() => _PerformerScreenState();
+}
+
+class _PerformerScreenState extends State<PerformerScreen> {
+  final _recorder = AudioRecorder();
+  final _player = AudioPlayer();
+
+  EpisodeDetail? _detail;
+  String? _loadError;
+  int _index = 0;
+  bool _recording = false;
+  final Map<String, String> _takes = {}; // dialogueId → 로컬 파일 경로
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final detail = await Repo.fetchEpisodeDetail(widget.episodeId);
+      if (mounted) setState(() => _detail = detail);
+    } catch (e) {
+      if (mounted) setState(() => _loadError = '$e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _recorder.dispose();
+    _player.dispose();
+    super.dispose();
+  }
+
+  List<({Cut cut, Dialogue dialogue})> get _lines => _detail?.lines ?? [];
+  ({Cut cut, Dialogue dialogue})? get _current => _lines.isEmpty ? null : _lines[_index];
+
+  Future<void> _toggleRecord() async {
+    final line = _current;
+    if (line == null) return;
+    if (_recording) {
+      final path = await _recorder.stop();
+      setState(() {
+        _recording = false;
+        if (path != null) _takes[line.dialogue.id] = path;
+      });
+      return;
+    }
+    if (!await _recorder.hasPermission()) {
+      _toast('마이크 권한이 필요해요.');
+      return;
+    }
+    await _player.stop();
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/take_${line.dialogue.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    setState(() => _recording = true);
+  }
+
+  Future<void> _playTake() async {
+    final line = _current;
+    final path = line == null ? null : _takes[line.dialogue.id];
+    if (path == null) return;
+    try {
+      await _player.setFilePath(path);
+      await _player.play();
+    } catch (_) {
+      _toast('재생할 수 없어요.');
+    }
+  }
+
+  void _go(int delta) {
+    if (_recording) return;
+    final next = _index + delta;
+    if (next < 0 || next >= _lines.length) return;
+    setState(() => _index = next);
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('불러오지 못했어요.\n$_loadError', textAlign: TextAlign.center)),
+      );
+    }
+    final detail = _detail;
+    if (detail == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.coral)));
+    }
+    final line = _current;
+    if (line == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(detail.summary.title)),
+        body: const Center(child: Text('녹음할 대사가 없어요.')),
+      );
+    }
+
+    final doneCount = _lines.where((l) => _takes.containsKey(l.dialogue.id)).length;
+
+    return Scaffold(
+      backgroundColor: AppColors.deviceDark,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 장면 (현재 컷)
+          Image.network(line.cut.imageUrl, fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(color: AppColors.deviceDark)),
+          // 상단 어둡게 + 컨트롤
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _topBar(detail, line, doneCount),
+          ),
+          // 하단 자막 + 컨트롤
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _bottomPanel(line),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _topBar(EpisodeDetail detail, ({Cut cut, Dialogue dialogue}) line, int done) {
+    final total = _lines.length;
+    return Container(
+      padding: EdgeInsets.fromLTRB(8, MediaQuery.of(context).padding.top + 4, 12, 24),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xCC000000), Color(0x00000000)],
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          ),
+          _pill('CUT ${line.cut.order} / ${detail.cuts.length}'),
+          const Spacer(),
+          _pill('$done / $total 완료', color: AppColors.gold),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String text, {Color color = Colors.white}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(text,
+            style: GoogleFonts.notoSansKr(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
+      );
+
+  Widget _bottomPanel(({Cut cut, Dialogue dialogue}) line) {
+    final hasTake = _takes.containsKey(line.dialogue.id);
+    final prev = _index > 0 ? _lines[_index - 1].dialogue : null;
+    final next = _index < _lines.length - 1 ? _lines[_index + 1].dialogue : null;
+    final color = _colorOf(line.dialogue.character?.color);
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(12, 0, 12, MediaQuery.of(context).padding.bottom + 14),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: AppColors.panelDark.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 30, offset: const Offset(0, 12))],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 노래방 스크립트: 이전 / 현재 / 다음
+          if (prev != null)
+            Text(prev.text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansKr(color: Colors.white.withValues(alpha: 0.3), fontWeight: FontWeight.w700, fontSize: 13)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  '${line.dialogue.speaker}${line.dialogue.direction.isNotEmpty ? ' · ${line.dialogue.direction}' : ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.notoSansKr(color: AppColors.gold, fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(line.dialogue.text,
+              style: GoogleFonts.notoSansKr(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24, height: 1.25)),
+          if (next != null) ...[
+            const SizedBox(height: 6),
+            Text('▾ ${next.text}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansKr(color: Colors.white.withValues(alpha: 0.3), fontWeight: FontWeight.w700, fontSize: 13)),
+          ],
+          const SizedBox(height: 16),
+          // 컨트롤: 이전 · 녹음 · 다음
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _circleBtn(Icons.chevron_left_rounded, enabled: _index > 0 && !_recording, onTap: () => _go(-1)),
+              const SizedBox(width: 28),
+              _recordButton(hasTake),
+              const SizedBox(width: 28),
+              _circleBtn(Icons.chevron_right_rounded, enabled: _index < _lines.length - 1 && !_recording, onTap: () => _go(1)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: Colors.white.withValues(alpha: 0.12), height: 1),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: hasTake ? _playTake : null,
+                icon: Icon(Icons.play_arrow_rounded, color: hasTake ? Colors.white : Colors.white24, size: 20),
+                label: Text('내 녹음 듣기',
+                    style: GoogleFonts.notoSansKr(
+                        color: hasTake ? Colors.white70 : Colors.white24, fontWeight: FontWeight.w800, fontSize: 13)),
+              ),
+              Text(
+                _recording ? '● 녹음 중' : hasTake ? '녹음됨 ✓' : '미녹음',
+                style: GoogleFonts.notoSansKr(
+                    color: _recording ? AppColors.coral : hasTake ? const Color(0xFF6FCF97) : Colors.white38,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recordButton(bool hasTake) {
+    return GestureDetector(
+      onTap: _toggleRecord,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: _recording ? AppColors.coral : AppColors.gold,
+          shape: BoxShape.circle,
+          boxShadow: [BoxShadow(color: (_recording ? AppColors.coral : AppColors.gold).withValues(alpha: 0.5), blurRadius: 16)],
+        ),
+        child: Icon(
+          _recording ? Icons.stop_rounded : hasTake ? Icons.refresh_rounded : Icons.mic_rounded,
+          color: AppColors.ink,
+          size: 30,
+        ),
+      ),
+    );
+  }
+
+  Widget _circleBtn(IconData icon, {required bool enabled, required VoidCallback onTap}) {
+    return Opacity(
+      opacity: enabled ? 1 : 0.3,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          ),
+          child: Icon(icon, color: Colors.white, size: 26),
+        ),
+      ),
+    );
+  }
+
+  Color _colorOf(String? hex) {
+    if (hex == null) return AppColors.coral;
+    final cleaned = hex.replaceAll('#', '');
+    final value = int.tryParse(cleaned.length == 6 ? 'FF$cleaned' : cleaned, radix: 16);
+    return value == null ? AppColors.coral : Color(value);
+  }
+}
