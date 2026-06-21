@@ -17,7 +17,9 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _code = TextEditingController();
+  final _password = TextEditingController();
   _Step _step = _Step.enterEmail;
+  bool _passwordMode = false;
   bool _busy = false;
   String? _error;
   String? _notice;
@@ -26,7 +28,27 @@ class _AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _email.dispose();
     _code.dispose();
+    _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _passwordLogin() async {
+    final email = _email.text.trim();
+    if (!email.contains('@') || _password.text.isEmpty) {
+      setState(() => _error = '이메일과 비밀번호를 입력해 주세요.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await Auth.signInWithPassword(email, _password.text);
+    } catch (e) {
+      setState(() => _error = '이메일 또는 비밀번호가 올바르지 않아요.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _google() async {
@@ -159,23 +181,40 @@ class _AuthScreenState extends State<AuthScreen> {
           controller: _email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _busy ? null : _sendCode(),
+          textInputAction: _passwordMode ? TextInputAction.next : TextInputAction.done,
+          onSubmitted: (_) => _busy ? null : (_passwordMode ? null : _sendCode()),
           decoration: const InputDecoration(hintText: '이메일'),
         ),
+        if (_passwordMode) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _password,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _busy ? null : _passwordLogin(),
+            decoration: const InputDecoration(hintText: '비밀번호'),
+          ),
+        ],
         if (_error != null) ...[
           const SizedBox(height: 12),
           Text(_error!, style: const TextStyle(color: AppColors.coral, fontWeight: FontWeight.w700)),
         ],
         const SizedBox(height: 20),
         FilledButton(
-          onPressed: _busy ? null : _sendCode,
-          child: _busy ? _spinner() : const Text('인증코드 받기'),
+          onPressed: _busy ? null : (_passwordMode ? _passwordLogin : _sendCode),
+          child: _busy ? _spinner() : Text(_passwordMode ? '로그인' : '인증코드 받기'),
         ),
-        const SizedBox(height: 14),
-        Text('비밀번호 없이, 메일로 받은 6자리 코드로 로그인해요.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.notoSansKr(color: AppColors.faint, fontSize: 12)),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                    _passwordMode = !_passwordMode;
+                    _error = null;
+                  }),
+          child: Text(_passwordMode ? '인증코드로 로그인' : '비밀번호로 로그인',
+              style: GoogleFonts.notoSansKr(color: AppColors.muted, fontWeight: FontWeight.w800, fontSize: 13)),
+        ),
       ],
     );
   }

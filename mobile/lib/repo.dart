@@ -75,6 +75,10 @@ class Auth {
   static bool get isSignedIn => currentUser != null;
   static Stream<AuthState> get changes => sb.auth.onAuthStateChange;
 
+  /// 비밀번호 로그인 (테스트 계정 등)
+  static Future<void> signInWithPassword(String email, String password) =>
+      sb.auth.signInWithPassword(email: email, password: password);
+
   /// 이메일로 6자리 인증코드 발송 (신규면 계정 자동 생성)
   static Future<void> sendEmailOtp(String email) =>
       sb.auth.signInWithOtp(email: email, shouldCreateUser: true);
