@@ -8,6 +8,13 @@ class Env {
   // Storage 버킷 (웹과 공용)
   static const bucketRecordings = 'recordings';
   static const bucketVideos = 'rendered-videos';
+
+  // 구글 로그인 — Google Cloud OAuth 클라이언트 ID
+  //  - googleWebClientId: "웹 애플리케이션" 클라이언트 ID (Supabase에도 동일하게 등록)
+  //  - googleIosClientId: iOS 클라이언트 ID (iOS 빌드 시 필요, 안드로이드는 비워도 됨)
+  // 비어 있으면 구글 버튼이 안내 메시지를 띄운다.
+  static const googleWebClientId = '';
+  static const googleIosClientId = '';
 }
 
 /// 더빙고 브랜드 컬러 (웹과 동일 팔레트)
