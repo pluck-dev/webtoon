@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import '../config.dart';
@@ -27,6 +31,7 @@ class _VideoSheet extends StatefulWidget {
 class _VideoSheetState extends State<_VideoSheet> {
   VideoPlayerController? _controller;
   bool _ready = false;
+  bool _sharing = false;
 
   @override
   void initState() {
@@ -48,6 +53,34 @@ class _VideoSheetState extends State<_VideoSheet> {
       }
     } catch (_) {
       if (mounted) setState(() => _ready = true);
+    }
+  }
+
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/dubbingo_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
+      final client = HttpClient();
+      final req = await client.getUrl(Uri.parse(widget.url));
+      final resp = await req.close();
+      final sink = file.openWrite();
+      await resp.pipe(sink);
+      client.close();
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'video/mp4'),
+      ], text: '더빙고로 만든 내 더빙 영상 🎬');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('영상을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
     }
   }
 
@@ -126,9 +159,35 @@ class _VideoSheetState extends State<_VideoSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _sharing ? null : _share,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.ink,
+                minimumSize: const Size.fromHeight(52),
+              ),
+              icon: _sharing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.ink,
+                      ),
+                    )
+                  : const Icon(Icons.ios_share_rounded, size: 20),
+              label: Text(
+                _sharing ? '준비 중…' : '공유 · 저장',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
-            '마이페이지에서 다시 볼 수 있어요.',
+            '보관함에서 언제든 다시 볼 수 있어요.',
             style: GoogleFonts.notoSansKr(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 8),
