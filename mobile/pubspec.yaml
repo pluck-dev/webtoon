@@ -41,6 +41,7 @@ dependencies:
   google_sign_in: ^6.2.2        # 구글 로그인(선택)
   path_provider: ^2.1.5         # 녹음 임시 파일 경로
   uuid: ^4.5.1                  # insert용 id 생성
+  url_launcher: ^6.3.1          # 약관/개인정보/문의 외부 링크
 
 # record 5.2.1 의존 세트 버그 우회:
 # record_android 1.5.2는 record_platform_interface ^1.5.0(startStream/hasPermission(request))을 요구하지만
@@ -59,6 +60,25 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1   # 런처 아이콘 생성
+  flutter_native_splash: ^2.4.1     # 스플래시 화면 생성
+
+# 런처 아이콘 설정 (dart run flutter_launcher_icons)
+flutter_launcher_icons:
+  android: true
+  ios: false   # iOS 프로젝트 생성 후 true로
+  image_path: "assets/icon/icon_full.png"
+  adaptive_icon_background: "#171512"
+  adaptive_icon_foreground: "assets/icon/icon_fg.png"
+  remove_alpha_ios: true
+
+# 스플래시 화면 설정 (dart run flutter_native_splash:create)
+flutter_native_splash:
+  color: "#171512"
+  image: assets/splash/logo.png
+  android_12:
+    color: "#171512"
+    image: assets/splash/logo.png
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

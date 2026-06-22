@@ -160,4 +160,89 @@ class Cloud {
         .from(Env.bucketVideos)
         .createSignedUrl(video['videoUrl'] as String, 60 * 60);
   }
+
+  /// storage key → 1시간 서명 URL (영상 재생용)
+  static Future<String> signVideo(String storageKey) =>
+      sb.storage.from(Env.bucketVideos).createSignedUrl(storageKey, 60 * 60);
+
+  /// 내 보관함: 내 공연 목록 + 에피소드 정보 + 녹음 수 + 영상 여부
+  static Future<List<MyWork>> myWorks() async {
+    final userId = await ensureUser();
+    final perfs = await sb
+        .from('Performance')
+        .select('id,episodeId,updatedAt')
+        .eq('userId', userId)
+        .order('updatedAt', ascending: false);
+    if (perfs.isEmpty) return [];
+
+    final perfIds = perfs.map((p) => p['id'] as String).toList();
+    final epIds = perfs.map((p) => p['episodeId'] as String).toSet().toList();
+
+    final eps = await sb
+        .from('Episode')
+        .select('id,title,thumbnailUrl,category')
+        .inFilter('id', epIds);
+    final epById = {for (final e in eps) e['id'] as String: e};
+
+    final recs = await sb
+        .from('Recording')
+        .select('performanceId')
+        .inFilter('performanceId', perfIds);
+    final recCount = <String, int>{};
+    for (final r in recs) {
+      final pid = r['performanceId'] as String;
+      recCount[pid] = (recCount[pid] ?? 0) + 1;
+    }
+
+    final vids = await sb
+        .from('RenderedVideo')
+        .select('performanceId,videoUrl,createdAt')
+        .inFilter('performanceId', perfIds)
+        .order('createdAt', ascending: false);
+    final latestVid = <String, String>{};
+    for (final v in vids) {
+      final pid = v['performanceId'] as String;
+      latestVid.putIfAbsent(pid, () => v['videoUrl'] as String);
+    }
+
+    return perfs.map<MyWork>((p) {
+      final pid = p['id'] as String;
+      final ep = epById[p['episodeId']];
+      return MyWork(
+        performanceId: pid,
+        episodeId: p['episodeId'] as String,
+        episodeTitle: (ep?['title'] as String?) ?? '삭제된 작품',
+        thumbnailUrl: ep?['thumbnailUrl'] as String?,
+        category: (ep?['category'] as String?) ?? 'WEBTOON',
+        recordingCount: recCount[pid] ?? 0,
+        videoStorageKey: latestVid[pid],
+        updatedAt: p['updatedAt'] as String?,
+      );
+    }).toList();
+  }
+}
+
+/// 보관함 항목 (공연 1건 요약)
+class MyWork {
+  final String performanceId;
+  final String episodeId;
+  final String episodeTitle;
+  final String? thumbnailUrl;
+  final String category;
+  final int recordingCount;
+  final String? videoStorageKey;
+  final String? updatedAt;
+
+  MyWork({
+    required this.performanceId,
+    required this.episodeId,
+    required this.episodeTitle,
+    required this.thumbnailUrl,
+    required this.category,
+    required this.recordingCount,
+    required this.videoStorageKey,
+    required this.updatedAt,
+  });
+
+  bool get hasVideo => videoStorageKey != null;
 }

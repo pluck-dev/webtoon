@@ -169,15 +169,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                tooltip: '로그아웃',
-                onPressed: () => Auth.signOut(),
-                icon: const Icon(
-                  Icons.logout_rounded,
-                  color: AppColors.muted,
-                  size: 22,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 16),

@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'repo.dart';
 import 'screens/auth_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/root_screen.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -41,7 +41,7 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: Auth.changes,
       builder: (context, _) {
-        return Auth.isSignedIn ? const HomeScreen() : const AuthScreen();
+        return Auth.isSignedIn ? const RootScreen() : const AuthScreen();
       },
     );
   }

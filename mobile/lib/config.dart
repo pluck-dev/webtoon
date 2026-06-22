@@ -16,6 +16,12 @@ class Env {
   // 비어 있으면 구글 버튼이 안내 메시지를 띄운다.
   static const googleWebClientId = '';
   static const googleIosClientId = '';
+
+  // 외부 링크 (프로필 화면)
+  static const siteBaseUrl = 'https://webtoon-flax.vercel.app';
+  static const termsUrl = '$siteBaseUrl/terms';
+  static const privacyUrl = '$siteBaseUrl/privacy';
+  static const supportEmail = 'admin@pluck.co.kr';
 }
 
 /// 더빙고 브랜드 컬러 (웹과 동일 팔레트)
