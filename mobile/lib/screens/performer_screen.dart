@@ -14,6 +14,7 @@ import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/celebration.dart';
 import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
@@ -41,6 +42,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
   int _recordStartMs = 0;
   double _level = 0; // 실시간 마이크 입력 레벨 0~1
   StreamSubscription<Amplitude>? _ampSub;
+  bool _celebrated = false; // 완성 축하 1회만
 
   @override
   void initState() {
@@ -87,7 +89,17 @@ class _PerformerScreenState extends State<PerformerScreen> {
         filePath: path,
         durationMs: durationMs,
       );
-      if (mounted) setState(() => _saved.add(dialogueId));
+      if (mounted) {
+        setState(() => _saved.add(dialogueId));
+        final allSaved =
+            _lines.isNotEmpty &&
+            _lines.every((l) => _saved.contains(l.dialogue.id));
+        if (allSaved && !_celebrated) {
+          _celebrated = true;
+          HapticFeedback.heavyImpact();
+          showCelebration(context);
+        }
+      }
     } catch (_) {
       if (mounted) _toast('클라우드 저장에 실패했어요. 다시 녹음해 주세요.');
     } finally {
@@ -170,6 +182,14 @@ class _PerformerScreenState extends State<PerformerScreen> {
           path,
           durationMs < 300 ? 300 : durationMs,
         );
+        // 아직 안 한 다음 장면으로 부드럽게 자동 이동
+        if (mounted &&
+            !_recording &&
+            _index < _lines.length - 1 &&
+            !_saved.contains(_lines[_index + 1].dialogue.id)) {
+          await Future.delayed(const Duration(milliseconds: 380));
+          if (mounted && !_recording) _go(1);
+        }
       }
       return;
     }
@@ -214,6 +234,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     if (_recording) return;
     final next = _index + delta;
     if (next < 0 || next >= _lines.length) return;
+    HapticFeedback.selectionClick();
     setState(() => _index = next);
   }
 
