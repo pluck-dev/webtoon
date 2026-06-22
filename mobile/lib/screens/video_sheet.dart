@@ -39,8 +39,12 @@ class _VideoSheetState extends State<_VideoSheet> {
     _init();
   }
 
+  bool get _isLocal => !widget.url.startsWith('http');
+
   Future<void> _init() async {
-    final c = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    final c = _isLocal
+        ? VideoPlayerController.file(File(widget.url))
+        : VideoPlayerController.networkUrl(Uri.parse(widget.url));
     try {
       await c.initialize();
       await c.setLooping(true);
@@ -60,18 +64,24 @@ class _VideoSheetState extends State<_VideoSheet> {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/dubbingo_${DateTime.now().millisecondsSinceEpoch}.mp4',
-      );
-      final client = HttpClient();
-      final req = await client.getUrl(Uri.parse(widget.url));
-      final resp = await req.close();
-      final sink = file.openWrite();
-      await resp.pipe(sink);
-      client.close();
+      String filePath;
+      if (_isLocal) {
+        filePath = widget.url; // 폰에서 만든 로컬 파일 그대로 공유
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File(
+          '${dir.path}/dubbingo_${DateTime.now().millisecondsSinceEpoch}.mp4',
+        );
+        final client = HttpClient();
+        final req = await client.getUrl(Uri.parse(widget.url));
+        final resp = await req.close();
+        final sink = file.openWrite();
+        await resp.pipe(sink);
+        client.close();
+        filePath = file.path;
+      }
       await Share.shareXFiles([
-        XFile(file.path, mimeType: 'video/mp4'),
+        XFile(filePath, mimeType: 'video/mp4'),
       ], text: '더빙고로 만든 내 더빙 영상 🎬');
     } catch (_) {
       if (mounted) {

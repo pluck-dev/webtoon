@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 
 import '../cloud.dart';
 import '../config.dart';
+import '../local_render.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
@@ -33,11 +34,13 @@ class _PerformerScreenState extends State<PerformerScreen> {
   int _index = 0;
   bool _recording = false;
   final Map<String, String> _takes = {}; // dialogueId → 로컬 파일 경로
+  final Map<String, int> _takeMs = {}; // dialogueId → 녹음 길이(ms)
   final Set<String> _saved = {}; // 클라우드 저장된 dialogueId
   final Set<String> _uploading = {}; // 업로드 중
   String? _userId;
   String? _performanceId;
   bool _rendering = false;
+  double _renderProgress = 0; // 온디바이스 렌더 진행률 0~1
   int _recordStartMs = 0;
   double _level = 0; // 실시간 마이크 입력 레벨 0~1
   final List<double> _levels = List<double>.filled(32, 0); // 파형 띠 히스토리
@@ -68,6 +71,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
           _userId = userId;
           _performanceId = perfId;
           _saved.addAll(saved.keys);
+          _takeMs.addAll(saved); // 저장된 녹음 길이도 보관
         });
       }
     } catch (e) {
@@ -112,41 +116,58 @@ class _PerformerScreenState extends State<PerformerScreen> {
   Future<void> _makeVideo() async {
     final perfId = _performanceId;
     if (perfId == null || _rendering) return;
-    setState(() => _rendering = true);
+    setState(() {
+      _rendering = true;
+      _renderProgress = 0;
+    });
     try {
-      final jobId = await Cloud.createRenderJob(perfId);
-      // 폴링 (최대 5분)
-      for (var i = 0; i < 100; i++) {
-        await Future.delayed(const Duration(seconds: 3));
-        ({String status, String? videoUrl}) r;
-        try {
-          r = await Cloud.fetchRender(jobId);
-        } catch (_) {
-          continue;
-        }
-        if (r.status == 'DONE' && r.videoUrl != null) {
-          if (mounted) {
-            setState(() => _rendering = false);
-            showVideoSheet(context, r.videoUrl!);
+      // 모든 대사의 로컬 오디오 확보 (이번 세션 녹음 우선, 없으면 클라우드 다운로드)
+      final meta = await Cloud.recordingMeta(perfId);
+      final renderLines = <RenderLine>[];
+      for (final l in _lines) {
+        final id = l.dialogue.id;
+        var path = _takes[id];
+        final ms = _takeMs[id] ?? meta[id]?.durationMs ?? 1200;
+        if (path == null) {
+          final key = meta[id]?.storageKey;
+          if (key == null) {
+            throw Exception('녹음 누락: ${l.dialogue.speaker}');
           }
-          return;
+          path = await Cloud.downloadRecording(key);
         }
-        if (r.status == 'FAILED') {
-          if (mounted) {
-            setState(() => _rendering = false);
-            _toast('영상 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
-          }
-          return;
-        }
+        renderLines.add(
+          RenderLine(
+            imageUrl: l.cut.imageUrl,
+            speaker: l.dialogue.speaker,
+            direction: l.dialogue.direction,
+            text: l.dialogue.text,
+            color: _colorOf(l.dialogue.character?.color),
+            audioPath: path,
+            durationMs: ms,
+          ),
+        );
       }
+      // 폰에서 직접 렌더
+      final out = await LocalRender.render(
+        renderLines,
+        onProgress: (p) {
+          if (mounted) setState(() => _renderProgress = p);
+        },
+      );
+      // 보관함에도 저장(클라우드 업로드) — 실패해도 로컬 재생은 가능
+      String url = out;
+      try {
+        final totalMs = renderLines.fold<int>(0, (a, r) => a + r.durationMs);
+        url = await Cloud.saveRenderedVideo(perfId, out, totalMs);
+      } catch (_) {}
       if (mounted) {
         setState(() => _rendering = false);
-        _toast('영상이 평소보다 오래 걸려요. 잠시 후 다시 확인해 주세요.');
+        showVideoSheet(context, url);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _rendering = false);
-        _toast('영상 생성을 시작하지 못했어요.');
+        _toast('영상 생성에 실패했어요.');
       }
     }
   }
@@ -257,7 +278,10 @@ class _PerformerScreenState extends State<PerformerScreen> {
       _recording = false;
       _level = 0;
       _levels.fillRange(0, _levels.length, 0);
-      if (path != null) _takes[line.dialogue.id] = path;
+      if (path != null) {
+        _takes[line.dialogue.id] = path;
+        _takeMs[line.dialogue.id] = durationMs < 300 ? 300 : durationMs;
+      }
     });
     // 정지 즉시 클라우드 업로드
     if (path != null) {
@@ -407,7 +431,9 @@ class _PerformerScreenState extends State<PerformerScreen> {
                       )
                     : const Icon(Icons.movie_creation_rounded),
                 label: Text(
-                  _rendering ? '영상 만드는 중…' : '영상 만들기',
+                  _rendering
+                      ? '만드는 중 ${(_renderProgress * 100).round()}%'
+                      : '영상 만들기',
                   style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
                 ),
               ),

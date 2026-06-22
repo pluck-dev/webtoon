@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -231,6 +232,78 @@ class Cloud {
         updatedAt: p['updatedAt'] as String?,
       );
     }).toList();
+  }
+
+  /// 이 공연의 대사별 최신 녹음 메타 (dialogueId → storageKey, durationMs)
+  static Future<Map<String, ({String storageKey, int durationMs})>>
+  recordingMeta(String performanceId) async {
+    final rows = await sb
+        .from('Recording')
+        .select('dialogueId,storageKey,durationMs,createdAt')
+        .eq('performanceId', performanceId)
+        .order('createdAt', ascending: false);
+    final out = <String, ({String storageKey, int durationMs})>{};
+    for (final r in rows) {
+      final d = r['dialogueId'] as String;
+      out.putIfAbsent(
+        d,
+        () => (
+          storageKey: r['storageKey'] as String,
+          durationMs: (r['durationMs'] ?? 1000) as int,
+        ),
+      );
+    }
+    return out;
+  }
+
+  /// recordings 버킷에서 녹음 다운로드 → 로컬 파일 경로
+  static Future<String> downloadRecording(String storageKey) async {
+    final bytes = await sb.storage
+        .from(Env.bucketRecordings)
+        .download(storageKey);
+    final dir = await getTemporaryDirectory();
+    final f = File('${dir.path}/dl_${storageKey.replaceAll('/', '_')}');
+    await f.writeAsBytes(bytes);
+    return f.path;
+  }
+
+  /// 폰에서 만든 mp4를 rendered-videos에 올리고 (완료된)RenderJob+RenderedVideo
+  /// 행을 만들어 보관함에도 뜨게 함 → 서명 URL 반환
+  static Future<String> saveRenderedVideo(
+    String performanceId,
+    String localPath,
+    int durationMs,
+  ) async {
+    final key = '$performanceId/${_uuid.v4()}.mp4';
+    await sb.storage
+        .from(Env.bucketVideos)
+        .upload(
+          key,
+          File(localPath),
+          fileOptions: const FileOptions(
+            contentType: 'video/mp4',
+            upsert: true,
+          ),
+        );
+    // 온디바이스 렌더는 잡을 즉시 완료 상태로 기록
+    final jobId = _uuid.v4();
+    await sb.from('RenderJob').insert({
+      'id': jobId,
+      'performanceId': performanceId,
+      'status': 'DONE',
+      'timeline': {},
+      'updatedAt': _now(),
+    });
+    await sb.from('RenderedVideo').insert({
+      'id': _uuid.v4(),
+      'performanceId': performanceId,
+      'renderJobId': jobId,
+      'videoUrl': key,
+      'durationMs': durationMs,
+      'width': 720,
+      'height': 1280,
+    });
+    return sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
   }
 
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
