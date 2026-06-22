@@ -41,8 +41,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
   bool _rendering = false;
   int _recordStartMs = 0;
   double _level = 0; // 실시간 마이크 입력 레벨 0~1
+  final List<double> _levels = List<double>.filled(32, 0); // 파형 띠 히스토리
   StreamSubscription<Amplitude>? _ampSub;
   bool _celebrated = false; // 완성 축하 1회만
+  int _countdown = 0; // 3-2-1 카운트다운
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -151,6 +154,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _ampSub?.cancel();
     _recorder.dispose();
     _player.dispose();
@@ -161,38 +165,45 @@ class _PerformerScreenState extends State<PerformerScreen> {
   ({Cut cut, Dialogue dialogue})? get _current =>
       _lines.isEmpty ? null : _lines[_index];
 
-  Future<void> _toggleRecord() async {
+  void _onRecordTap() {
+    if (_recording) {
+      _stopRecording();
+    } else if (_countdown > 0) {
+      _startNow(); // 카운트다운 중 다시 탭하면 즉시 시작
+    } else {
+      _beginCountdown();
+    }
+  }
+
+  void _beginCountdown() {
+    if (_current == null) return;
+    HapticFeedback.lightImpact();
+    setState(() => _countdown = 3);
+    _countdownTimer = Timer.periodic(const Duration(milliseconds: 450), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_countdown <= 1) {
+        t.cancel();
+        _startNow();
+      } else {
+        HapticFeedback.lightImpact();
+        setState(() => _countdown--);
+      }
+    });
+  }
+
+  void _startNow() {
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    if (_countdown != 0) setState(() => _countdown = 0);
+    _startRecording();
+  }
+
+  Future<void> _startRecording() async {
     final line = _current;
     if (line == null) return;
-    if (_recording) {
-      HapticFeedback.mediumImpact();
-      final path = await _recorder.stop();
-      final durationMs = DateTime.now().millisecondsSinceEpoch - _recordStartMs;
-      await _ampSub?.cancel();
-      _ampSub = null;
-      setState(() {
-        _recording = false;
-        _level = 0;
-        if (path != null) _takes[line.dialogue.id] = path;
-      });
-      // 정지 즉시 클라우드 업로드
-      if (path != null) {
-        await _uploadTake(
-          line.dialogue.id,
-          path,
-          durationMs < 300 ? 300 : durationMs,
-        );
-        // 아직 안 한 다음 장면으로 부드럽게 자동 이동
-        if (mounted &&
-            !_recording &&
-            _index < _lines.length - 1 &&
-            !_saved.contains(_lines[_index + 1].dialogue.id)) {
-          await Future.delayed(const Duration(milliseconds: 380));
-          if (mounted && !_recording) _go(1);
-        }
-      }
-      return;
-    }
     if (!await _recorder.hasPermission()) {
       _toast('마이크 권한이 필요해요.');
       return;
@@ -207,15 +218,52 @@ class _PerformerScreenState extends State<PerformerScreen> {
     );
     HapticFeedback.mediumImpact();
     _recordStartMs = DateTime.now().millisecondsSinceEpoch;
-    // 실시간 입력 레벨 구독 → 버튼 펄스가 목소리에 반응
+    // 실시간 입력 레벨 구독 → 버튼/파형이 목소리에 반응
     _ampSub = _recorder
-        .onAmplitudeChanged(const Duration(milliseconds: 110))
+        .onAmplitudeChanged(const Duration(milliseconds: 90))
         .listen((amp) {
-          // dBFS(-50~0)를 0~1로 정규화
           final norm = ((amp.current + 50) / 50).clamp(0.0, 1.0);
-          if (mounted) setState(() => _level = norm);
+          if (mounted) {
+            setState(() {
+              _level = norm;
+              _levels.removeAt(0);
+              _levels.add(norm);
+            });
+          }
         });
     setState(() => _recording = true);
+  }
+
+  Future<void> _stopRecording() async {
+    final line = _current;
+    if (line == null) return;
+    HapticFeedback.mediumImpact();
+    final path = await _recorder.stop();
+    final durationMs = DateTime.now().millisecondsSinceEpoch - _recordStartMs;
+    await _ampSub?.cancel();
+    _ampSub = null;
+    setState(() {
+      _recording = false;
+      _level = 0;
+      _levels.fillRange(0, _levels.length, 0);
+      if (path != null) _takes[line.dialogue.id] = path;
+    });
+    // 정지 즉시 클라우드 업로드
+    if (path != null) {
+      await _uploadTake(
+        line.dialogue.id,
+        path,
+        durationMs < 300 ? 300 : durationMs,
+      );
+      // 아직 안 한 다음 장면으로 부드럽게 자동 이동
+      if (mounted &&
+          !_recording &&
+          _index < _lines.length - 1 &&
+          !_saved.contains(_lines[_index + 1].dialogue.id)) {
+        await Future.delayed(const Duration(milliseconds: 380));
+        if (mounted && !_recording) _go(1);
+      }
+    }
   }
 
   Future<void> _playTake() async {
@@ -231,7 +279,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
   }
 
   void _go(int delta) {
-    if (_recording) return;
+    if (_recording || _countdown > 0) return;
     final next = _index + delta;
     if (next < 0 || next >= _lines.length) return;
     HapticFeedback.selectionClick();
@@ -399,6 +447,33 @@ class _PerformerScreenState extends State<PerformerScreen> {
           ),
           // 하단 자막 + 컨트롤
           Positioned(left: 0, right: 0, bottom: 0, child: _bottomPanel(line)),
+          // 3-2-1 카운트다운 오버레이
+          if (_countdown > 0)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  alignment: Alignment.center,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, anim) => ScaleTransition(
+                      scale: Tween(begin: 1.4, end: 0.8).animate(anim),
+                      child: FadeTransition(opacity: anim, child: child),
+                    ),
+                    child: Text(
+                      '$_countdown',
+                      key: ValueKey(_countdown),
+                      style: GoogleFonts.notoSansKr(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 120,
+                        letterSpacing: -2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -610,6 +685,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
                     ),
                   ),
                 ],
+                // 녹음 중 실시간 파형 띠
+                if (_recording) ...[
+                  const SizedBox(height: 14),
+                  _WaveStrip(levels: _levels),
+                ],
                 const SizedBox(height: 16),
                 // 컨트롤: 이전 · 녹음 · 다음
                 Row(
@@ -625,7 +705,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                       recording: _recording,
                       hasTake: hasTake,
                       level: _level,
-                      onTap: _toggleRecord,
+                      onTap: _onRecordTap,
                     ),
                     const SizedBox(width: 28),
                     _circleBtn(
@@ -851,4 +931,49 @@ class _RecordButtonState extends State<_RecordButton>
       ),
     );
   }
+}
+
+/// 녹음 중 실시간 입력 파형 띠 (오른쪽이 최신)
+class _WaveStrip extends StatelessWidget {
+  final List<double> levels;
+  const _WaveStrip({required this.levels});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 30,
+      width: double.infinity,
+      child: CustomPaint(painter: _WavePainter(List<double>.of(levels))),
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  final List<double> levels;
+  _WavePainter(this.levels);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = levels.length;
+    if (n == 0) return;
+    const gap = 3.0;
+    final bw = (size.width - gap * (n - 1)) / n;
+    final midy = size.height / 2;
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var i = 0; i < n; i++) {
+      final h = 3 + levels[i] * (size.height - 3);
+      final x = i * (bw + gap);
+      paint.color = AppColors.coral.withValues(alpha: 0.25 + 0.6 * (i / n));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, midy - h / 2, bw, h),
+          Radius.circular(bw / 2),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) => true;
 }
