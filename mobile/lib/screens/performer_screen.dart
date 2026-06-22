@@ -203,34 +203,47 @@ class _PerformerScreenState extends State<PerformerScreen> {
   Future<void> _startRecording() async {
     final line = _current;
     if (line == null) return;
-    if (!await _recorder.hasPermission()) {
-      _toast('마이크 권한이 필요해요.');
-      return;
-    }
-    await _player.stop();
-    final dir = await getTemporaryDirectory();
-    final path =
-        '${dir.path}/take_${line.dialogue.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
-      path: path,
-    );
-    HapticFeedback.mediumImpact();
-    _recordStartMs = DateTime.now().millisecondsSinceEpoch;
-    // 실시간 입력 레벨 구독 → 버튼/파형이 목소리에 반응
-    _ampSub = _recorder
-        .onAmplitudeChanged(const Duration(milliseconds: 90))
-        .listen((amp) {
-          final norm = ((amp.current + 50) / 50).clamp(0.0, 1.0);
-          if (mounted) {
+    try {
+      if (!await _recorder.hasPermission()) {
+        _toast('마이크 권한이 필요해요.');
+        return;
+      }
+      // 이전 녹음이 아직 안 끝났을 수 있어 확실히 정지
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
+      await _player.stop();
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/take_${line.dialogue.id}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path,
+      );
+      HapticFeedback.mediumImpact();
+      _recordStartMs = DateTime.now().millisecondsSinceEpoch;
+      // 레벨 스트림은 1회만 구독(record amplitude는 재구독 불가) → 세션 내내 유지.
+      // 고정 길이 버퍼를 add/removeAt 없이 in-place 시프트.
+      _ampSub ??= _recorder
+          .onAmplitudeChanged(const Duration(milliseconds: 90))
+          .listen((amp) {
+            if (!_recording || !mounted) return;
+            final norm = ((amp.current + 50) / 50).clamp(0.0, 1.0);
             setState(() {
               _level = norm;
-              _levels.removeAt(0);
-              _levels.add(norm);
+              for (var i = 0; i < _levels.length - 1; i++) {
+                _levels[i] = _levels[i + 1];
+              }
+              _levels[_levels.length - 1] = norm;
             });
-          }
-        });
-    setState(() => _recording = true);
+          }, onError: (_) {});
+      setState(() => _recording = true);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _recording = false);
+        _toast('녹음을 시작하지 못했어요.');
+      }
+    }
   }
 
   Future<void> _stopRecording() async {
@@ -239,8 +252,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     HapticFeedback.mediumImpact();
     final path = await _recorder.stop();
     final durationMs = DateTime.now().millisecondsSinceEpoch - _recordStartMs;
-    await _ampSub?.cancel();
-    _ampSub = null;
+    // _ampSub은 취소하지 않고 유지(재구독 불가) — _recording=false면 무시됨
     setState(() {
       _recording = false;
       _level = 0;
