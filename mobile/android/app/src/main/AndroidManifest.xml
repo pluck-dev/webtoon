@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="더빙고"
+        android:label="쩌렁쩌렁"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

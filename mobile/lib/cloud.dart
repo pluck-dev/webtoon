@@ -30,7 +30,7 @@ class Cloud {
       'handle': authUser.id, // 고유 보장
       'supabaseUserId': authUser.id,
       'email': email,
-      'displayName': email != null ? email.split('@').first : '더빙고 유저',
+      'displayName': email != null ? email.split('@').first : '쩌렁쩌렁 유저',
       'updatedAt': _now(),
     };
     try {

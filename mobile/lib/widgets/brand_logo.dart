@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 
-/// 더빙고 심볼 — 음성 파형(이퀄라이저) 막대.
+/// 쩌렁쩌렁 심볼 — 음성 파형(이퀄라이저) 막대.
 /// animate=true 면 막대가 사인파로 진동(라이브 더빙 느낌).
 class BrandLogo extends StatefulWidget {
   final double size;

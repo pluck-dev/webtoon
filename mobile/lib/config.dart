@@ -24,7 +24,7 @@ class Env {
   static const supportEmail = 'admin@pluck.co.kr';
 }
 
-/// 더빙고 브랜드 컬러 (웹과 동일 팔레트)
+/// 쩌렁쩌렁 브랜드 컬러 (웹과 동일 팔레트)
 class AppColors {
   static const cream = Color(0xFFF3F0E8);
   static const card = Color(0xFFFFFCF5);

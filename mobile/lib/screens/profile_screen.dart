@@ -113,7 +113,7 @@ class ProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          email.isEmpty ? '더빙고 유저' : email.split('@').first,
+                          email.isEmpty ? '쩌렁쩌렁 유저' : email.split('@').first,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.notoSansKr(
@@ -170,7 +170,7 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    '더빙고',
+                    '쩌렁쩌렁',
                     style: GoogleFonts.notoSansKr(
                       fontWeight: FontWeight.w900,
                       color: AppColors.faint,

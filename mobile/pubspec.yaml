@@ -1,5 +1,5 @@
 name: dubbingo
-description: "더빙고 — 짧은 상황을 내 목소리로 연기하는 더빙 앱"
+description: "쩌렁쩌렁 — 짧은 상황을 내 목소리로 연기하는 더빙 앱"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

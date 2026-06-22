@@ -175,7 +175,7 @@ class _AuthScreenState extends State<AuthScreen> {
       const BrandLogo(size: 42, animate: true),
       const SizedBox(width: 12),
       Text(
-        '더빙고',
+        '쩌렁쩌렁',
         style: GoogleFonts.notoSansKr(
           fontWeight: FontWeight.w900,
           fontSize: 24,
@@ -192,7 +192,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _brand(),
         const SizedBox(height: 28),
         Text(
-          _isSignup ? '더빙고 시작하기' : '내 목소리로 시작해요',
+          _isSignup ? '쩌렁쩌렁 시작하기' : '내 목소리로 시작해요',
           style: GoogleFonts.notoSansKr(
             fontWeight: FontWeight.w900,
             fontSize: 30,

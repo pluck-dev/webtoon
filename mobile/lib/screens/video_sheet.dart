@@ -82,7 +82,7 @@ class _VideoSheetState extends State<_VideoSheet> {
       }
       await Share.shareXFiles([
         XFile(filePath, mimeType: 'video/mp4'),
-      ], text: '더빙고로 만든 내 더빙 영상 🎬');
+      ], text: '쩌렁쩌렁으로 만든 내 더빙 영상 🎬');
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

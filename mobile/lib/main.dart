@@ -30,7 +30,7 @@ class DubbingoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '더빙고',
+      title: '쩌렁쩌렁',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       home: const SplashGate(),
@@ -120,7 +120,7 @@ class _SplashView extends StatelessWidget {
               builder: (context, t, child) =>
                   Opacity(opacity: t.clamp(0, 1), child: child),
               child: Text(
-                '더빙고',
+                '쩌렁쩌렁',
                 style: GoogleFonts.notoSansKr(
                   color: AppColors.paper,
                   fontWeight: FontWeight.w900,

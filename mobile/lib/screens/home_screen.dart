@@ -304,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const BrandLogo(size: 32, animate: true),
               const SizedBox(width: 10),
               Text(
-                '더빙고',
+                '쩌렁쩌렁',
                 style: GoogleFonts.notoSansKr(
                   fontWeight: FontWeight.w900,
                   fontSize: 20,
