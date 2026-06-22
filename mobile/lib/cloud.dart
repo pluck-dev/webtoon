@@ -220,6 +220,14 @@ class Cloud {
       );
     }).toList();
   }
+
+  /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
+  static Future<void> deleteWork(String performanceId) async {
+    await sb.from('Recording').delete().eq('performanceId', performanceId);
+    await sb.from('RenderedVideo').delete().eq('performanceId', performanceId);
+    await sb.from('RenderJob').delete().eq('performanceId', performanceId);
+    await sb.from('Performance').delete().eq('id', performanceId);
+  }
 }
 
 /// 보관함 항목 (공연 1건 요약)

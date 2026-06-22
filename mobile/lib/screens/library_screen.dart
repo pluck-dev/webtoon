@@ -74,6 +74,47 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _refresh(); // 돌아오면 새 상태 반영
   }
 
+  Future<bool> _confirmDelete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          '삭제할까요?',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
+        content: const Text('이 더빙과 만든 영상이 모두 삭제돼요. 되돌릴 수 없어요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.coral),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  Future<void> _deleteWork(MyWork w) async {
+    setState(
+      () => _works!.removeWhere((x) => x.performanceId == w.performanceId),
+    );
+    try {
+      await Cloud.deleteWork(w.performanceId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('삭제하지 못했어요. 다시 시도해 주세요.')));
+        _refresh();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,15 +205,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
       sliver: SliverList.separated(
         itemCount: _works!.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, i) => FadeInUp(
-          index: i,
-          child: _WorkCard(
-            work: _works![i],
-            opening: _opening == _works![i].performanceId,
-            onPlay: () => _openVideo(_works![i]),
-            onContinue: () => _continue(_works![i]),
-          ),
-        ),
+        itemBuilder: (context, i) {
+          final w = _works![i];
+          return FadeInUp(
+            index: i,
+            child: Dismissible(
+              key: ValueKey(w.performanceId),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) => _confirmDelete(),
+              onDismissed: (_) => _deleteWork(w),
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                decoration: BoxDecoration(
+                  color: AppColors.coral,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(Icons.delete_rounded, color: Colors.white),
+              ),
+              child: _WorkCard(
+                work: w,
+                opening: _opening == w.performanceId,
+                onPlay: () => _openVideo(w),
+                onContinue: () => _continue(w),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -236,7 +295,25 @@ class _WorkCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(width: 92, child: NetworkThumb(url: work.thumbnailUrl)),
+          SizedBox(
+            width: 92,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                NetworkThumb(url: work.thumbnailUrl),
+                if (work.hasVideo)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
