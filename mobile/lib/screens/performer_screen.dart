@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -422,17 +421,17 @@ class _PerformerScreenState extends State<PerformerScreen> {
             bottom: 0,
             child: IgnorePointer(
               child: Container(
-                height: 380,
+                height: 440,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
                       Color(0x00000000),
-                      Color(0x66000000),
-                      Color(0xB3000000),
+                      Color(0x73000000),
+                      Color(0xE0000000),
                     ],
-                    stops: [0.0, 0.45, 1.0],
+                    stops: [0.0, 0.42, 1.0],
                   ),
                 ),
               ),
@@ -571,202 +570,205 @@ class _PerformerScreenState extends State<PerformerScreen> {
 
   Widget _bottomPanel(({Cut cut, Dialogue dialogue}) line) {
     final hasTake = _takes.containsKey(line.dialogue.id);
-    final prev = _index > 0 ? _lines[_index - 1].dialogue : null;
     final next = _index < _lines.length - 1
         ? _lines[_index + 1].dialogue
         : null;
     final color = _colorOf(line.dialogue.character?.color);
+    final d = line.dialogue;
 
-    return Container(
-      margin: EdgeInsets.fromLTRB(
-        12,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
         0,
-        12,
-        MediaQuery.of(context).padding.bottom + 14,
+        20,
+        MediaQuery.of(context).padding.bottom + 16,
       ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 화자 (작은 칩)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                d.speaker,
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
+                ),
+              ),
+            ],
+          ),
+          // 지문(연기 지시) — 대사와 분리해 작고 흐리게
+          if (d.direction.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              d.direction,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+                fontStyle: FontStyle.italic,
+                fontSize: 12.5,
+                height: 1.3,
+                shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          // 현재 대사 — 노래방 메인 (크게·중앙·또렷)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween(
+                  begin: const Offset(0, 0.12),
+                  end: Offset.zero,
+                ).animate(anim),
+                child: child,
+              ),
+            ),
+            child: Text(
+              d.text,
+              key: ValueKey(d.id),
+              textAlign: TextAlign.center,
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 30,
+                height: 1.28,
+                shadows: const [
+                  Shadow(
+                    color: Colors.black,
+                    blurRadius: 14,
+                    offset: Offset(0, 2),
+                  ),
+                  Shadow(color: Colors.black54, blurRadius: 30),
+                ],
+              ),
+            ),
+          ),
+          // 다음 한 줄 살짝 미리
+          if (next != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              '다음  ${next.text}',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+              ),
+            ),
+          ],
+          if (_recording) ...[
+            const SizedBox(height: 16),
+            _WaveStrip(levels: _levels),
+          ],
+          const SizedBox(height: 22),
+          // 컨트롤
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _circleBtn(
+                Icons.chevron_left_rounded,
+                enabled: _index > 0 && !_recording,
+                onTap: () => _go(-1),
+              ),
+              const SizedBox(width: 30),
+              _RecordButton(
+                recording: _recording,
+                hasTake: hasTake,
+                level: _level,
+                onTap: _onRecordTap,
+              ),
+              const SizedBox(width: 30),
+              _circleBtn(
+                Icons.chevron_right_rounded,
+                enabled: _index < _lines.length - 1 && !_recording,
+                onTap: () => _go(1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 듣기 + 상태 (한 줄, 중앙)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: hasTake ? _playTake : null,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: Icon(
+                  Icons.play_arrow_rounded,
+                  color: hasTake ? Colors.white : Colors.white24,
+                  size: 18,
+                ),
+                label: Text(
+                  '내 녹음 듣기',
+                  style: GoogleFonts.notoSansKr(
+                    color: hasTake ? Colors.white70 : Colors.white24,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+              Container(
+                width: 3,
+                height: 3,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: const BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Builder(
+                builder: (_) {
+                  final id = d.id;
+                  final up = _uploading.contains(id);
+                  final saved = _saved.contains(id);
+                  final (String label, Color c) = _recording
+                      ? ('● 녹음 중', AppColors.coral)
+                      : up
+                      ? ('저장 중…', AppColors.gold)
+                      : saved
+                      ? ('저장됨 ✓', const Color(0xFF6FCF97))
+                      : hasTake
+                      ? ('녹음됨', Colors.white70)
+                      : ('미녹음', Colors.white38);
+                  return Text(
+                    label,
+                    style: GoogleFonts.notoSansKr(
+                      color: c,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-            decoration: BoxDecoration(
-              // 반투명 + 블러: 뒤 장면이 비치되 자막은 또렷하게
-              color: AppColors.panelDark.withValues(alpha: 0.42),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 노래방 스크립트: 이전 / 현재 / 다음
-                if (prev != null)
-                  Text(
-                    prev.text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansKr(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        '${line.dialogue.speaker}${line.dialogue.direction.isNotEmpty ? ' · ${line.dialogue.direction}' : ''}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansKr(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 280),
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween(
-                        begin: const Offset(0, 0.12),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: Text(
-                    line.dialogue.text,
-                    key: ValueKey(line.dialogue.id),
-                    style: GoogleFonts.notoSansKr(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      height: 1.25,
-                    ),
-                  ),
-                ),
-                if (next != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    '▾ ${next.text}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansKr(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-                // 녹음 중 실시간 파형 띠
-                if (_recording) ...[
-                  const SizedBox(height: 14),
-                  _WaveStrip(levels: _levels),
-                ],
-                const SizedBox(height: 16),
-                // 컨트롤: 이전 · 녹음 · 다음
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _circleBtn(
-                      Icons.chevron_left_rounded,
-                      enabled: _index > 0 && !_recording,
-                      onTap: () => _go(-1),
-                    ),
-                    const SizedBox(width: 28),
-                    _RecordButton(
-                      recording: _recording,
-                      hasTake: hasTake,
-                      level: _level,
-                      onTap: _onRecordTap,
-                    ),
-                    const SizedBox(width: 28),
-                    _circleBtn(
-                      Icons.chevron_right_rounded,
-                      enabled: _index < _lines.length - 1 && !_recording,
-                      onTap: () => _go(1),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Divider(color: Colors.white.withValues(alpha: 0.12), height: 1),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton.icon(
-                      onPressed: hasTake ? _playTake : null,
-                      icon: Icon(
-                        Icons.play_arrow_rounded,
-                        color: hasTake ? Colors.white : Colors.white24,
-                        size: 20,
-                      ),
-                      label: Text(
-                        '내 녹음 듣기',
-                        style: GoogleFonts.notoSansKr(
-                          color: hasTake ? Colors.white70 : Colors.white24,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    Builder(
-                      builder: (_) {
-                        final id = line.dialogue.id;
-                        final up = _uploading.contains(id);
-                        final saved = _saved.contains(id);
-                        final (String label, Color c) = _recording
-                            ? ('● 녹음 중', AppColors.coral)
-                            : up
-                            ? ('저장 중…', AppColors.gold)
-                            : saved
-                            ? ('클라우드 저장됨 ✓', const Color(0xFF6FCF97))
-                            : hasTake
-                            ? ('녹음됨', Colors.white70)
-                            : ('미녹음', Colors.white38);
-                        return Text(
-                          label,
-                          style: GoogleFonts.notoSansKr(
-                            color: c,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
