@@ -60,6 +60,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return all.where((e) => e.category == _filter).toList();
   }
 
+  // 추천 배너: 전체 보기 + 작품 3개 이상일 때 첫 작품을 큰 배너로
+  EpisodeSummary? get _featured =>
+      (_filter == 'ALL' && (_episodes?.length ?? 0) >= 3)
+      ? _episodes!.first
+      : null;
+
+  // 그리드 목록 (추천으로 뽑힌 작품은 그리드에서 제외해 중복 방지)
+  List<EpisodeSummary> get _gridList =>
+      _featured == null ? _visible : _episodes!.skip(1).toList();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,6 +85,21 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverToBoxAdapter(child: _header()),
               if (_error == null && _episodes != null && _episodes!.isNotEmpty)
                 SliverToBoxAdapter(child: _filterChips()),
+              if (_featured != null)
+                SliverToBoxAdapter(child: _featuredBanner(_featured!)),
+              if (_featured != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+                    child: Text(
+                      '둘러보기',
+                      style: GoogleFonts.notoSansKr(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ),
               _body(),
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -108,8 +133,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    final list = _visible;
+    final list = _gridList;
     if (list.isEmpty) {
+      // 추천 배너가 떠 있으면 빈 박스 대신 아무것도 안 보여줌
+      if (_featured != null) return const SliverToBoxAdapter(child: SizedBox());
       return SliverFillRemaining(hasScrollBody: false, child: _emptyBox());
     }
     return SliverPadding(
@@ -134,6 +161,141 @@ class _HomeScreenState extends State<HomeScreen> {
     childAspectRatio: 0.62,
   );
 
+  Widget _featuredBanner(EpisodeSummary ep) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+      child: Pressable(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PerformerScreen(episodeId: ep.id)),
+        ),
+        child: Container(
+          height: 208,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.ink.withValues(alpha: 0.12),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              NetworkThumb(url: ep.thumbnailUrl),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x33000000), Color(0xCC000000)],
+                    stops: [0.35, 1.0],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '오늘의 추천',
+                        style: GoogleFonts.notoSansKr(
+                          color: AppColors.ink,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ep.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.notoSansKr(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ep.logline,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.notoSansKr(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.mic_rounded,
+                                size: 15,
+                                color: AppColors.ink,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '더빙하기',
+                                style: GoogleFonts.notoSansKr(
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _greeting(String name) {
+    final h = DateTime.now().hour;
+    final who = name.isEmpty ? '' : '$name 님, ';
+    if (h < 6) return '$who늦은 밤이에요 🌙';
+    if (h < 12) return '$who좋은 아침이에요 ☀️';
+    if (h < 18) return '$who좋은 오후예요 🎬';
+    return '$who편안한 저녁이에요 🌆';
+  }
+
   Widget _header() {
     final email = Auth.currentUser?.email ?? '';
     final name = email.isEmpty ? '' : email.split('@').first;
@@ -156,7 +318,16 @@ class _HomeScreenState extends State<HomeScreen> {
               const Spacer(),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
+          Text(
+            _greeting(name),
+            style: GoogleFonts.notoSansKr(
+              color: AppColors.coral,
+              fontWeight: FontWeight.w800,
+              fontSize: 13.5,
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
             '짧은 상황,\n내 목소리로 연기하세요.',
             style: GoogleFonts.notoSansKr(
@@ -167,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            name.isEmpty ? '작품을 골라 첫 더빙을 시작해보세요.' : '$name 님, 오늘은 어떤 역을 맡아볼까요?',
+            '작품을 골라 오늘의 더빙을 시작해보세요.',
             style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 14),
           ),
         ],
