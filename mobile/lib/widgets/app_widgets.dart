@@ -48,6 +48,32 @@ class _PressableState extends State<Pressable> {
   }
 }
 
+/// 앱 공용 페이지 전환 — 페이드 + 살짝 위로 슬라이드 (StyleSeed enter: ease-out)
+Route<T> fadeThroughRoute<T>(Widget page) {
+  return PageRouteBuilder<T>(
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (_, _, _) => page,
+    transitionsBuilder: (_, anim, _, child) {
+      final curved = CurvedAnimation(
+        parent: anim,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.035),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 /// 진입 시 아래에서 살짝 떠오르며 페이드인 (index로 스태거)
 class FadeInUp extends StatelessWidget {
   final Widget child;

@@ -66,11 +66,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _continue(MyWork w) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PerformerScreen(episodeId: w.episodeId),
-      ),
-    );
+    await Navigator.of(
+      context,
+    ).push(fadeThroughRoute(PerformerScreen(episodeId: w.episodeId)));
     _refresh(); // 돌아오면 새 상태 반영
   }
 

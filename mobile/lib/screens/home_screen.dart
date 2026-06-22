@@ -165,9 +165,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
       child: Pressable(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PerformerScreen(episodeId: ep.id)),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(fadeThroughRoute(PerformerScreen(episodeId: ep.id))),
         child: Container(
           height: 208,
           decoration: BoxDecoration(
@@ -442,11 +442,9 @@ class _EpisodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Pressable(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => PerformerScreen(episodeId: episode.id),
-        ),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(fadeThroughRoute(PerformerScreen(episodeId: episode.id))),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.card,
