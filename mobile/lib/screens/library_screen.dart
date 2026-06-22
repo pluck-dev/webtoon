@@ -97,6 +97,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         style: GoogleFonts.notoSansKr(
                           fontWeight: FontWeight.w900,
                           fontSize: 28,
+                          letterSpacing: -0.6,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -229,13 +230,7 @@ class _WorkCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.ink.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: AppShadows.card,
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(

@@ -172,13 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 208,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.ink.withValues(alpha: 0.12),
-                blurRadius: 22,
-                offset: const Offset(0, 12),
-              ),
-            ],
+            boxShadow: AppShadows.elevated,
           ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
@@ -229,6 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 22,
+                        letterSpacing: -0.4,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -334,6 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
               fontWeight: FontWeight.w900,
               fontSize: 30,
               height: 1.15,
+              letterSpacing: -0.6,
             ),
           ),
           const SizedBox(height: 8),
@@ -456,13 +452,7 @@ class _EpisodeCard extends StatelessWidget {
           color: AppColors.card,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.line),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.ink.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppShadows.card,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(

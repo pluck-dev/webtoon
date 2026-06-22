@@ -76,6 +76,7 @@ class ProfileScreen extends StatelessWidget {
               style: GoogleFonts.notoSansKr(
                 fontWeight: FontWeight.w900,
                 fontSize: 28,
+                letterSpacing: -0.6,
               ),
             ),
             const SizedBox(height: 24),

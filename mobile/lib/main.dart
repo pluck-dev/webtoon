@@ -96,7 +96,7 @@ class _SplashView extends StatelessWidget {
                   color: AppColors.paper,
                   fontWeight: FontWeight.w900,
                   fontSize: 26,
-                  letterSpacing: 1,
+                  letterSpacing: -0.4,
                 ),
               ),
             ),

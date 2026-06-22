@@ -43,3 +43,27 @@ class AppColors {
   static const deviceDark = Color(0xFF080B0D);
   static const panelDark = Color(0xFF171512);
 }
+
+/// StyleSeed 그림자 토큰 — 절제된(미세한) 엘리베이션
+/// card: 0 1px 3px /.04 · elevated: 0 4px 12px /.08 · modal: 0 8px 24px /.12
+class AppShadows {
+  static const card = [
+    BoxShadow(color: Color(0x0A000000), blurRadius: 3, offset: Offset(0, 1)),
+  ];
+  static const elevated = [
+    BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 4)),
+  ];
+  static const modal = [
+    BoxShadow(color: Color(0x1F000000), blurRadius: 24, offset: Offset(0, 8)),
+  ];
+}
+
+/// StyleSeed 모션 토큰 — fast 100 / normal 200 / slow 350
+class AppMotion {
+  static const fast = Duration(milliseconds: 100);
+  static const normal = Duration(milliseconds: 200);
+  static const slow = Duration(milliseconds: 350);
+  // 스프링(장난스러운 마이크로 인터랙션)
+  static const spring = Cubic(0.34, 1.56, 0.64, 1);
+  static const easeOutToken = Cubic(0, 0, 0.2, 1);
+}
