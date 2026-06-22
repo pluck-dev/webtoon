@@ -39,7 +39,7 @@ class Repo {
         .from('Cut')
         .select('id,order,imageUrl,caption')
         .eq('episodeId', episodeId)
-        .order('order');
+        .order('order', ascending: true);
 
     final cutIds = cutRows.map((r) => r['id'] as String).toList();
     final dialogueRows = cutIds.isEmpty
@@ -48,7 +48,7 @@ class Repo {
               .from('Dialogue')
               .select('id,cutId,characterId,order,text,direction')
               .inFilter('cutId', cutIds)
-              .order('order');
+              .order('order', ascending: true);
 
     final dialoguesByCut = <String, List<Dialogue>>{};
     for (final r in dialogueRows) {
