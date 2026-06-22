@@ -300,8 +300,8 @@ class Cloud {
       'renderJobId': jobId,
       'videoUrl': key,
       'durationMs': durationMs,
-      'width': 720,
-      'height': 1280,
+      'width': 1080,
+      'height': 1920,
     });
     return sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
   }

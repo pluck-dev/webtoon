@@ -33,8 +33,8 @@ class RenderLine {
 
 /// 폰에서 직접 장면 이미지 + 자막 + 녹음을 합쳐 mp4 생성 (ffmpeg)
 class LocalRender {
-  static const int w = 720;
-  static const int h = 1280;
+  static const int w = 1080;
+  static const int h = 1920;
 
   /// onProgress: 0~1
   static Future<String> render(
@@ -62,10 +62,11 @@ class LocalRender {
       // 2) PNG + 녹음 → mp4 세그먼트
       final seg = '${dir.path}/seg_$i.mp4';
       final dur = (line.durationMs / 1000).clamp(0.4, 60.0);
+      // H.264(libx264) — 정지 이미지 튜닝, 소셜 호환. full-gpl 빌드라 x264 포함됨.
       final cmd =
           "-y -loop 1 -i '$framePath' -i '${line.audioPath}' "
-          "-t $dur -r 24 -c:v mpeg4 -q:v 4 -pix_fmt yuv420p "
-          "-c:a aac -b:a 128k -ar 44100 -shortest '$seg'";
+          "-t $dur -r 24 -c:v libx264 -preset veryfast -tune stillimage "
+          "-crf 22 -pix_fmt yuv420p -c:a aac -b:a 160k -ar 44100 -shortest '$seg'";
       final ok = await _run(cmd);
       if (!ok) {
         throw Exception('세그먼트 $i 생성 실패');
@@ -85,7 +86,8 @@ class LocalRender {
       // copy 실패 시 재인코딩으로 이어붙이기
       ok = await _run(
         "-y -f concat -safe 0 -i '${listFile.path}' "
-        "-c:v mpeg4 -q:v 4 -pix_fmt yuv420p -c:a aac -b:a 128k '$out'",
+        "-c:v libx264 -preset veryfast -crf 22 -pix_fmt yuv420p "
+        "-c:a aac -b:a 160k '$out'",
       );
       if (!ok) throw Exception('이어붙이기 실패');
     }
@@ -157,21 +159,21 @@ class LocalRender {
         ),
     );
 
-    // 자막 블록 (하단)
-    const pad = 48.0;
+    // 자막 블록 (하단) — 1080 기준 크기
+    const pad = 72.0;
     final maxTextW = w - pad * 2;
-    var y = h - 70.0;
+    var y = h - 110.0;
 
     // 메인 대사 (아래에서부터 쌓기 위해 높이 계산)
     final textTp = _tp(
       line.text,
       const TextStyle(
         color: Colors.white,
-        fontSize: 46,
+        fontSize: 70,
         fontWeight: FontWeight.w900,
         height: 1.25,
         shadows: [
-          Shadow(color: Colors.black, blurRadius: 12, offset: Offset(0, 2)),
+          Shadow(color: Colors.black, blurRadius: 18, offset: Offset(0, 3)),
         ],
       ),
       maxTextW,
@@ -181,9 +183,9 @@ class LocalRender {
       line.speaker,
       const TextStyle(
         color: AppColors.gold,
-        fontSize: 24,
+        fontSize: 36,
         fontWeight: FontWeight.w900,
-        shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+        shadows: [Shadow(color: Colors.black, blurRadius: 12)],
       ),
       maxTextW,
       TextAlign.center,
@@ -194,11 +196,11 @@ class LocalRender {
             line.direction,
             const TextStyle(
               color: Colors.white70,
-              fontSize: 20,
+              fontSize: 30,
               fontWeight: FontWeight.w600,
               fontStyle: FontStyle.italic,
               height: 1.3,
-              shadows: [Shadow(color: Colors.black, blurRadius: 6)],
+              shadows: [Shadow(color: Colors.black, blurRadius: 9)],
             ),
             maxTextW,
             TextAlign.center,
@@ -209,10 +211,10 @@ class LocalRender {
     y -= textTp.height;
     textTp.paint(canvas, Offset((w - textTp.width) / 2, y));
     if (dirTp != null) {
-      y -= dirTp.height + 14;
+      y -= dirTp.height + 20;
       dirTp.paint(canvas, Offset((w - dirTp.width) / 2, y));
     }
-    y -= speakerTp.height + 14;
+    y -= speakerTp.height + 20;
     speakerTp.paint(canvas, Offset((w - speakerTp.width) / 2, y));
 
     final pic = recorder.endRecording();
