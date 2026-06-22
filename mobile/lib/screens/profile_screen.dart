@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../cloud.dart';
 import '../config.dart';
 import '../repo.dart';
 
@@ -135,6 +136,8 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 18),
+            _statsCard(),
             const SizedBox(height: 24),
             _section('지원'),
             _tile(
@@ -189,6 +192,65 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _statsCard() {
+    return FutureBuilder<List<MyWork>>(
+      future: Cloud.myWorks(),
+      builder: (context, snap) {
+        final works = snap.data ?? const <MyWork>[];
+        final loading = snap.connectionState == ConnectionState.waiting;
+        final recordings = works.fold<int>(0, (a, w) => a + w.recordingCount);
+        final videos = works.where((w) => w.hasVideo).length;
+        String v(int n) => loading ? '–' : '$n';
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            color: AppColors.ink,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              _stat(v(works.length), '더빙 작품'),
+              _statDivider(),
+              _stat(v(recordings), '녹음'),
+              _statDivider(),
+              _stat(v(videos), '완성 영상'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _stat(String value, String label) => Expanded(
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.notoSansKr(
+            color: AppColors.gold,
+            fontWeight: FontWeight.w900,
+            fontSize: 24,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: GoogleFonts.notoSansKr(
+            color: Colors.white70,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _statDivider() => Container(
+    width: 1,
+    height: 34,
+    color: Colors.white.withValues(alpha: 0.12),
+  );
 
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
