@@ -11,6 +11,7 @@ import '../cloud.dart';
 import '../config.dart';
 import '../local_render.dart';
 import '../models.dart';
+import '../notify.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/brand_logo.dart';
@@ -120,6 +121,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
       _rendering = true;
       _renderProgress = 0;
     });
+    await Notify.requestPermission();
+    await Notify.startRender(); // 백그라운드 유지 + 진행 알림
     try {
       // 모든 대사의 로컬 오디오 확보 (이번 세션 녹음 우선, 없으면 클라우드 다운로드)
       final meta = await Cloud.recordingMeta(perfId);
@@ -152,6 +155,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
         renderLines,
         onProgress: (p) {
           if (mounted) setState(() => _renderProgress = p);
+          Notify.updateRender((p * 100).round());
         },
       );
       // 보관함에도 저장(클라우드 업로드) — 실패해도 로컬 재생은 가능
@@ -160,11 +164,14 @@ class _PerformerScreenState extends State<PerformerScreen> {
         final totalMs = renderLines.fold<int>(0, (a, r) => a + r.durationMs);
         url = await Cloud.saveRenderedVideo(perfId, out, totalMs);
       } catch (_) {}
+      await Notify.stopRender();
+      await Notify.renderDone(); // 완료 알림(앱 나가있어도 받음)
       if (mounted) {
         setState(() => _rendering = false);
         showVideoSheet(context, url);
       }
     } catch (e) {
+      await Notify.stopRender();
       if (mounted) {
         setState(() => _rendering = false);
         _toast('영상 생성에 실패했어요.');

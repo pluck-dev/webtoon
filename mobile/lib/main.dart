@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config.dart';
+import 'notify.dart';
 import 'repo.dart';
 import 'screens/auth_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     anonKey: Env.supabaseAnonKey,
     // ignore: deprecated_member_use
   );
+  await Notify.init(); // 포그라운드 서비스 + 로컬 알림 채널
   runApp(const DubbingoApp());
 }
 
