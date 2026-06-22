@@ -14,23 +14,35 @@ class Cloud {
   /// 현재 로그인 유저에 대응하는 User 행을 보장하고 User.id 반환
   static Future<String> ensureUser() async {
     final authUser = sb.auth.currentUser!;
-    final existing = await sb
+    // 이미 이 인증 계정에 연결된 User
+    final byUid = await sb
         .from('User')
         .select('id')
         .eq('supabaseUserId', authUser.id)
         .maybeSingle();
-    if (existing != null) return existing['id'] as String;
+    if (byUid != null) return byUid['id'] as String;
 
-    final id = _uuid.v4();
     final email = authUser.email;
-    await sb.from('User').insert({
+    final id = _uuid.v4();
+    final row = {
       'id': id,
       'handle': authUser.id, // 고유 보장
       'supabaseUserId': authUser.id,
       'email': email,
       'displayName': email != null ? email.split('@').first : '더빙고 유저',
       'updatedAt': _now(),
-    });
+    };
+    try {
+      await sb.from('User').insert(row);
+    } on PostgrestException catch (e) {
+      // 같은 이메일이 이미 존재(웹 계정 등)해 유니크 충돌 → 이메일 없이 생성
+      // (RLS상 기존 행을 읽거나 연결할 수 없어 모바일용 행을 별도 생성)
+      if (e.code == '23505') {
+        await sb.from('User').insert({...row, 'email': null});
+      } else {
+        rethrow;
+      }
+    }
     return id;
   }
 
