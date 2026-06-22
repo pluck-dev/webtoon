@@ -418,7 +418,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     return Scaffold(
       backgroundColor: AppColors.deviceDark,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: (allSaved && !_recording)
+      floatingActionButton: (allSaved && !_recording && !_rendering)
           ? Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).size.height * 0.32,
@@ -518,7 +518,105 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
               ),
             ),
+          // 영상 만드는 중 오버레이
+          if (_rendering) _renderOverlay(),
         ],
+      ),
+    );
+  }
+
+  Widget _renderOverlay() {
+    final pct = (_renderProgress * 100).round();
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.82),
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandLogo(size: 84, animate: true, badge: false),
+              const SizedBox(height: 24),
+              Text(
+                '영상 만드는 중',
+                style: GoogleFonts.notoSansKr(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 진행 바
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 8,
+                      width: double.infinity,
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        begin: 0,
+                        end: _renderProgress.clamp(0.0, 1.0),
+                      ),
+                      duration: const Duration(milliseconds: 300),
+                      builder: (context, t, _) => FractionallySizedBox(
+                        widthFactor: t,
+                        child: Container(
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.gold, AppColors.coral],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '$pct%',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Text(
+                '폰에서 직접 만들고 있어요.\n다른 작품 더빙하러 가도 돼요 — 완료되면 알림으로 알려드릴게요 🔔',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.notoSansKr(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).maybePop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 12,
+                  ),
+                ),
+                icon: const Icon(Icons.home_rounded, size: 20),
+                label: Text(
+                  '나가서 기다리기',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
