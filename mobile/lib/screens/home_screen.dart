@@ -5,6 +5,7 @@ import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import '../widgets/brand_logo.dart';
 import 'performer_screen.dart';
 
 const categoryLabels = {
@@ -143,23 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.ink,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Text(
-                  '더',
-                  style: GoogleFonts.notoSansKr(
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
+              const BrandLogo(size: 32, animate: true),
               const SizedBox(width: 10),
               Text(
                 '더빙고',

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
 import '../repo.dart';
+import '../widgets/brand_logo.dart';
 
 enum _Step { enterEmail, enterCode }
 
@@ -132,23 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _brand() => Row(
     children: [
-      Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.ink,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Text(
-          '더',
-          style: GoogleFonts.notoSansKr(
-            color: AppColors.gold,
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-          ),
-        ),
-      ),
+      const BrandLogo(size: 42, animate: true),
       const SizedBox(width: 12),
       Text(
         '더빙고',
