@@ -1,7 +1,5 @@
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'config.dart';
 import 'models.dart';
 
 SupabaseClient get sb => Supabase.instance.client;
@@ -98,28 +96,12 @@ class Auth {
 
   static Future<void> signOut() => sb.auth.signOut();
 
-  static bool get isGoogleConfigured => Env.googleWebClientId.isNotEmpty;
-
-  /// 네이티브 구글 로그인 → Supabase에 idToken으로 인증
-  static Future<void> signInWithGoogle() async {
-    if (!isGoogleConfigured) {
-      throw '구글 로그인 설정이 아직 안 됐어요. (Env.googleWebClientId)';
-    }
-    final google = GoogleSignIn(
-      clientId: Env.googleIosClientId.isEmpty ? null : Env.googleIosClientId,
-      serverClientId: Env.googleWebClientId,
-    );
-    final account = await google.signIn();
-    if (account == null) return; // 사용자가 취소
-    final auth = await account.authentication;
-    final idToken = auth.idToken;
-    if (idToken == null) {
-      throw '구글 인증 토큰을 받지 못했어요.';
-    }
-    await sb.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      accessToken: auth.accessToken,
-    );
-  }
+  /// 구글 로그인 — Supabase OAuth(딥링크) 플로우.
+  /// 브라우저(커스텀 탭)로 구글 동의 → kr.co.pluck.dubbingo://login-callback 로
+  /// 돌아오면 supabase_flutter가 세션을 자동 처리한다.
+  /// (Supabase 대시보드에서 Google provider 활성화 + 위 redirect URL 등록 필요)
+  static Future<void> signInWithGoogle() => sb.auth.signInWithOAuth(
+    OAuthProvider.google,
+    redirectTo: 'kr.co.pluck.dubbingo://login-callback',
+  );
 }
