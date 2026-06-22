@@ -20,7 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _code = TextEditingController();
   final _password = TextEditingController();
   _Step _step = _Step.enterEmail;
-  bool _passwordMode = false;
+  bool _passwordMode = true; // 기본: 이메일+비밀번호 로그인 (가입은 인증코드)
   bool _busy = false;
   String? _error;
   String? _notice;
@@ -162,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          '짧은 상황을 내 목소리로 연기하는 더빙 놀이터',
+          _passwordMode ? '이메일과 비밀번호로 로그인하세요' : '처음이세요? 인증코드를 받아 바로 가입돼요',
           style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 15),
         ),
         const SizedBox(height: 28),
@@ -241,13 +241,26 @@ class _AuthScreenState extends State<AuthScreen> {
               : () => setState(() {
                   _passwordMode = !_passwordMode;
                   _error = null;
+                  _notice = null;
                 }),
-          child: Text(
-            _passwordMode ? '인증코드로 로그인' : '비밀번호로 로그인',
-            style: GoogleFonts.notoSansKr(
-              color: AppColors.muted,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
+          child: Text.rich(
+            TextSpan(
+              style: GoogleFonts.notoSansKr(
+                color: AppColors.muted,
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+              ),
+              children: [
+                TextSpan(text: _passwordMode ? '처음이신가요?  ' : '이미 계정이 있으신가요?  '),
+                TextSpan(
+                  text: _passwordMode ? '인증코드로 가입' : '비밀번호로 로그인',
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
