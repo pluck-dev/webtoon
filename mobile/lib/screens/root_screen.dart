@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
@@ -56,6 +57,7 @@ class _RootScreenState extends State<RootScreen> {
           height: 64,
           selectedIndex: _index,
           onDestinationSelected: (i) {
+            HapticFeedback.selectionClick();
             setState(() {
               _index = i;
               if (i == 1) {

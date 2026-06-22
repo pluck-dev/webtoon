@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,6 +13,7 @@ import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import '../widgets/brand_logo.dart';
 import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
@@ -36,6 +39,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
   String? _performanceId;
   bool _rendering = false;
   int _recordStartMs = 0;
+  double _level = 0; // 실시간 마이크 입력 레벨 0~1
+  StreamSubscription<Amplitude>? _ampSub;
 
   @override
   void initState() {
@@ -134,6 +139,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
 
   @override
   void dispose() {
+    _ampSub?.cancel();
     _recorder.dispose();
     _player.dispose();
     super.dispose();
@@ -147,10 +153,14 @@ class _PerformerScreenState extends State<PerformerScreen> {
     final line = _current;
     if (line == null) return;
     if (_recording) {
+      HapticFeedback.mediumImpact();
       final path = await _recorder.stop();
       final durationMs = DateTime.now().millisecondsSinceEpoch - _recordStartMs;
+      await _ampSub?.cancel();
+      _ampSub = null;
       setState(() {
         _recording = false;
+        _level = 0;
         if (path != null) _takes[line.dialogue.id] = path;
       });
       // 정지 즉시 클라우드 업로드
@@ -175,7 +185,16 @@ class _PerformerScreenState extends State<PerformerScreen> {
       const RecordConfig(encoder: AudioEncoder.aacLc),
       path: path,
     );
+    HapticFeedback.mediumImpact();
     _recordStartMs = DateTime.now().millisecondsSinceEpoch;
+    // 실시간 입력 레벨 구독 → 버튼 펄스가 목소리에 반응
+    _ampSub = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 110))
+        .listen((amp) {
+          // dBFS(-50~0)를 0~1로 정규화
+          final norm = ((amp.current + 50) / 50).clamp(0.0, 1.0);
+          if (mounted) setState(() => _level = norm);
+        });
     setState(() => _recording = true);
   }
 
@@ -208,16 +227,68 @@ class _PerformerScreenState extends State<PerformerScreen> {
   Widget build(BuildContext context) {
     if (_loadError != null) {
       return Scaffold(
-        appBar: AppBar(),
+        backgroundColor: AppColors.ink,
         body: Center(
-          child: Text('불러오지 못했어요.\n$_loadError', textAlign: TextAlign.center),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.cloud_off_rounded,
+                  color: Colors.white54,
+                  size: 44,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '작품을 불러오지 못했어요.',
+                  style: GoogleFonts.notoSansKr(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                FilledButton(
+                  onPressed: () {
+                    setState(() => _loadError = null);
+                    _load();
+                  },
+                  child: const Text('다시 시도'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: Text(
+                    '돌아가기',
+                    style: GoogleFonts.notoSansKr(color: Colors.white60),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
     final detail = _detail;
     if (detail == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.coral)),
+      return Scaffold(
+        backgroundColor: AppColors.ink,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandLogo(size: 76, animate: true, badge: false),
+              const SizedBox(height: 18),
+              Text(
+                '무대를 준비하고 있어요…',
+                style: GoogleFonts.notoSansKr(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     final line = _current;
@@ -532,6 +603,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                     _RecordButton(
                       recording: _recording,
                       hasTake: hasTake,
+                      level: _level,
                       onTap: _toggleRecord,
                     ),
                     const SizedBox(width: 28),
@@ -632,14 +704,16 @@ class _PerformerScreenState extends State<PerformerScreen> {
   }
 }
 
-/// 녹음 버튼 — 녹음 중엔 코랄 펄스 링이 퍼진다
+/// 녹음 버튼 — 펄스 링 + 목소리 크기(level)에 반응하는 글로우
 class _RecordButton extends StatefulWidget {
   final bool recording;
   final bool hasTake;
+  final double level; // 0~1 실시간 입력 레벨
   final VoidCallback onTap;
   const _RecordButton({
     required this.recording,
     required this.hasTake,
+    required this.level,
     required this.onTap,
   });
 
@@ -680,9 +754,10 @@ class _RecordButtonState extends State<_RecordButton>
   @override
   Widget build(BuildContext context) {
     final base = widget.recording ? AppColors.coral : AppColors.gold;
+    final level = widget.recording ? widget.level : 0.0;
     return SizedBox(
-      width: 96,
-      height: 96,
+      width: 112,
+      height: 112,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -697,27 +772,45 @@ class _RecordButtonState extends State<_RecordButton>
                 );
               },
             ),
+          // 목소리 크기에 반응하는 글로우
+          if (widget.recording)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 110),
+              curve: Curves.easeOut,
+              width: 70 + level * 42,
+              height: 70 + level * 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.coral.withValues(alpha: 0.18 + level * 0.22),
+              ),
+            ),
           GestureDetector(
             onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: base,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: base.withValues(alpha: 0.5), blurRadius: 16),
-                ],
-              ),
-              child: Icon(
-                widget.recording
-                    ? Icons.stop_rounded
-                    : widget.hasTake
-                    ? Icons.refresh_rounded
-                    : Icons.mic_rounded,
-                color: AppColors.ink,
-                size: 30,
+            child: AnimatedScale(
+              scale: 1 + level * 0.07,
+              duration: const Duration(milliseconds: 110),
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: base,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: base.withValues(alpha: 0.5),
+                      blurRadius: 16,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.recording
+                      ? Icons.stop_rounded
+                      : widget.hasTake
+                      ? Icons.refresh_rounded
+                      : Icons.mic_rounded,
+                  color: AppColors.ink,
+                  size: 30,
+                ),
               ),
             ),
           ),
@@ -727,13 +820,13 @@ class _RecordButtonState extends State<_RecordButton>
   }
 
   Widget _ring(double t) {
-    final size = 64.0 + t * 32.0;
+    final size = 64.0 + t * 40.0;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.coral.withValues(alpha: (1 - t) * 0.35),
+        color: AppColors.coral.withValues(alpha: (1 - t) * 0.30),
       ),
     );
   }
