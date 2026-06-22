@@ -79,17 +79,22 @@ class Auth {
   static bool get isSignedIn => currentUser != null;
   static Stream<AuthState> get changes => sb.auth.onAuthStateChange;
 
-  /// 비밀번호 로그인 (테스트 계정 등)
+  /// 이메일+비밀번호 로그인
   static Future<void> signInWithPassword(String email, String password) =>
       sb.auth.signInWithPassword(email: email, password: password);
 
-  /// 이메일로 6자리 인증코드 발송 (신규면 계정 자동 생성)
-  static Future<void> sendEmailOtp(String email) =>
-      sb.auth.signInWithOtp(email: email, shouldCreateUser: true);
+  /// 회원가입 — 이메일 확인이 켜져 있으면 가입 확인 코드가 메일로 발송됨.
+  /// (세션은 코드 인증 후 생성, 확인이 꺼져 있으면 즉시 session 반환)
+  static Future<AuthResponse> signUp(String email, String password) =>
+      sb.auth.signUp(email: email, password: password);
 
-  /// 인증코드 검증 → 성공 시 로그인 완료
-  static Future<AuthResponse> verifyEmailOtp(String email, String token) =>
-      sb.auth.verifyOTP(email: email, token: token, type: OtpType.email);
+  /// 회원가입 확인 코드 검증 → 성공 시 가입 완료 + 로그인
+  static Future<AuthResponse> verifySignup(String email, String token) =>
+      sb.auth.verifyOTP(email: email, token: token, type: OtpType.signup);
+
+  /// 가입 확인 코드 재발송
+  static Future<void> resendSignup(String email) =>
+      sb.auth.resend(type: OtpType.signup, email: email);
 
   static Future<void> signOut() => sb.auth.signOut();
 
