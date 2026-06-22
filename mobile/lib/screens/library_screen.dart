@@ -290,86 +290,90 @@ class _WorkCard extends StatelessWidget {
         boxShadow: AppShadows.card,
       ),
       clipBehavior: Clip.antiAlias,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 92,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                NetworkThumb(url: work.thumbnailUrl),
-                if (work.hasVideo)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.28),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.play_circle_fill_rounded,
-                      color: Colors.white,
-                      size: 34,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+      // IntrinsicHeight: Row(stretch) 안의 Stack(fit:expand) 썸네일이 무한 높이를
+      // 받아 뷰포트가 안 그려지던 문제 방지(행 높이를 콘텐츠 기준으로 확정)
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 92,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Row(
-                    children: [
-                      _tag(categoryLabels[work.category] ?? work.category),
-                      const SizedBox(width: 6),
-                      if (work.hasVideo)
-                        _tag('영상 완성', bg: AppColors.gold, fg: AppColors.ink),
-                    ],
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    work.episodeTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansKr(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '녹음 ${work.recordingCount}개',
-                    style: GoogleFonts.notoSansKr(
-                      color: AppColors.muted,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      if (work.hasVideo)
-                        _btn(
-                          icon: Icons.play_arrow_rounded,
-                          label: '영상 보기',
-                          filled: true,
-                          loading: opening,
-                          onTap: onPlay,
-                        ),
-                      if (work.hasVideo) const SizedBox(width: 8),
-                      _btn(
-                        icon: Icons.mic_rounded,
-                        label: '이어서 더빙',
-                        filled: !work.hasVideo,
-                        onTap: onContinue,
+                  NetworkThumb(url: work.thumbnailUrl),
+                  if (work.hasVideo)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Colors.white,
+                        size: 34,
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        _tag(categoryLabels[work.category] ?? work.category),
+                        const SizedBox(width: 6),
+                        if (work.hasVideo)
+                          _tag('영상 완성', bg: AppColors.gold, fg: AppColors.ink),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      work.episodeTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.notoSansKr(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '녹음 ${work.recordingCount}개',
+                      style: GoogleFonts.notoSansKr(
+                        color: AppColors.muted,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (work.hasVideo)
+                          _btn(
+                            icon: Icons.play_arrow_rounded,
+                            label: '영상 보기',
+                            filled: true,
+                            loading: opening,
+                            onTap: onPlay,
+                          ),
+                        if (work.hasVideo) const SizedBox(width: 8),
+                        _btn(
+                          icon: Icons.mic_rounded,
+                          label: '이어서 더빙',
+                          filled: !work.hasVideo,
+                          onTap: onContinue,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

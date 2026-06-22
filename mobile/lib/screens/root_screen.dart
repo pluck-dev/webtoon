@@ -18,27 +18,16 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   int _index = 0;
 
-  // 보관함은 탭 진입 때마다 새로 읽도록 key 교체
-  Key _libraryKey = const ValueKey('lib-0');
-  int _libVisits = 0;
-
-  late final List<Widget> _pages = [
-    const HomeScreen(),
-    const SizedBox.shrink(), // 보관함은 동적 key로 빌드
-    const ProfileScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: [
-          _pages[0],
-          LibraryScreen(key: _libraryKey),
-          _pages[2],
-        ],
-      ),
+      // IndexedStack 대신 활성 화면만 빌드 — 오프스테이지 스크롤뷰가
+      // 안 그려지던 문제 회피 + 탭 재진입 시 새로 로드(보관함 새로고침)
+      body: switch (_index) {
+        0 => const HomeScreen(),
+        1 => const LibraryScreen(),
+        _ => const ProfileScreen(),
+      },
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           backgroundColor: AppColors.card,
@@ -58,13 +47,7 @@ class _RootScreenState extends State<RootScreen> {
           selectedIndex: _index,
           onDestinationSelected: (i) {
             HapticFeedback.selectionClick();
-            setState(() {
-              _index = i;
-              if (i == 1) {
-                _libVisits++;
-                _libraryKey = ValueKey('lib-$_libVisits'); // 재진입 시 새로고침
-              }
-            });
+            setState(() => _index = i);
           },
           destinations: const [
             NavigationDestination(
