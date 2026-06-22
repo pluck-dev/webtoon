@@ -69,10 +69,27 @@ class _VideoSheetState extends State<_VideoSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
-              Text('완성된 영상 🎬',
-                  style: GoogleFonts.notoSansKr(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
+              Text(
+                '완성된 영상 🎬',
+                style: GoogleFonts.notoSansKr(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
               const Spacer(),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -88,21 +105,32 @@ class _VideoSheetState extends State<_VideoSheet> {
               child: Container(
                 color: Colors.black,
                 child: !_ready
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+                    ? const Center(
+                        child: CircularProgressIndicator(color: AppColors.gold),
+                      )
                     : _controller != null && _controller!.value.isInitialized
-                        ? GestureDetector(
-                            onTap: () => setState(() {
-                              _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
-                            }),
-                            child: VideoPlayer(_controller!),
-                          )
-                        : const Center(child: Text('영상을 불러오지 못했어요.', style: TextStyle(color: Colors.white70))),
+                    ? GestureDetector(
+                        onTap: () => setState(() {
+                          _controller!.value.isPlaying
+                              ? _controller!.pause()
+                              : _controller!.play();
+                        }),
+                        child: VideoPlayer(_controller!),
+                      )
+                    : const Center(
+                        child: Text(
+                          '영상을 불러오지 못했어요.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          Text('마이페이지에서 다시 볼 수 있어요.',
-              style: GoogleFonts.notoSansKr(color: Colors.white54, fontSize: 13)),
+          Text(
+            '마이페이지에서 다시 볼 수 있어요.',
+            style: GoogleFonts.notoSansKr(color: Colors.white54, fontSize: 13),
+          ),
           const SizedBox(height: 8),
         ],
       ),

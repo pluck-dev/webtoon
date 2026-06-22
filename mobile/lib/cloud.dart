@@ -35,7 +35,10 @@ class Cloud {
   }
 
   /// 에피소드에 대한 내 공연을 가져오거나 생성
-  static Future<String> getOrCreatePerformance(String episodeId, String userId) async {
+  static Future<String> getOrCreatePerformance(
+    String episodeId,
+    String userId,
+  ) async {
     final existing = await sb
         .from('Performance')
         .select('id')
@@ -58,7 +61,9 @@ class Cloud {
   }
 
   /// 이 공연의 저장된 녹음(대사별 최신) — dialogueId → durationMs
-  static Future<Map<String, int>> loadSavedRecordings(String performanceId) async {
+  static Future<Map<String, int>> loadSavedRecordings(
+    String performanceId,
+  ) async {
     final rows = await sb
         .from('Recording')
         .select('dialogueId,durationMs,createdAt')
@@ -80,11 +85,17 @@ class Cloud {
     required String filePath,
     required int durationMs,
   }) async {
-    final key = '$performanceId/$dialogueId-${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await sb.storage.from(Env.bucketRecordings).upload(
+    final key =
+        '$performanceId/$dialogueId-${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await sb.storage
+        .from(Env.bucketRecordings)
+        .upload(
           key,
           File(filePath),
-          fileOptions: const FileOptions(contentType: 'audio/mp4', upsert: true),
+          fileOptions: const FileOptions(
+            contentType: 'audio/mp4',
+            upsert: true,
+          ),
         );
     await sb.from('Recording').insert({
       'id': _uuid.v4(),
@@ -111,8 +122,14 @@ class Cloud {
   }
 
   /// 렌더 잡 상태 + 완료 시 영상 서명 URL
-  static Future<({String status, String? videoUrl})> fetchRender(String jobId) async {
-    final job = await sb.from('RenderJob').select('status').eq('id', jobId).maybeSingle();
+  static Future<({String status, String? videoUrl})> fetchRender(
+    String jobId,
+  ) async {
+    final job = await sb
+        .from('RenderJob')
+        .select('status')
+        .eq('id', jobId)
+        .maybeSingle();
     final status = (job?['status'] ?? 'QUEUED') as String;
     if (status != 'DONE') return (status: status, videoUrl: null);
 
@@ -139,6 +156,8 @@ class Cloud {
         .limit(1)
         .maybeSingle();
     if (video == null) return null;
-    return sb.storage.from(Env.bucketVideos).createSignedUrl(video['videoUrl'] as String, 60 * 60);
+    return sb.storage
+        .from(Env.bucketVideos)
+        .createSignedUrl(video['videoUrl'] as String, 60 * 60);
   }
 }

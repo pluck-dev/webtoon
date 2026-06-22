@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 /// Supabase 연결 설정 (publishable 키는 클라이언트 공개용 — 안전)
 class Env {
   static const supabaseUrl = 'https://brnjzvtvudkyjoxswuln.supabase.co';
-  static const supabaseAnonKey = 'sb_publishable_vqxNd4NX6GSb_MYFEPyOXg_88oe8PlP';
+  static const supabaseAnonKey =
+      'sb_publishable_vqxNd4NX6GSb_MYFEPyOXg_88oe8PlP';
 
   // Storage 버킷 (웹과 공용)
   static const bucketRecordings = 'recordings';

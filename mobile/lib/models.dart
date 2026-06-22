@@ -22,15 +22,15 @@ class EpisodeSummary {
   });
 
   factory EpisodeSummary.fromMap(Map<String, dynamic> m) => EpisodeSummary(
-        id: m['id'] as String,
-        slug: m['slug'] as String,
-        title: m['title'] as String,
-        logline: (m['logline'] ?? '') as String,
-        thumbnailUrl: m['thumbnailUrl'] as String?,
-        maxSeconds: (m['maxSeconds'] ?? 60) as int,
-        category: (m['category'] ?? 'WEBTOON') as String,
-        format: (m['format'] ?? 'SHORT') as String,
-      );
+    id: m['id'] as String,
+    slug: m['slug'] as String,
+    title: m['title'] as String,
+    logline: (m['logline'] ?? '') as String,
+    thumbnailUrl: m['thumbnailUrl'] as String?,
+    maxSeconds: (m['maxSeconds'] ?? 60) as int,
+    category: (m['category'] ?? 'WEBTOON') as String,
+    format: (m['format'] ?? 'SHORT') as String,
+  );
 }
 
 class Character {
@@ -49,12 +49,12 @@ class Character {
   });
 
   factory Character.fromMap(Map<String, dynamic> m) => Character(
-        id: m['id'] as String,
-        name: (m['name'] ?? '') as String,
-        description: (m['description'] ?? '') as String,
-        voiceGuide: (m['voiceGuide'] ?? '') as String,
-        color: (m['color'] ?? '#7c5cff') as String,
-      );
+    id: m['id'] as String,
+    name: (m['name'] ?? '') as String,
+    description: (m['description'] ?? '') as String,
+    voiceGuide: (m['voiceGuide'] ?? '') as String,
+    color: (m['color'] ?? '#7c5cff') as String,
+  );
 }
 
 class Dialogue {
@@ -79,13 +79,13 @@ class Dialogue {
   String get speaker => character?.name ?? 'Narration';
 
   factory Dialogue.fromMap(Map<String, dynamic> m) => Dialogue(
-        id: m['id'] as String,
-        cutId: m['cutId'] as String,
-        characterId: m['characterId'] as String?,
-        order: (m['order'] ?? 0) as int,
-        text: (m['text'] ?? '') as String,
-        direction: (m['direction'] ?? '') as String,
-      );
+    id: m['id'] as String,
+    cutId: m['cutId'] as String,
+    characterId: m['characterId'] as String?,
+    order: (m['order'] ?? 0) as int,
+    text: (m['text'] ?? '') as String,
+    direction: (m['direction'] ?? '') as String,
+  );
 }
 
 class Cut {
@@ -110,7 +110,11 @@ class EpisodeDetail {
   final List<Cut> cuts;
   final List<Character> characters;
 
-  EpisodeDetail({required this.summary, required this.cuts, required this.characters});
+  EpisodeDetail({
+    required this.summary,
+    required this.cuts,
+    required this.characters,
+  });
 
   /// 전체 대사를 순서대로 펼친 리스트 (퍼포머 순차 진행용)
   List<({Cut cut, Dialogue dialogue})> get lines {

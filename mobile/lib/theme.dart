@@ -5,10 +5,9 @@ import 'config.dart';
 
 ThemeData buildTheme() {
   final base = ThemeData(brightness: Brightness.light, useMaterial3: true);
-  final textTheme = GoogleFonts.notoSansKrTextTheme(base.textTheme).apply(
-    bodyColor: AppColors.ink,
-    displayColor: AppColors.ink,
-  );
+  final textTheme = GoogleFonts.notoSansKrTextTheme(
+    base.textTheme,
+  ).apply(bodyColor: AppColors.ink, displayColor: AppColors.ink);
 
   return base.copyWith(
     scaffoldBackgroundColor: AppColors.cream,
@@ -31,7 +30,10 @@ ThemeData buildTheme() {
         foregroundColor: AppColors.paper,
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800, fontSize: 16),
+        textStyle: GoogleFonts.notoSansKr(
+          fontWeight: FontWeight.w800,
+          fontSize: 16,
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -40,7 +42,10 @@ ThemeData buildTheme() {
         minimumSize: const Size.fromHeight(52),
         side: const BorderSide(color: AppColors.ink),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800, fontSize: 16),
+        textStyle: GoogleFonts.notoSansKr(
+          fontWeight: FontWeight.w800,
+          fontSize: 16,
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -65,8 +70,8 @@ ThemeData buildTheme() {
 
 /// 자주 쓰는 텍스트 스타일 헬퍼
 TextStyle kicker() => GoogleFonts.notoSansKr(
-      fontSize: 12,
-      fontWeight: FontWeight.w900,
-      letterSpacing: 0.5,
-      color: AppColors.muted,
-    );
+  fontSize: 12,
+  fontWeight: FontWeight.w900,
+  letterSpacing: 0.5,
+  color: AppColors.muted,
+);

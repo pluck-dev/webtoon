@@ -131,19 +131,34 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _brand() => Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(11)),
-            child: Text('더',
-                style: GoogleFonts.notoSansKr(color: AppColors.gold, fontWeight: FontWeight.w900, fontSize: 18)),
+    children: [
+      Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.ink,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Text(
+          '더',
+          style: GoogleFonts.notoSansKr(
+            color: AppColors.gold,
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
           ),
-          const SizedBox(width: 12),
-          Text('더빙고', style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900, fontSize: 24)),
-        ],
-      );
+        ),
+      ),
+      const SizedBox(width: 12),
+      Text(
+        '더빙고',
+        style: GoogleFonts.notoSansKr(
+          fontWeight: FontWeight.w900,
+          fontSize: 24,
+        ),
+      ),
+    ],
+  );
 
   Widget _emailStep() {
     return Column(
@@ -152,17 +167,30 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         _brand(),
         const SizedBox(height: 28),
-        Text('내 목소리로 시작해요',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900, fontSize: 30, height: 1.1)),
+        Text(
+          '내 목소리로 시작해요',
+          style: GoogleFonts.notoSansKr(
+            fontWeight: FontWeight.w900,
+            fontSize: 30,
+            height: 1.1,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text('짧은 상황을 내 목소리로 연기하는 더빙 놀이터',
-            style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 15)),
+        Text(
+          '짧은 상황을 내 목소리로 연기하는 더빙 놀이터',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 15),
+        ),
         const SizedBox(height: 28),
         OutlinedButton.icon(
           onPressed: _busy ? null : _google,
           icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
-          label: Text('구글로 계속하기',
-              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800, fontSize: 16)),
+          label: Text(
+            '구글로 계속하기',
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
         ),
         const SizedBox(height: 18),
         Row(
@@ -170,8 +198,14 @@ class _AuthScreenState extends State<AuthScreen> {
             const Expanded(child: Divider(color: AppColors.line)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('또는 이메일로',
-                  style: GoogleFonts.notoSansKr(color: AppColors.faint, fontSize: 12, fontWeight: FontWeight.w700)),
+              child: Text(
+                '또는 이메일로',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.faint,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
             const Expanded(child: Divider(color: AppColors.line)),
           ],
@@ -181,8 +215,11 @@ class _AuthScreenState extends State<AuthScreen> {
           controller: _email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          textInputAction: _passwordMode ? TextInputAction.next : TextInputAction.done,
-          onSubmitted: (_) => _busy ? null : (_passwordMode ? null : _sendCode()),
+          textInputAction: _passwordMode
+              ? TextInputAction.next
+              : TextInputAction.done,
+          onSubmitted: (_) =>
+              _busy ? null : (_passwordMode ? null : _sendCode()),
           decoration: const InputDecoration(hintText: '이메일'),
         ),
         if (_passwordMode) ...[
@@ -197,11 +234,19 @@ class _AuthScreenState extends State<AuthScreen> {
         ],
         if (_error != null) ...[
           const SizedBox(height: 12),
-          Text(_error!, style: const TextStyle(color: AppColors.coral, fontWeight: FontWeight.w700)),
+          Text(
+            _error!,
+            style: const TextStyle(
+              color: AppColors.coral,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
         const SizedBox(height: 20),
         FilledButton(
-          onPressed: _busy ? null : (_passwordMode ? _passwordLogin : _sendCode),
+          onPressed: _busy
+              ? null
+              : (_passwordMode ? _passwordLogin : _sendCode),
           child: _busy ? _spinner() : Text(_passwordMode ? '로그인' : '인증코드 받기'),
         ),
         const SizedBox(height: 8),
@@ -209,11 +254,17 @@ class _AuthScreenState extends State<AuthScreen> {
           onPressed: _busy
               ? null
               : () => setState(() {
-                    _passwordMode = !_passwordMode;
-                    _error = null;
-                  }),
-          child: Text(_passwordMode ? '인증코드로 로그인' : '비밀번호로 로그인',
-              style: GoogleFonts.notoSansKr(color: AppColors.muted, fontWeight: FontWeight.w800, fontSize: 13)),
+                  _passwordMode = !_passwordMode;
+                  _error = null;
+                }),
+          child: Text(
+            _passwordMode ? '인증코드로 로그인' : '비밀번호로 로그인',
+            style: GoogleFonts.notoSansKr(
+              color: AppColors.muted,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
         ),
       ],
     );
@@ -226,11 +277,24 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         _brand(),
         const SizedBox(height: 28),
-        Text('인증코드 입력',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900, fontSize: 30, height: 1.1)),
+        Text(
+          '인증코드 입력',
+          style: GoogleFonts.notoSansKr(
+            fontWeight: FontWeight.w900,
+            fontSize: 30,
+            height: 1.1,
+          ),
+        ),
         const SizedBox(height: 8),
         if (_notice != null)
-          Text(_notice!, style: GoogleFonts.notoSansKr(color: AppColors.inkSoft, fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(
+            _notice!,
+            style: GoogleFonts.notoSansKr(
+              color: AppColors.inkSoft,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         const SizedBox(height: 28),
         TextField(
           controller: _code,
@@ -239,13 +303,26 @@ class _AuthScreenState extends State<AuthScreen> {
           maxLength: 6,
           autofocus: true,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: GoogleFonts.notoSansKr(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 10),
-          decoration: const InputDecoration(counterText: '', hintText: '------'),
+          style: GoogleFonts.notoSansKr(
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 10,
+          ),
+          decoration: const InputDecoration(
+            counterText: '',
+            hintText: '------',
+          ),
           onSubmitted: (_) => _busy ? null : _verify(),
         ),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!, style: const TextStyle(color: AppColors.coral, fontWeight: FontWeight.w700)),
+          Text(
+            _error!,
+            style: const TextStyle(
+              color: AppColors.coral,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
         const SizedBox(height: 16),
         FilledButton(
@@ -260,19 +337,29 @@ class _AuthScreenState extends State<AuthScreen> {
               onPressed: _busy
                   ? null
                   : () => setState(() {
-                        _step = _Step.enterEmail;
-                        _code.clear();
-                        _error = null;
-                        _notice = null;
-                      }),
-              child: Text('이메일 바꾸기',
-                  style: GoogleFonts.notoSansKr(color: AppColors.muted, fontWeight: FontWeight.w800)),
+                      _step = _Step.enterEmail;
+                      _code.clear();
+                      _error = null;
+                      _notice = null;
+                    }),
+              child: Text(
+                '이메일 바꾸기',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
             const Text('·', style: TextStyle(color: AppColors.faint)),
             TextButton(
               onPressed: _busy ? null : _sendCode,
-              child: Text('코드 다시 받기',
-                  style: GoogleFonts.notoSansKr(color: AppColors.ink, fontWeight: FontWeight.w800)),
+              child: Text(
+                '코드 다시 받기',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.ink,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),
@@ -281,8 +368,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _spinner() => const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.paper),
-      );
+    width: 22,
+    height: 22,
+    child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.paper),
+  );
 }

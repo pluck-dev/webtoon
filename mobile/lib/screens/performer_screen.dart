@@ -10,6 +10,7 @@ import '../cloud.dart';
 import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
+import '../widgets/app_widgets.dart';
 import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
@@ -264,11 +265,15 @@ class _PerformerScreenState extends State<PerformerScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 장면 (현재 컷)
-          Image.network(
-            line.cut.imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(color: AppColors.deviceDark),
+          // 장면 (현재 컷) — 컷이 바뀌면 부드럽게 크로스페이드
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 450),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: SizedBox.expand(
+              key: ValueKey(line.cut.id),
+              child: NetworkThumb(url: line.cut.imageUrl),
+            ),
           ),
           // 하단 가독성용 스크림 (장면은 비치되 자막은 또렷하게)
           Positioned(
@@ -327,23 +332,59 @@ class _PerformerScreenState extends State<PerformerScreen> {
           colors: [Color(0xCC000000), Color(0x00000000)],
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              _pill('CUT ${line.cut.order} / ${detail.cuts.length}'),
+              const Spacer(),
+              _pill('$done / $total 완료', color: AppColors.gold),
+            ],
           ),
-          _pill('CUT ${line.cut.order} / ${detail.cuts.length}'),
-          const Spacer(),
-          _pill('$done / $total 완료', color: AppColors.gold),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: _progressBar(total == 0 ? 0 : done / total),
+          ),
         ],
       ),
     );
   }
+
+  Widget _progressBar(double value) => ClipRRect(
+    borderRadius: BorderRadius.circular(999),
+    child: Stack(
+      children: [
+        Container(height: 5, color: Colors.white.withValues(alpha: 0.18)),
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOut,
+          builder: (context, t, _) => FractionallySizedBox(
+            widthFactor: t,
+            child: Container(
+              height: 5,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.coral],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _pill(String text, {Color color = Colors.white}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -441,13 +482,27 @@ class _PerformerScreenState extends State<PerformerScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  line.dialogue.text,
-                  style: GoogleFonts.notoSansKr(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 24,
-                    height: 1.25,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.12),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: Text(
+                    line.dialogue.text,
+                    key: ValueKey(line.dialogue.id),
+                    style: GoogleFonts.notoSansKr(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      height: 1.25,
+                    ),
                   ),
                 ),
                 if (next != null) ...[
@@ -474,7 +529,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
                       onTap: () => _go(-1),
                     ),
                     const SizedBox(width: 28),
-                    _recordButton(hasTake),
+                    _RecordButton(
+                      recording: _recording,
+                      hasTake: hasTake,
+                      onTap: _toggleRecord,
+                    ),
                     const SizedBox(width: 28),
                     _circleBtn(
                       Icons.chevron_right_rounded,
@@ -539,37 +598,6 @@ class _PerformerScreenState extends State<PerformerScreen> {
     );
   }
 
-  Widget _recordButton(bool hasTake) {
-    return GestureDetector(
-      onTap: _toggleRecord,
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: _recording ? AppColors.coral : AppColors.gold,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: (_recording ? AppColors.coral : AppColors.gold).withValues(
-                alpha: 0.5,
-              ),
-              blurRadius: 16,
-            ),
-          ],
-        ),
-        child: Icon(
-          _recording
-              ? Icons.stop_rounded
-              : hasTake
-              ? Icons.refresh_rounded
-              : Icons.mic_rounded,
-          color: AppColors.ink,
-          size: 30,
-        ),
-      ),
-    );
-  }
-
   Widget _circleBtn(
     IconData icon, {
     required bool enabled,
@@ -601,5 +629,112 @@ class _PerformerScreenState extends State<PerformerScreen> {
       radix: 16,
     );
     return value == null ? AppColors.coral : Color(value);
+  }
+}
+
+/// 녹음 버튼 — 녹음 중엔 코랄 펄스 링이 퍼진다
+class _RecordButton extends StatefulWidget {
+  final bool recording;
+  final bool hasTake;
+  final VoidCallback onTap;
+  const _RecordButton({
+    required this.recording,
+    required this.hasTake,
+    required this.onTap,
+  });
+
+  @override
+  State<_RecordButton> createState() => _RecordButtonState();
+}
+
+class _RecordButtonState extends State<_RecordButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.recording) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecordButton old) {
+    super.didUpdateWidget(old);
+    if (widget.recording && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!widget.recording && _c.isAnimating) {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.recording ? AppColors.coral : AppColors.gold;
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 펄스 링 2겹 (녹음 중에만)
+          if (widget.recording)
+            AnimatedBuilder(
+              animation: _c,
+              builder: (_, _) {
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [_ring(_c.value), _ring((_c.value + 0.5) % 1.0)],
+                );
+              },
+            ),
+          GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: base,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: base.withValues(alpha: 0.5), blurRadius: 16),
+                ],
+              ),
+              child: Icon(
+                widget.recording
+                    ? Icons.stop_rounded
+                    : widget.hasTake
+                    ? Icons.refresh_rounded
+                    : Icons.mic_rounded,
+                color: AppColors.ink,
+                size: 30,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ring(double t) {
+    final size = 64.0 + t * 32.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.coral.withValues(alpha: (1 - t) * 0.35),
+      ),
+    );
   }
 }

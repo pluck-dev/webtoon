@@ -11,7 +11,9 @@ class Repo {
   static Future<List<EpisodeSummary>> fetchEpisodes() async {
     final rows = await sb
         .from('Episode')
-        .select('id,slug,title,logline,thumbnailUrl,maxSeconds,category,format,createdAt')
+        .select(
+          'id,slug,title,logline,thumbnailUrl,maxSeconds,category,format,createdAt',
+        )
         .eq('status', 'PUBLISHED')
         .order('createdAt', ascending: false);
     return rows.map<EpisodeSummary>((r) => EpisodeSummary.fromMap(r)).toList();
@@ -30,7 +32,9 @@ class Repo {
         .from('Character')
         .select('id,name,description,voiceGuide,color')
         .eq('episodeId', episodeId);
-    final characters = charRows.map<Character>((r) => Character.fromMap(r)).toList();
+    final characters = charRows
+        .map<Character>((r) => Character.fromMap(r))
+        .toList();
     final charById = {for (final c in characters) c.id: c};
 
     final cutRows = await sb
@@ -43,10 +47,10 @@ class Repo {
     final dialogueRows = cutIds.isEmpty
         ? <Map<String, dynamic>>[]
         : await sb
-            .from('Dialogue')
-            .select('id,cutId,characterId,order,text,direction')
-            .inFilter('cutId', cutIds)
-            .order('order');
+              .from('Dialogue')
+              .select('id,cutId,characterId,order,text,direction')
+              .inFilter('cutId', cutIds)
+              .order('order');
 
     final dialoguesByCut = <String, List<Dialogue>>{};
     for (final r in dialogueRows) {
