@@ -43,6 +43,7 @@ dependencies:
   uuid: ^4.5.1                  # insert용 id 생성
   url_launcher: ^6.3.1          # 약관/개인정보/문의 외부 링크
   share_plus: ^10.1.4           # 완성 영상 공유/저장
+  shared_preferences: ^2.3.3    # 온보딩 1회 노출 플래그
 
 # record 5.2.1 의존 세트 버그 우회:
 # record_android 1.5.2는 record_platform_interface ^1.5.0(startStream/hasPermission(request))을 요구하지만

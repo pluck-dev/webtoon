@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config.dart';
 import 'repo.dart';
 import 'screens/auth_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/root_screen.dart';
 import 'theme.dart';
 import 'widgets/brand_logo.dart';
@@ -44,20 +46,45 @@ class SplashGate extends StatefulWidget {
 
 class _SplashGateState extends State<SplashGate> {
   bool _ready = false;
+  bool _needsOnboarding = false;
+  SharedPreferences? _prefs;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1700), () {
-      if (mounted) setState(() => _ready = true);
+    _boot();
+  }
+
+  Future<void> _boot() async {
+    final prefs = await SharedPreferences.getInstance();
+    final seen = prefs.getBool('seen_onboarding') ?? false;
+    await Future.delayed(const Duration(milliseconds: 1700));
+    if (!mounted) return;
+    setState(() {
+      _prefs = prefs;
+      _needsOnboarding = !seen;
+      _ready = true;
     });
+  }
+
+  void _finishOnboarding() {
+    _prefs?.setBool('seen_onboarding', true);
+    setState(() => _needsOnboarding = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final Widget child;
+    if (!_ready) {
+      child = const _SplashView();
+    } else if (_needsOnboarding) {
+      child = OnboardingScreen(onDone: _finishOnboarding);
+    } else {
+      child = const AuthGate();
+    }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 450),
-      child: _ready ? const AuthGate() : const _SplashView(),
+      child: child,
     );
   }
 }
