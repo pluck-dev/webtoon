@@ -14,6 +14,7 @@ class EpisodeSummary {
   final String? author;
   final String? creatorId;
   final int likeCount;
+  final int commentCount;
   final bool likedByMe;
 
   EpisodeSummary({
@@ -28,6 +29,7 @@ class EpisodeSummary {
     this.author,
     this.creatorId,
     this.likeCount = 0,
+    this.commentCount = 0,
     this.likedByMe = false,
   });
 
@@ -55,23 +57,26 @@ class EpisodeSummary {
     author: m['author'] as String?,
     creatorId: m['creator_id'] as String?,
     likeCount: (m['like_count'] ?? 0) as int,
+    commentCount: (m['comment_count'] ?? 0) as int,
     likedByMe: (m['liked_by_me'] ?? false) as bool,
   );
 
-  EpisodeSummary copyWith({int? likeCount, bool? likedByMe}) => EpisodeSummary(
-    id: id,
-    slug: slug,
-    title: title,
-    logline: logline,
-    thumbnailUrl: thumbnailUrl,
-    maxSeconds: maxSeconds,
-    category: category,
-    format: format,
-    author: author,
-    creatorId: creatorId,
-    likeCount: likeCount ?? this.likeCount,
-    likedByMe: likedByMe ?? this.likedByMe,
-  );
+  EpisodeSummary copyWith({int? likeCount, int? commentCount, bool? likedByMe}) =>
+      EpisodeSummary(
+        id: id,
+        slug: slug,
+        title: title,
+        logline: logline,
+        thumbnailUrl: thumbnailUrl,
+        maxSeconds: maxSeconds,
+        category: category,
+        format: format,
+        author: author,
+        creatorId: creatorId,
+        likeCount: likeCount ?? this.likeCount,
+        commentCount: commentCount ?? this.commentCount,
+        likedByMe: likedByMe ?? this.likedByMe,
+      );
 }
 
 class Character {
@@ -166,5 +171,35 @@ class EpisodeDetail {
       }
     }
     return out;
+  }
+}
+
+/// 댓글 1건 (작가 이름 임베드)
+class CommentItem {
+  final String id;
+  final String userId;
+  final String author;
+  final String text;
+  final DateTime createdAt;
+
+  CommentItem({
+    required this.id,
+    required this.userId,
+    required this.author,
+    required this.text,
+    required this.createdAt,
+  });
+
+  /// episode_comments RPC 결과(security definer로 작가명 포함)
+  factory CommentItem.fromRpcMap(Map<String, dynamic> m) {
+    final name = m['author'] as String?;
+    return CommentItem(
+      id: m['id'] as String,
+      userId: m['user_id'] as String,
+      author: (name == null || name.isEmpty) ? '익명' : name,
+      text: (m['body'] ?? '') as String,
+      createdAt:
+          DateTime.tryParse('${m['created_at']}')?.toLocal() ?? DateTime(2000),
+    );
   }
 }

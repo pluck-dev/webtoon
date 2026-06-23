@@ -61,6 +61,7 @@ model User {
   recordings   Recording[]
   createdEpisodes Episode[]  @relation("creator")
   likes        Like[]
+  comments     Comment[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -81,6 +82,7 @@ model Episode {
   cuts         Cut[]
   performances Performance[]
   likes        Like[]
+  comments     Comment[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -97,6 +99,18 @@ model Like {
 
   @@unique([userId, episodeId])
   @@index([episodeId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  episodeId String
+  userId    String
+  text      String
+  episode   Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([episodeId, createdAt])
 }
 
 model Character {

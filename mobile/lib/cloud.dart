@@ -470,6 +470,50 @@ class Cloud {
     await sb.from('Episode').delete().eq('id', episodeId);
   }
 
+  /// 현재 로그인 사용자의 User.id (댓글 본인 여부 판별용)
+  static Future<String> myUserId() => ensureUser();
+
+  /// 에피소드 댓글 목록(오래된 순) — 작가명 포함(security definer RPC)
+  static Future<List<CommentItem>> fetchComments(String episodeId) async {
+    final rows =
+        await sb.rpc('episode_comments', params: {'p_episode': episodeId})
+            as List;
+    return rows
+        .map((r) => CommentItem.fromRpcMap(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// 댓글 작성 → 생성된 댓글 반환
+  static Future<CommentItem> addComment(String episodeId, String text) async {
+    final uid = await ensureUser();
+    final id = _uuid.v4();
+    await sb.from('Comment').insert({
+      'id': id,
+      'episodeId': episodeId,
+      'userId': uid,
+      'text': text,
+    });
+    // 본인 User 행은 RLS상 읽을 수 있으므로 작가명 조회
+    final me = await sb
+        .from('User')
+        .select('displayName')
+        .eq('id', uid)
+        .maybeSingle();
+    final name = (me?['displayName'] as String?) ?? '';
+    return CommentItem(
+      id: id,
+      userId: uid,
+      author: name.isEmpty ? '익명' : name,
+      text: text,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// 댓글 삭제 (RLS상 본인 것만)
+  static Future<void> deleteComment(String id) async {
+    await sb.from('Comment').delete().eq('id', id);
+  }
+
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
   static Future<void> deleteWork(String performanceId) async {
     await sb.from('Recording').delete().eq('performanceId', performanceId);

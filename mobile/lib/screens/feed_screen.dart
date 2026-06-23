@@ -8,6 +8,7 @@ import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import 'author_screen.dart';
+import 'comments_sheet.dart';
 import 'creator_screen.dart';
 import 'performer_screen.dart';
 
@@ -281,11 +282,18 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
                       ),
                     ),
                   ),
-                  // 좋아요 알약 (탭 → 토글)
+                  // 댓글 · 좋아요 알약 (탭 → 시트 / 토글)
                   Positioned(
                     right: 10,
                     top: 10,
-                    child: _likePill(i, ep),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _commentPill(i, ep),
+                        const SizedBox(width: 6),
+                        _likePill(i, ep),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -368,6 +376,42 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
       ),
     );
   }
+
+  Future<void> _openComments(EpisodeSummary ep) async {
+    await showCommentsSheet(context, ep.id, ep.commentCount);
+    // 시트는 PageRoute가 아니라 자동 새로고침이 안 되므로 직접 갱신
+    if (mounted) _load();
+  }
+
+  Widget _commentPill(int i, EpisodeSummary ep) => Pressable(
+    onTap: () => _openComments(ep),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.mode_comment_outlined,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '${ep.commentCount}',
+            style: GoogleFonts.notoSansKr(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _likePill(int i, EpisodeSummary ep) => Pressable(
     onTap: () => _toggleLike(i),
