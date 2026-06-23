@@ -20,7 +20,15 @@ import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
   final String episodeId;
-  const PerformerScreen({super.key, required this.episodeId});
+  // 초대 더빙: 이 배역(캐릭터) 대사만 녹음. null이면 전체(혼자 더빙).
+  final String? roleCharacterId;
+  final String? collabRoleId; // 콜라보 배역 완료 표시용
+  const PerformerScreen({
+    super.key,
+    required this.episodeId,
+    this.roleCharacterId,
+    this.collabRoleId,
+  });
 
   @override
   State<PerformerScreen> createState() => _PerformerScreenState();
@@ -103,8 +111,12 @@ class _PerformerScreenState extends State<PerformerScreen> {
             _lines.every((l) => _saved.contains(l.dialogue.id));
         if (allSaved && !_celebrated) {
           _celebrated = true;
-          HapticFeedback.heavyImpact();
-          showCelebration(context);
+          if (_isCollabRole) {
+            _markRoleDone(); // 콜라보: 내 배역 완료 표시
+          } else {
+            HapticFeedback.heavyImpact();
+            showCelebration(context);
+          }
         }
       }
     } catch (_) {
@@ -188,7 +200,30 @@ class _PerformerScreenState extends State<PerformerScreen> {
     super.dispose();
   }
 
-  List<({Cut cut, Dialogue dialogue})> get _lines => _detail?.lines ?? [];
+  bool get _isCollabRole => widget.collabRoleId != null;
+  bool _roleMarked = false;
+
+  // 초대 더빙이면 내 배역 대사만, 아니면 전체
+  List<({Cut cut, Dialogue dialogue})> get _lines {
+    final all = _detail?.lines ?? [];
+    if (widget.roleCharacterId == null) return all;
+    return all
+        .where((l) => l.dialogue.characterId == widget.roleCharacterId)
+        .toList();
+  }
+
+  // 콜라보 배역 녹음 완료 표시(+축하). 1회만.
+  Future<void> _markRoleDone() async {
+    if (_roleMarked) return;
+    _roleMarked = true;
+    try {
+      await Cloud.setRoleRecorded(widget.collabRoleId!);
+    } catch (_) {}
+    if (mounted) {
+      HapticFeedback.heavyImpact();
+      showCelebration(context);
+    }
+  }
   ({Cut cut, Dialogue dialogue})? get _current =>
       _lines.isEmpty ? null : _lines[_index];
 
@@ -424,23 +459,33 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 bottom: MediaQuery.of(context).size.height * 0.32,
               ),
               child: FloatingActionButton.extended(
-                onPressed: _rendering ? null : _makeVideo,
+                onPressed: _isCollabRole
+                    ? () async {
+                        final nav = Navigator.of(context);
+                        await _markRoleDone();
+                        if (mounted) nav.maybePop();
+                      }
+                    : (_rendering ? null : _makeVideo),
                 backgroundColor: AppColors.gold,
                 foregroundColor: AppColors.ink,
-                icon: _rendering
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: AppColors.ink,
-                        ),
-                      )
-                    : const Icon(Icons.movie_creation_rounded),
+                icon: _isCollabRole
+                    ? const Icon(Icons.check_rounded)
+                    : _rendering
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppColors.ink,
+                            ),
+                          )
+                        : const Icon(Icons.movie_creation_rounded),
                 label: Text(
-                  _rendering
-                      ? '만드는 중 ${(_renderProgress * 100).round()}%'
-                      : '영상 만들기',
+                  _isCollabRole
+                      ? '내 배역 완료하기'
+                      : _rendering
+                          ? '만드는 중 ${(_renderProgress * 100).round()}%'
+                          : '영상 만들기',
                   style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
                 ),
               ),

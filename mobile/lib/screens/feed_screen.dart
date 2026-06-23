@@ -10,6 +10,7 @@ import '../widgets/app_widgets.dart';
 import 'author_screen.dart';
 import 'comments_sheet.dart';
 import 'creator_screen.dart';
+import 'join_screen.dart';
 import 'performer_screen.dart';
 
 /// 공개 피드 — 사용자들이 만든 만화를 둘러보고 좋아요/나도 더빙
@@ -166,6 +167,31 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                   color: AppColors.muted,
+                ),
+              ),
+            ),
+            const Spacer(),
+            // 초대 코드로 참여
+            Pressable(
+              onTap: _joinByCode,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.group_add_rounded,
+                        size: 16, color: AppColors.ink),
+                    const SizedBox(width: 5),
+                    Text('초대코드',
+                        style: GoogleFonts.notoSansKr(
+                            fontWeight: FontWeight.w800, fontSize: 12.5)),
+                  ],
                 ),
               ),
             ),
@@ -375,6 +401,41 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
         ],
       ),
     );
+  }
+
+  Future<void> _joinByCode() async {
+    final ctrl = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('초대 코드로 참여',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.none,
+          decoration: const InputDecoration(hintText: '예: a1b2c3d4'),
+          onSubmitted: (v) => Navigator.pop(context, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('취소',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+            child: Text('참여',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (code != null && code.isNotEmpty && mounted) {
+      Navigator.of(context).push(fadeThroughRoute(JoinScreen(shareCode: code)));
+    }
   }
 
   Future<void> _openComments(EpisodeSummary ep) async {

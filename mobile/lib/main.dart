@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,10 +9,14 @@ import 'notify.dart';
 import 'repo.dart';
 import 'widgets/app_widgets.dart';
 import 'screens/auth_screen.dart';
+import 'screens/join_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/root_screen.dart';
 import 'theme.dart';
 import 'widgets/brand_logo.dart';
+
+/// 딥링크 등에서 화면 전환하기 위한 전역 네비게이터 키
+final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,8 +30,44 @@ Future<void> main() async {
   runApp(const DubbingoApp());
 }
 
-class DubbingoApp extends StatelessWidget {
+class DubbingoApp extends StatefulWidget {
   const DubbingoApp({super.key});
+
+  @override
+  State<DubbingoApp> createState() => _DubbingoAppState();
+}
+
+class _DubbingoAppState extends State<DubbingoApp> {
+  final _appLinks = AppLinks();
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    // 콜드 스타트로 들어온 링크
+    try {
+      final initial = await _appLinks.getInitialLink();
+      if (initial != null) {
+        // 첫 프레임 후 네비게이터가 준비되면 처리
+        WidgetsBinding.instance.addPostFrameCallback((_) => _handle(initial));
+      }
+    } catch (_) {}
+    // 앱 실행 중 들어온 링크
+    _appLinks.uriLinkStream.listen(_handle, onError: (_) {});
+  }
+
+  void _handle(Uri uri) {
+    // kr.co.pluck.dubbingo://collab/{code}  (login-callback은 supabase가 처리)
+    if (uri.host != 'collab') return;
+    final code = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+    if (code.isEmpty) return;
+    final nav = appNavKey.currentState;
+    if (nav == null) return;
+    nav.push(fadeThroughRoute(JoinScreen(shareCode: code)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +75,7 @@ class DubbingoApp extends StatelessWidget {
       title: '쩌렁쩌렁',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      navigatorKey: appNavKey,
       navigatorObservers: [routeObserver],
       home: const SplashGate(),
     );
