@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'config.dart';
+import 'models.dart';
 import 'repo.dart';
 
 const _uuid = Uuid();
@@ -314,7 +315,7 @@ class Cloud {
     required List<({String imagePath, String speaker, String text, String direction})>
     cuts,
   }) async {
-    await ensureUser();
+    final uid = await ensureUser();
     final epId = _uuid.v4();
     final slug = 'u-${epId.substring(0, 8)}';
 
@@ -349,6 +350,7 @@ class Cloud {
       'category': category,
       'maxSeconds': 60,
       'thumbnailUrl': imageUrls.isNotEmpty ? imageUrls.first : null,
+      'creatorId': uid, // 사용자 창작물 → 공개 피드 노출
       'updatedAt': _now(),
     });
 
@@ -400,6 +402,51 @@ class Cloud {
       });
     }
     return epId;
+  }
+
+  /// 좋아요 토글 → 토글 후 좋아요 여부 반환
+  static Future<bool> toggleLike(String episodeId) async {
+    final uid = await ensureUser();
+    final existing = await sb
+        .from('Like')
+        .select('id')
+        .eq('episodeId', episodeId)
+        .eq('userId', uid)
+        .maybeSingle();
+    if (existing != null) {
+      await sb.from('Like').delete().eq('id', existing['id'] as String);
+      return false;
+    }
+    await sb.from('Like').insert({
+      'id': _uuid.v4(),
+      'userId': uid,
+      'episodeId': episodeId,
+    });
+    return true;
+  }
+
+  /// 내가 창작한 에피소드 목록(최신순) — 좋아요 수 포함
+  static Future<List<({EpisodeSummary ep, int likes})>> myEpisodes() async {
+    final uid = await ensureUser();
+    final rows = await sb
+        .from('Episode')
+        .select(
+          'id,slug,title,logline,thumbnailUrl,maxSeconds,category,format,createdAt',
+        )
+        .eq('creatorId', uid)
+        .order('createdAt', ascending: false);
+    final result = <({EpisodeSummary ep, int likes})>[];
+    for (final r in rows) {
+      final ep = EpisodeSummary.fromMap(r);
+      final likeRows = await sb.from('Like').select('id').eq('episodeId', ep.id);
+      result.add((ep: ep, likes: (likeRows as List).length));
+    }
+    return result;
+  }
+
+  /// 내 창작 에피소드 삭제 (RLS상 본인 것만; Cut/Dialogue/Character는 FK Cascade)
+  static Future<void> deleteEpisode(String episodeId) async {
+    await sb.from('Episode').delete().eq('id', episodeId);
   }
 
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)

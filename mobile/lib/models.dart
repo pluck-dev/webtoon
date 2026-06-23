@@ -10,6 +10,11 @@ class EpisodeSummary {
   final String category; // WEBTOON / ROLEPLAY / ANIMATION
   final String format; // SHORT / SERIES
 
+  // 공개 피드용(없으면 기본값) — 작가/좋아요 정보
+  final String? author;
+  final int likeCount;
+  final bool likedByMe;
+
   EpisodeSummary({
     required this.id,
     required this.slug,
@@ -19,6 +24,9 @@ class EpisodeSummary {
     required this.maxSeconds,
     required this.category,
     required this.format,
+    this.author,
+    this.likeCount = 0,
+    this.likedByMe = false,
   });
 
   factory EpisodeSummary.fromMap(Map<String, dynamic> m) => EpisodeSummary(
@@ -30,6 +38,35 @@ class EpisodeSummary {
     maxSeconds: (m['maxSeconds'] ?? 60) as int,
     category: (m['category'] ?? 'WEBTOON') as String,
     format: (m['format'] ?? 'SHORT') as String,
+  );
+
+  /// feed_episodes RPC 결과(snake_case) → 모델
+  factory EpisodeSummary.fromFeedMap(Map<String, dynamic> m) => EpisodeSummary(
+    id: m['id'] as String,
+    slug: m['slug'] as String,
+    title: m['title'] as String,
+    logline: (m['logline'] ?? '') as String,
+    thumbnailUrl: m['thumbnailUrl'] as String?,
+    maxSeconds: (m['maxSeconds'] ?? 60) as int,
+    category: (m['category'] ?? 'WEBTOON') as String,
+    format: (m['format'] ?? 'SHORT') as String,
+    author: m['author'] as String?,
+    likeCount: (m['like_count'] ?? 0) as int,
+    likedByMe: (m['liked_by_me'] ?? false) as bool,
+  );
+
+  EpisodeSummary copyWith({int? likeCount, bool? likedByMe}) => EpisodeSummary(
+    id: id,
+    slug: slug,
+    title: title,
+    logline: logline,
+    thumbnailUrl: thumbnailUrl,
+    maxSeconds: maxSeconds,
+    category: category,
+    format: format,
+    author: author,
+    likeCount: likeCount ?? this.likeCount,
+    likedByMe: likedByMe ?? this.likedByMe,
   );
 }
 

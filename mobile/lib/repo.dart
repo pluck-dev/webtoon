@@ -5,7 +5,7 @@ import 'models.dart';
 SupabaseClient get sb => Supabase.instance.client;
 
 class Repo {
-  /// 공개된 에피소드 목록
+  /// 홈: 공식(큐레이션) 에피소드 — 사용자 창작물(creatorId)은 제외
   static Future<List<EpisodeSummary>> fetchEpisodes() async {
     final rows = await sb
         .from('Episode')
@@ -13,8 +13,20 @@ class Repo {
           'id,slug,title,logline,thumbnailUrl,maxSeconds,category,format,createdAt',
         )
         .eq('status', 'PUBLISHED')
+        .isFilter('creatorId', null)
         .order('createdAt', ascending: false);
     return rows.map<EpisodeSummary>((r) => EpisodeSummary.fromMap(r)).toList();
+  }
+
+  /// 공개 피드: 사용자 창작 에피소드 + 작가/좋아요 정보 (RPC)
+  /// [sort] : 'popular' | 'recent'
+  static Future<List<EpisodeSummary>> fetchFeed({String sort = 'recent'}) async {
+    final rows = await sb.rpc('feed_episodes', params: {'p_sort': sort}) as List;
+    return rows
+        .map<EpisodeSummary>(
+          (r) => EpisodeSummary.fromFeedMap(r as Map<String, dynamic>),
+        )
+        .toList();
   }
 
   /// 에피소드 상세(컷 + 대사 + 캐릭터)를 조립

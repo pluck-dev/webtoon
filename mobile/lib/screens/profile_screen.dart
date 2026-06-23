@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../cloud.dart';
 import '../config.dart';
 import '../repo.dart';
+import '../widgets/app_widgets.dart';
+import 'creator_screen.dart';
+import 'my_episodes_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -139,6 +142,23 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _statsCard(),
+            const SizedBox(height: 24),
+            _section('내 콘텐츠'),
+            _tile(
+              Icons.auto_stories_rounded,
+              '내가 만든 만화',
+              subtitle: '발행한 작품 관리 · 삭제',
+              onTap: () => Navigator.of(
+                context,
+              ).push(fadeThroughRoute(const MyEpisodesScreen())),
+            ),
+            _tile(
+              Icons.edit_rounded,
+              '새 만화 만들기',
+              onTap: () => Navigator.of(
+                context,
+              ).push(fadeThroughRoute(const CreatorScreen())),
+            ),
             const SizedBox(height: 24),
             _section('지원'),
             _tile(

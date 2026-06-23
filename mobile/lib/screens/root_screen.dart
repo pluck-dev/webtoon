@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
+import 'feed_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
 
-/// 로그인 후 메인 셸 — 홈 / 보관함 / 프로필 하단 네비
+/// 로그인 후 메인 셸 — 홈 / 피드 / 보관함 / 프로필 하단 네비
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
 
@@ -25,7 +26,8 @@ class _RootScreenState extends State<RootScreen> {
       // 안 그려지던 문제 회피 + 탭 재진입 시 새로 로드(보관함 새로고침)
       body: switch (_index) {
         0 => const HomeScreen(),
-        1 => const LibraryScreen(),
+        1 => const FeedScreen(),
+        2 => const LibraryScreen(),
         _ => const ProfileScreen(),
       },
       bottomNavigationBar: NavigationBarTheme(
@@ -54,6 +56,11 @@ class _RootScreenState extends State<RootScreen> {
               icon: Icon(Icons.home_outlined, color: AppColors.muted),
               selectedIcon: Icon(Icons.home_rounded, color: AppColors.ink),
               label: '홈',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.explore_outlined, color: AppColors.muted),
+              selectedIcon: Icon(Icons.explore_rounded, color: AppColors.ink),
+              label: '피드',
             ),
             NavigationDestination(
               icon: Icon(Icons.video_library_outlined, color: AppColors.muted),

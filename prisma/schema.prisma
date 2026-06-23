@@ -59,6 +59,8 @@ model User {
   role         UserRole      @default(ACTOR)
   performances Performance[]
   recordings   Recording[]
+  createdEpisodes Episode[]  @relation("creator")
+  likes        Like[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -73,11 +75,28 @@ model Episode {
   category     EpisodeCategory @default(WEBTOON)
   maxSeconds   Int             @default(60)
   thumbnailUrl String?
+  creatorId    String?
+  creator      User?           @relation("creator", fields: [creatorId], references: [id], onDelete: SetNull)
   characters   Character[]
   cuts         Cut[]
   performances Performance[]
+  likes        Like[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  @@index([creatorId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  episodeId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episode   Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, episodeId])
+  @@index([episodeId])
 }
 
 model Character {
