@@ -270,13 +270,21 @@ class _CollabManageScreenState extends State<CollabManageScreen>
     final mine = r.assignedUserId == _myId;
     Widget trailing;
     if (mine && !r.isRecorded) {
-      trailing = FilledButton(
-        onPressed: () => _dubRole(r),
-        style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 14)),
-        child: Text('더빙',
-            style: GoogleFonts.notoSansKr(
-                fontWeight: FontWeight.w900, fontSize: 13)),
+      // Row 안에서는 Material 버튼 대신 Pressable 알약 사용(렌더 이슈 회피)
+      trailing = Pressable(
+        onTap: () => _dubRole(r),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: AppColors.ink,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text('더빙',
+              style: GoogleFonts.notoSansKr(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                  color: AppColors.paper)),
+        ),
       );
     } else {
       trailing = Container(

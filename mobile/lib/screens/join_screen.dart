@@ -192,16 +192,32 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
     final mine = r.assignedUserId == _myId;
     final busy = _busyRole == r.roleId;
 
+    // 앱 표준 Pressable 알약 버튼 (Material 버튼은 Row 안에서 렌더 이슈가 있어 사용 안 함)
+    Widget pill(String label, Color bg, Color fg, VoidCallback? onTap,
+            {bool spin = false, bool outline = false}) =>
+        Pressable(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(999),
+              border: outline ? Border.all(color: AppColors.line) : null,
+            ),
+            child: spin
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(label,
+                    style: GoogleFonts.notoSansKr(
+                        fontWeight: FontWeight.w900, fontSize: 13, color: fg)),
+          ),
+        );
+
     Widget trailing;
     if (mine && !r.isRecorded) {
-      trailing = FilledButton(
-        onPressed: () => _dub(r),
-        style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 14)),
-        child: Text('더빙하기',
-            style: GoogleFonts.notoSansKr(
-                fontWeight: FontWeight.w900, fontSize: 13)),
-      );
+      trailing = pill('더빙하기', AppColors.ink, AppColors.paper, () => _dub(r));
     } else if (r.isRecorded) {
       trailing = Text(mine ? '내 녹음 완료 ✓' : '완료 ✓',
           style: GoogleFonts.notoSansKr(
@@ -209,19 +225,9 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
               fontSize: 12.5,
               color: AppColors.teal));
     } else if (r.isOpen) {
-      trailing = OutlinedButton(
-        onPressed: busy ? null : () => _claim(r),
-        style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 14)),
-        child: busy
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : Text('맡기',
-                style: GoogleFonts.notoSansKr(
-                    fontWeight: FontWeight.w900, fontSize: 13)),
-      );
+      trailing = pill('맡기', AppColors.gold, AppColors.ink,
+          busy ? null : () => _claim(r),
+          spin: busy);
     } else {
       trailing = Text('${r.assigneeName ?? "친구"}님이 맡음',
           style: GoogleFonts.notoSansKr(
