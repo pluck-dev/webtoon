@@ -444,6 +444,27 @@ class Cloud {
     return result;
   }
 
+  /// 특정 작가의 공개 에피소드 목록(최신순) — 좋아요 수 포함
+  static Future<List<({EpisodeSummary ep, int likes})>> authorEpisodes(
+    String creatorId,
+  ) async {
+    final rows = await sb
+        .from('Episode')
+        .select(
+          'id,slug,title,logline,thumbnailUrl,maxSeconds,category,format,createdAt',
+        )
+        .eq('creatorId', creatorId)
+        .eq('status', 'PUBLISHED')
+        .order('createdAt', ascending: false);
+    final result = <({EpisodeSummary ep, int likes})>[];
+    for (final r in rows) {
+      final ep = EpisodeSummary.fromMap(r);
+      final likeRows = await sb.from('Like').select('id').eq('episodeId', ep.id);
+      result.add((ep: ep, likes: (likeRows as List).length));
+    }
+    return result;
+  }
+
   /// 내 창작 에피소드 삭제 (RLS상 본인 것만; Cut/Dialogue/Character는 FK Cascade)
   static Future<void> deleteEpisode(String episodeId) async {
     await sb.from('Episode').delete().eq('id', episodeId);

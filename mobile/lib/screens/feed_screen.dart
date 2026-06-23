@@ -7,6 +7,7 @@ import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import 'author_screen.dart';
 import 'creator_screen.dart';
 import 'performer_screen.dart';
 
@@ -18,7 +19,7 @@ class FeedScreen extends StatefulWidget {
   State<FeedScreen> createState() => _FeedScreenState();
 }
 
-class _FeedScreenState extends State<FeedScreen> {
+class _FeedScreenState extends State<FeedScreen> with RouteAware {
   List<EpisodeSummary>? _eps;
   String? _error;
   String _sort = 'recent'; // recent | popular
@@ -28,6 +29,23 @@ class _FeedScreenState extends State<FeedScreen> {
     super.initState();
     _load();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) routeObserver.subscribe(this, route);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  // 위에 쌓였던 화면(작가 에디터/더빙 등)이 닫혀 피드로 돌아오면 자동 새로고침
+  @override
+  void didPopNext() => _load();
 
   Future<void> _load() async {
     try {
@@ -278,20 +296,39 @@ class _FeedScreenState extends State<FeedScreen> {
             padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
             child: Row(
               children: [
-                _avatar(ep.author),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    ep.author ?? '익명 작가',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansKr(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                      color: AppColors.inkSoft,
+                  child: Pressable(
+                    onTap: ep.creatorId == null
+                        ? null
+                        : () => Navigator.of(context).push(
+                            fadeThroughRoute(
+                              AuthorScreen(
+                                creatorId: ep.creatorId!,
+                                authorName: ep.author ?? '익명 작가',
+                              ),
+                            ),
+                          ),
+                    child: Row(
+                      children: [
+                        _avatar(ep.author),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            ep.author ?? '익명 작가',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.notoSansKr(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                              color: AppColors.inkSoft,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Pressable(
                   onTap: () => _openDub(ep),
                   child: Container(

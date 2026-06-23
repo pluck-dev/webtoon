@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 
 import '../config.dart';
 
+/// 전역 라우트 옵서버 — 위에 쌓인 화면이 pop되면 아래 화면이
+/// didPopNext()로 새로고침할 수 있게 한다(피드/내작품 자동 갱신).
+final RouteObserver<PageRoute<dynamic>> routeObserver =
+    RouteObserver<PageRoute<dynamic>>();
+
 /// 탭하면 살짝 눌리는 스케일 피드백 (네이티브 앱 같은 촉감)
 class Pressable extends StatefulWidget {
   final Widget child;

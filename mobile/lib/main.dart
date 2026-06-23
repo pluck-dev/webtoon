@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'notify.dart';
 import 'repo.dart';
+import 'widgets/app_widgets.dart';
 import 'screens/auth_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/root_screen.dart';
@@ -33,6 +34,7 @@ class DubbingoApp extends StatelessWidget {
       title: '쩌렁쩌렁',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
+      navigatorObservers: [routeObserver],
       home: const SplashGate(),
     );
   }

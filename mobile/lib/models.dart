@@ -12,6 +12,7 @@ class EpisodeSummary {
 
   // 공개 피드용(없으면 기본값) — 작가/좋아요 정보
   final String? author;
+  final String? creatorId;
   final int likeCount;
   final bool likedByMe;
 
@@ -25,6 +26,7 @@ class EpisodeSummary {
     required this.category,
     required this.format,
     this.author,
+    this.creatorId,
     this.likeCount = 0,
     this.likedByMe = false,
   });
@@ -51,6 +53,7 @@ class EpisodeSummary {
     category: (m['category'] ?? 'WEBTOON') as String,
     format: (m['format'] ?? 'SHORT') as String,
     author: m['author'] as String?,
+    creatorId: m['creator_id'] as String?,
     likeCount: (m['like_count'] ?? 0) as int,
     likedByMe: (m['liked_by_me'] ?? false) as bool,
   );
@@ -65,6 +68,7 @@ class EpisodeSummary {
     category: category,
     format: format,
     author: author,
+    creatorId: creatorId,
     likeCount: likeCount ?? this.likeCount,
     likedByMe: likedByMe ?? this.likedByMe,
   );
