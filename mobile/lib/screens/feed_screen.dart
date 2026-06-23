@@ -12,7 +12,7 @@ import 'comments_sheet.dart';
 import 'creator_screen.dart';
 import 'performer_screen.dart';
 
-/// 공개 피드 — 사용자들이 만든 만화를 둘러보고 좋아요/같이 더빙
+/// 공개 피드 — 사용자들이 만든 만화를 둘러보고 좋아요/나도 더빙
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
 
@@ -299,7 +299,7 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
               ),
             ),
           ),
-          // 푸터: 작가 + 같이 더빙
+          // 푸터: 작가 + 나도 더빙
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
             child: Row(
@@ -358,7 +358,7 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          '같이 더빙',
+                          '나도 더빙',
                           style: GoogleFonts.notoSansKr(
                             color: AppColors.paper,
                             fontWeight: FontWeight.w900,
