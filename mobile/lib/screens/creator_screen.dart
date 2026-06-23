@@ -51,7 +51,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
   }
 
   Future<void> _pickImage(_CutDraft cut) async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final mode = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
@@ -71,33 +71,57 @@ class _CreatorScreenState extends State<CreatorScreen> {
               ),
             ),
             ListTile(
+              leading: const Icon(
+                Icons.photo_library_rounded,
+                color: AppColors.ink,
+              ),
+              title: Text('앨범에서 선택',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
+              subtitle: Text('여러 장 고르면 컷이 자동으로 만들어져요',
+                  style: GoogleFonts.notoSansKr(
+                      fontSize: 12.5, color: AppColors.muted)),
+              onTap: () => Navigator.pop(context, 'album'),
+            ),
+            ListTile(
               leading: const Icon(Icons.camera_alt_rounded, color: AppColors.ink),
               title: Text('사진 찍기',
                   style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded, color: AppColors.ink),
-              title: Text('앨범에서 선택',
-                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
+              onTap: () => Navigator.pop(context, 'camera'),
             ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
-    if (source == null) return;
+    if (mode == null) return;
     try {
-      final x = await _picker.pickImage(
-        source: source,
-        maxWidth: 1280,
-        imageQuality: 88,
-      );
-      if (x != null && mounted) {
-        setState(() => cut.imagePath = x.path);
-        HapticFeedback.selectionClick();
+      if (mode == 'camera') {
+        final x = await _picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1280,
+          imageQuality: 88,
+        );
+        if (x != null && mounted) {
+          setState(() => cut.imagePath = x.path);
+          HapticFeedback.selectionClick();
+        }
+        return;
       }
+      // 앨범: 여러 장 → 첫 장은 이 컷, 나머지는 바로 뒤에 새 컷으로 자동 추가
+      final xs = await _picker.pickMultiImage(maxWidth: 1280, imageQuality: 88);
+      if (xs.isEmpty || !mounted) return;
+      setState(() {
+        cut.imagePath = xs.first.path;
+        final at = _cuts.indexOf(cut) + 1;
+        final extras = xs.skip(1).map((x) {
+          final d = _CutDraft();
+          d.imagePath = x.path;
+          return d;
+        }).toList();
+        if (extras.isNotEmpty) _cuts.insertAll(at, extras);
+      });
+      HapticFeedback.selectionClick();
+      if (xs.length > 1) _toast('사진 ${xs.length}장으로 컷 ${xs.length}개를 만들었어요!');
     } catch (_) {
       if (mounted) _toast('사진을 불러오지 못했어요.');
     }
@@ -394,6 +418,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
                               style: GoogleFonts.notoSansKr(
                                   color: AppColors.muted,
                                   fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 3),
+                          Text('여러 장 선택하면 컷이 자동 생성',
+                              style: GoogleFonts.notoSansKr(
+                                  color: AppColors.faint, fontSize: 11.5)),
                         ],
                       ),
                     ),
