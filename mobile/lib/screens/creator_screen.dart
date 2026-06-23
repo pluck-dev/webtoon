@@ -201,10 +201,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
             16,
             8,
             16,
-            // 키보드 높이만큼 여백을 더해 입력 중인 필드가 키보드 위로 스크롤되게
+            // 키보드 높이 + 하단 발행 바(약 80) 위로 '컷 추가' 버튼이 확실히 드러나도록 여백 확보
             MediaQuery.of(context).viewInsets.bottom +
                 MediaQuery.of(context).padding.bottom +
-                100),
+                170),
         children: [
           _infoCard(),
           const SizedBox(height: 20),
@@ -221,22 +221,19 @@ class _CreatorScreenState extends State<CreatorScreen> {
           Pressable(
             onTap: _addCut,
             child: Container(
-              height: 56,
+              height: 58,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.card,
+                color: AppColors.gold.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.line,
-                  width: 1.5,
-                ),
+                border: Border.all(color: AppColors.gold, width: 1.5),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.add_rounded, color: AppColors.ink),
                   const SizedBox(width: 6),
-                  Text('컷 추가',
+                  Text('컷 추가 (장면 더 넣기)',
                       style: GoogleFonts.notoSansKr(
                           fontWeight: FontWeight.w900, fontSize: 15)),
                 ],
