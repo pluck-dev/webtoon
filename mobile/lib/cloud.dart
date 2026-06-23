@@ -450,6 +450,68 @@ class Cloud {
     return res['allDone'] == true;
   }
 
+  /// 내 초대 더빙 목록(호스트/참여) — 진행 상황 포함
+  static Future<List<Map<String, dynamic>>> myCollabs() async {
+    await ensureUser();
+    final res = await sb.rpc('my_collabs') as List;
+    return res.cast<Map<String, dynamic>>();
+  }
+
+  /// storage key → 재생용 signed URL (완성 영상 다시보기)
+  static Future<String> signedVideoUrl(String key) =>
+      sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
+
+  /// 콜라보 합본 영상 저장 → (재생용 signed URL, 영구 storage key)
+  static Future<({String url, String key})> saveCollabVideo(
+    String performanceId,
+    String localPath,
+    int durationMs,
+  ) async {
+    final key = '$performanceId/collab-${_uuid.v4()}.mp4';
+    await sb.storage.from(Env.bucketVideos).upload(
+          key,
+          File(localPath),
+          fileOptions:
+              const FileOptions(contentType: 'video/mp4', upsert: true),
+        );
+    final jobId = _uuid.v4();
+    await sb.from('RenderJob').insert({
+      'id': jobId,
+      'performanceId': performanceId,
+      'status': 'DONE',
+      'timeline': {},
+      'updatedAt': _now(),
+    });
+    await sb.from('RenderedVideo').insert({
+      'id': _uuid.v4(),
+      'performanceId': performanceId,
+      'renderJobId': jobId,
+      'videoUrl': key,
+      'durationMs': durationMs,
+      'width': 1080,
+      'height': 1920,
+    });
+    final url =
+        await sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
+    return (url: url, key: key);
+  }
+
+  /// 합본 렌더 입력: dialogueId → (담당자 녹음 storageKey, 길이ms)
+  static Future<Map<String, ({String storageKey, int durationMs})>>
+  collabRenderMeta(String sessionId) async {
+    final rows = await sb
+        .rpc('collab_render_meta', params: {'p_session': sessionId}) as List;
+    final out = <String, ({String storageKey, int durationMs})>{};
+    for (final r in rows) {
+      final m = r as Map<String, dynamic>;
+      out[m['dialogue_id'] as String] = (
+        storageKey: m['storage_key'] as String,
+        durationMs: (m['duration_ms'] ?? 1200) as int,
+      );
+    }
+    return out;
+  }
+
   /// 호스트가 콜라보 완성 처리(합본 영상 연결)
   static Future<bool> completeCollab(String sessionId, String videoId) async {
     final res = await sb.rpc('complete_collab',

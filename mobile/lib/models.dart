@@ -244,6 +244,8 @@ class CollabView {
   final String status; // OPEN | READY | COMPLETE | CANCELLED
   final String shareCode;
   final String hostName;
+  final String hostUserId;
+  final String? videoId; // 완성 영상 storage key
   final String episodeId;
   final String title;
   final String? thumbnailUrl;
@@ -254,6 +256,8 @@ class CollabView {
     required this.status,
     required this.shareCode,
     required this.hostName,
+    required this.hostUserId,
+    required this.videoId,
     required this.episodeId,
     required this.title,
     required this.thumbnailUrl,
@@ -265,6 +269,8 @@ class CollabView {
         status: (m['status'] ?? 'OPEN') as String,
         shareCode: (m['shareCode'] ?? '') as String,
         hostName: (m['hostName'] ?? '익명') as String,
+        hostUserId: (m['hostUserId'] ?? '') as String,
+        videoId: m['videoId'] as String?,
         episodeId: m['episodeId'] as String,
         title: (m['title'] ?? '') as String,
         thumbnailUrl: m['thumbnailUrl'] as String?,
@@ -272,4 +278,8 @@ class CollabView {
             .map((r) => CollabRoleView.fromMap(r as Map<String, dynamic>))
             .toList(),
       );
+
+  bool get isReady => status == 'READY';
+  bool get isComplete => status == 'COMPLETE';
+  int get recordedCount => roles.where((r) => r.isRecorded).length;
 }

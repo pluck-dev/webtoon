@@ -6,6 +6,7 @@ import '../cloud.dart';
 import '../config.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import 'collab_list_screen.dart';
 import 'creator_screen.dart';
 import 'my_episodes_screen.dart';
 
@@ -151,6 +152,14 @@ class ProfileScreen extends StatelessWidget {
               onTap: () => Navigator.of(
                 context,
               ).push(fadeThroughRoute(const MyEpisodesScreen())),
+            ),
+            _tile(
+              Icons.group_rounded,
+              '내 초대 더빙',
+              subtitle: '친구와 같이 더빙 진행 상황',
+              onTap: () => Navigator.of(
+                context,
+              ).push(fadeThroughRoute(const CollabListScreen())),
             ),
             _tile(
               Icons.edit_rounded,
