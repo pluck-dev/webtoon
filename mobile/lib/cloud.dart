@@ -307,8 +307,10 @@ class Cloud {
     return sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
   }
 
-  /// 작가 발행: 컷 이미지 업로드 + Episode/Character/Cut/Dialogue 생성 → episodeId
-  static Future<String> publishEpisode({
+  /// 작가 발행: 컷 이미지 업로드 + Episode/Character/Cut/Dialogue 생성
+  /// → episodeId + 생성된 캐릭터(배역) 목록(초대 더빙 캐스팅용)
+  static Future<({String epId, List<({String id, String name})> characters})>
+  publishEpisode({
     required String title,
     required String logline,
     required String category, // WEBTOON / ROLEPLAY / ANIMATION
@@ -401,7 +403,59 @@ class Cloud {
         'direction': cuts[i].direction,
       });
     }
-    return epId;
+    final characters =
+        charIdByName.entries.map((e) => (id: e.value, name: e.key)).toList();
+    return (epId: epId, characters: characters);
+  }
+
+  /// 초대 더빙 세션 생성 → (sessionId, shareCode)
+  /// [assignments] : 배역별 {characterId, mine(내가 더빙 여부)}
+  static Future<({String sessionId, String shareCode})> createCollab({
+    required String episodeId,
+    required List<({String characterId, bool mine})> assignments,
+  }) async {
+    await ensureUser();
+    final res = await sb.rpc('create_collab', params: {
+      'p_episode': episodeId,
+      'p_assignments': assignments
+          .map((a) => {'characterId': a.characterId, 'mine': a.mine})
+          .toList(),
+    }) as Map<String, dynamic>;
+    return (
+      sessionId: res['sessionId'] as String,
+      shareCode: res['shareCode'] as String,
+    );
+  }
+
+  /// 공유 코드로 콜라보 세션 조회(참여/관리 화면). 없으면 null.
+  static Future<CollabView?> collabByCode(String code) async {
+    final res = await sb.rpc('collab_by_code', params: {'p_code': code});
+    if (res == null) return null;
+    return CollabView.fromMap(res as Map<String, dynamic>);
+  }
+
+  /// 빈 배역 맡기 → 성공 여부
+  static Future<bool> claimRole(String roleId) async {
+    await ensureUser();
+    final res = await sb.rpc('claim_collab_role', params: {'p_role': roleId})
+        as Map<String, dynamic>;
+    return res['ok'] == true;
+  }
+
+  /// 배역 녹음 완료 표시 → 전부 끝났는지(allDone) 반환
+  static Future<bool> setRoleRecorded(String roleId) async {
+    final res = await sb
+            .rpc('set_collab_role_recorded', params: {'p_role': roleId})
+        as Map<String, dynamic>;
+    return res['allDone'] == true;
+  }
+
+  /// 호스트가 콜라보 완성 처리(합본 영상 연결)
+  static Future<bool> completeCollab(String sessionId, String videoId) async {
+    final res = await sb.rpc('complete_collab',
+        params: {'p_session': sessionId, 'p_video': videoId})
+        as Map<String, dynamic>;
+    return res['ok'] == true;
   }
 
   /// 좋아요 토글 → 토글 후 좋아요 여부 반환

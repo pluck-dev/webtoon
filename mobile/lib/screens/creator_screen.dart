@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../cloud.dart';
 import '../config.dart';
 import '../widgets/app_widgets.dart';
+import 'casting_screen.dart';
 import 'performer_screen.dart';
 
 /// 작가 모드 — 컷마다 사진 + 대사로 내 만화 만들기
@@ -149,11 +150,28 @@ class _CreatorScreenState extends State<CreatorScreen> {
     return null;
   }
 
+  // 서로 다른 화자(배역) 수 — 2명 이상이면 초대 더빙 가능
+  int get _distinctSpeakers {
+    final s = <String>{};
+    for (final c in _cuts) {
+      final v = c.speaker.text.trim();
+      s.add(v.isEmpty ? '내레이션' : v);
+    }
+    return s.length;
+  }
+
   Future<void> _publish() async {
     final err = _validate();
     if (err != null) {
       _toast(err);
       return;
+    }
+    // 화자 2명 이상이면 혼자/초대 선택
+    bool collab = false;
+    if (_distinctSpeakers >= 2) {
+      final mode = await _askDubMode();
+      if (mode == null) return; // 취소
+      collab = mode == 'collab';
     }
     setState(() => _publishing = true);
     try {
@@ -167,7 +185,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 direction: c.direction.text.trim(),
               ))
           .toList();
-      final epId = await Cloud.publishEpisode(
+      final res = await Cloud.publishEpisode(
         title: _title.text.trim(),
         logline: _logline.text.trim().isEmpty
             ? '내가 만든 만화'
@@ -177,10 +195,20 @@ class _CreatorScreenState extends State<CreatorScreen> {
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
-      // 발행 후 바로 더빙 화면으로
-      Navigator.of(context).pushReplacement(
-        fadeThroughRoute(PerformerScreen(episodeId: epId)),
-      );
+      if (collab) {
+        // 캐스팅 화면으로 (배역 분배 → 초대)
+        Navigator.of(context).pushReplacement(
+          fadeThroughRoute(CastingScreen(
+            episodeId: res.epId,
+            characters: res.characters,
+          )),
+        );
+      } else {
+        // 혼자 더빙 — 바로 더빙 화면으로
+        Navigator.of(context).pushReplacement(
+          fadeThroughRoute(PerformerScreen(episodeId: res.epId)),
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _publishing = false);
@@ -188,6 +216,94 @@ class _CreatorScreenState extends State<CreatorScreen> {
       }
     }
   }
+
+  /// 혼자/초대 더빙 선택 시트 → 'solo' | 'collab' | null(취소)
+  Future<String?> _askDubMode() => showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: AppColors.card,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        builder: (_) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.line,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                Text('어떻게 더빙할까요?',
+                    style: GoogleFonts.notoSansKr(
+                        fontWeight: FontWeight.w900, fontSize: 18)),
+                const SizedBox(height: 14),
+                _modeTile(
+                  icon: Icons.person_rounded,
+                  title: '혼자 더빙',
+                  subtitle: '모든 배역을 내 목소리로',
+                  value: 'solo',
+                ),
+                const SizedBox(height: 10),
+                _modeTile(
+                  icon: Icons.group_rounded,
+                  title: '친구와 같이 더빙 (초대)',
+                  subtitle: '배역을 나눠 친구를 초대하고 한 영상으로 완성',
+                  value: 'collab',
+                  highlight: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _modeTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String value,
+    bool highlight = false,
+  }) =>
+      Pressable(
+        onTap: () => Navigator.pop(context, value),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: highlight ? AppColors.gold.withValues(alpha: 0.16) : AppColors.cream,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: highlight ? AppColors.gold : AppColors.line, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.ink, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: GoogleFonts.notoSansKr(
+                            fontWeight: FontWeight.w900, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: GoogleFonts.notoSansKr(
+                            fontSize: 12.5, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.faint),
+            ],
+          ),
+        ),
+      );
 
   void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(m), behavior: SnackBarBehavior.floating),

@@ -203,3 +203,73 @@ class CommentItem {
     );
   }
 }
+
+/// 초대 더빙 배역(collab_by_code RPC의 roles 원소)
+class CollabRoleView {
+  final String roleId;
+  final String characterId;
+  final String characterName;
+  final String color;
+  final String status; // OPEN | CLAIMED | RECORDED
+  final String? assignedUserId;
+  final String? assigneeName;
+
+  CollabRoleView({
+    required this.roleId,
+    required this.characterId,
+    required this.characterName,
+    required this.color,
+    required this.status,
+    required this.assignedUserId,
+    required this.assigneeName,
+  });
+
+  factory CollabRoleView.fromMap(Map<String, dynamic> m) => CollabRoleView(
+        roleId: m['roleId'] as String,
+        characterId: m['characterId'] as String,
+        characterName: (m['characterName'] ?? '배역') as String,
+        color: (m['color'] ?? '#5CC8BA') as String,
+        status: (m['status'] ?? 'OPEN') as String,
+        assignedUserId: m['assignedUserId'] as String?,
+        assigneeName: m['assigneeName'] as String?,
+      );
+
+  bool get isOpen => status == 'OPEN';
+  bool get isRecorded => status == 'RECORDED';
+}
+
+/// 초대 더빙 세션 (collab_by_code RPC 결과)
+class CollabView {
+  final String sessionId;
+  final String status; // OPEN | READY | COMPLETE | CANCELLED
+  final String shareCode;
+  final String hostName;
+  final String episodeId;
+  final String title;
+  final String? thumbnailUrl;
+  final List<CollabRoleView> roles;
+
+  CollabView({
+    required this.sessionId,
+    required this.status,
+    required this.shareCode,
+    required this.hostName,
+    required this.episodeId,
+    required this.title,
+    required this.thumbnailUrl,
+    required this.roles,
+  });
+
+  factory CollabView.fromMap(Map<String, dynamic> m) => CollabView(
+        sessionId: m['sessionId'] as String,
+        status: (m['status'] ?? 'OPEN') as String,
+        shareCode: (m['shareCode'] ?? '') as String,
+        hostName: (m['hostName'] ?? '익명') as String,
+        episodeId: m['episodeId'] as String,
+        title: (m['title'] ?? '') as String,
+        thumbnailUrl: m['thumbnailUrl'] as String?,
+        roles: ((m['roles'] ?? []) as List)
+            .map((r) => CollabRoleView.fromMap(r as Map<String, dynamic>))
+            .toList(),
+      );
+}

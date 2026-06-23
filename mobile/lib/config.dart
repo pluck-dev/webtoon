@@ -15,6 +15,10 @@ class Env {
   static String publicImageUrl(String key) =>
       '$supabaseUrl/storage/v1/object/public/$bucketImages/$key';
 
+  /// 초대 더빙 공유 링크(웹 랜딩 → 앱 유도). 앱 딥링크 스킴은 별도.
+  static String collabLink(String code) => '$siteBaseUrl/c/$code';
+  static const collabScheme = 'kr.co.pluck.dubbingo';
+
   // 구글 로그인 — Google Cloud OAuth 클라이언트 ID
   //  - googleWebClientId: "웹 애플리케이션" 클라이언트 ID (Supabase에도 동일하게 등록)
   //  - googleIosClientId: iOS 클라이언트 ID (iOS 빌드 시 필요, 안드로이드는 비워도 됨)
