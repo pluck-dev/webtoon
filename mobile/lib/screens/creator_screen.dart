@@ -198,7 +198,13 @@ class _CreatorScreenState extends State<CreatorScreen> {
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-            16, 8, 16, MediaQuery.of(context).padding.bottom + 100),
+            16,
+            8,
+            16,
+            // 키보드 높이만큼 여백을 더해 입력 중인 필드가 키보드 위로 스크롤되게
+            MediaQuery.of(context).viewInsets.bottom +
+                MediaQuery.of(context).padding.bottom +
+                100),
         children: [
           _infoCard(),
           const SizedBox(height: 20),
@@ -239,7 +245,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
           ),
         ],
       ),
-      bottomSheet: _publishBar(),
+      // 키보드가 올라오면 발행 바를 숨겨 입력 필드를 가리지 않게
+      bottomSheet:
+          MediaQuery.of(context).viewInsets.bottom > 0 ? null : _publishBar(),
     );
   }
 

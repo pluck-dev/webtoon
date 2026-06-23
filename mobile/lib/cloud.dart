@@ -327,15 +327,32 @@ class Cloud {
           .upload(
             key,
             File(cuts[i].imagePath),
+            // upsert는 ON CONFLICT DO UPDATE라 UPDATE RLS까지 요구해 403이 난다.
+            // 경로가 매번 새 UUID라 충돌이 없으므로 일반 INSERT(upsert=false)로 업로드한다.
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
-              upsert: true,
+              upsert: false,
             ),
           );
       imageUrls.add(Env.publicImageUrl(key));
     }
 
-    // 2) 화자 → 캐릭터 생성(자동 색 배정)
+    // 2) 에피소드(PUBLISHED → 홈 노출)
+    //    Character/Cut이 episodeId를 FK로 참조하므로 Episode를 먼저 만든다.
+    await sb.from('Episode').insert({
+      'id': epId,
+      'slug': slug,
+      'title': title,
+      'logline': logline,
+      'status': 'PUBLISHED',
+      'format': 'SHORT',
+      'category': category,
+      'maxSeconds': 60,
+      'thumbnailUrl': imageUrls.isNotEmpty ? imageUrls.first : null,
+      'updatedAt': _now(),
+    });
+
+    // 3) 화자 → 캐릭터 생성(자동 색 배정)
     const palette = [
       '#EF6F5E',
       '#5CC8BA',
@@ -362,20 +379,6 @@ class Cloud {
       });
       charIdByName[speakers[i]] = cid;
     }
-
-    // 3) 에피소드(PUBLISHED → 홈 노출)
-    await sb.from('Episode').insert({
-      'id': epId,
-      'slug': slug,
-      'title': title,
-      'logline': logline,
-      'status': 'PUBLISHED',
-      'format': 'SHORT',
-      'category': category,
-      'maxSeconds': 60,
-      'thumbnailUrl': imageUrls.isNotEmpty ? imageUrls.first : null,
-      'updatedAt': _now(),
-    });
 
     // 4) 컷 + 대사
     for (var i = 0; i < cuts.length; i++) {
