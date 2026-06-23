@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 작가 모드: 컷 사진 촬영 -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="쩌렁쩌렁"
         android:name="${applicationName}"

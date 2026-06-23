@@ -9,6 +9,11 @@ class Env {
   // Storage 버킷 (웹과 공용)
   static const bucketRecordings = 'recordings';
   static const bucketVideos = 'rendered-videos';
+  static const bucketImages = 'webtoon-images'; // 작가가 올린 컷 이미지
+
+  /// 공개 버킷의 storage key → public URL
+  static String publicImageUrl(String key) =>
+      '$supabaseUrl/storage/v1/object/public/$bucketImages/$key';
 
   // 구글 로그인 — Google Cloud OAuth 클라이언트 ID
   //  - googleWebClientId: "웹 애플리케이션" 클라이언트 ID (Supabase에도 동일하게 등록)

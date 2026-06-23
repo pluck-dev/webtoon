@@ -306,6 +306,99 @@ class Cloud {
     return sb.storage.from(Env.bucketVideos).createSignedUrl(key, 60 * 60);
   }
 
+  /// 작가 발행: 컷 이미지 업로드 + Episode/Character/Cut/Dialogue 생성 → episodeId
+  static Future<String> publishEpisode({
+    required String title,
+    required String logline,
+    required String category, // WEBTOON / ROLEPLAY / ANIMATION
+    required List<({String imagePath, String speaker, String text, String direction})>
+    cuts,
+  }) async {
+    await ensureUser();
+    final epId = _uuid.v4();
+    final slug = 'u-${epId.substring(0, 8)}';
+
+    // 1) 컷 이미지 업로드 → public URL
+    final imageUrls = <String>[];
+    for (var i = 0; i < cuts.length; i++) {
+      final key = 'user/$epId/cut-${i + 1}.jpg';
+      await sb.storage
+          .from(Env.bucketImages)
+          .upload(
+            key,
+            File(cuts[i].imagePath),
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      imageUrls.add(Env.publicImageUrl(key));
+    }
+
+    // 2) 화자 → 캐릭터 생성(자동 색 배정)
+    const palette = [
+      '#EF6F5E',
+      '#5CC8BA',
+      '#F0BD62',
+      '#3A7BD5',
+      '#FF6B9D',
+      '#9B8CFF',
+    ];
+    final speakers = <String>[];
+    for (final c in cuts) {
+      final s = c.speaker.trim();
+      if (s.isNotEmpty && !speakers.contains(s)) speakers.add(s);
+    }
+    final charIdByName = <String, String>{};
+    for (var i = 0; i < speakers.length; i++) {
+      final cid = _uuid.v4();
+      await sb.from('Character').insert({
+        'id': cid,
+        'episodeId': epId,
+        'name': speakers[i],
+        'description': '',
+        'voiceGuide': '',
+        'color': palette[i % palette.length],
+      });
+      charIdByName[speakers[i]] = cid;
+    }
+
+    // 3) 에피소드(PUBLISHED → 홈 노출)
+    await sb.from('Episode').insert({
+      'id': epId,
+      'slug': slug,
+      'title': title,
+      'logline': logline,
+      'status': 'PUBLISHED',
+      'format': 'SHORT',
+      'category': category,
+      'maxSeconds': 60,
+      'thumbnailUrl': imageUrls.isNotEmpty ? imageUrls.first : null,
+      'updatedAt': _now(),
+    });
+
+    // 4) 컷 + 대사
+    for (var i = 0; i < cuts.length; i++) {
+      final cutId = _uuid.v4();
+      await sb.from('Cut').insert({
+        'id': cutId,
+        'episodeId': epId,
+        'order': i + 1,
+        'imageUrl': imageUrls[i],
+        'caption': '',
+      });
+      await sb.from('Dialogue').insert({
+        'id': _uuid.v4(),
+        'cutId': cutId,
+        'characterId': charIdByName[cuts[i].speaker.trim()],
+        'order': 1,
+        'text': cuts[i].text,
+        'direction': cuts[i].direction,
+      });
+    }
+    return epId;
+  }
+
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
   static Future<void> deleteWork(String performanceId) async {
     await sb.from('Recording').delete().eq('performanceId', performanceId);

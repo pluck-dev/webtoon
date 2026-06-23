@@ -6,6 +6,7 @@ import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/brand_logo.dart';
+import 'creator_screen.dart';
 import 'performer_screen.dart';
 
 const categoryLabels = {
@@ -311,6 +312,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const Spacer(),
+              Pressable(
+                onTap: () => Navigator.of(
+                  context,
+                ).push(fadeThroughRoute(const CreatorScreen())),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.edit_rounded,
+                        size: 16,
+                        color: AppColors.ink,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '만들기',
+                        style: GoogleFonts.notoSansKr(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 18),
