@@ -29,6 +29,8 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // 본문을 네비 뒤까지 깔아 → 바 주변 빈 영역은 투명(콘텐츠 비침 + 터치 통과)
+      extendBody: true,
       // IndexedStack 대신 활성 화면만 빌드 — 탭 재진입 시 새로 로드(보관함 새로고침)
       body: switch (_index) {
         0 => const HomeScreen(),

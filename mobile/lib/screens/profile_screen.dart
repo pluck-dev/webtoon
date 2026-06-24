@@ -73,7 +73,8 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, MediaQuery.of(context).padding.bottom + 100),
           children: [
             Text(
               '프로필',

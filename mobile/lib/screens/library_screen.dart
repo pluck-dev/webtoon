@@ -154,7 +154,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               _body(),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: MediaQuery.of(context).padding.bottom + 24,
+                  height: MediaQuery.of(context).padding.bottom + 100,
                 ),
               ),
             ],
