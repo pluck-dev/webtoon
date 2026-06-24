@@ -242,6 +242,7 @@ class CollabRoleView {
 class CollabView {
   final String sessionId;
   final String status; // OPEN | READY | COMPLETE | CANCELLED
+  final String mode; // TEAM | REMIX
   final String shareCode;
   final String hostName;
   final String hostUserId;
@@ -254,6 +255,7 @@ class CollabView {
   CollabView({
     required this.sessionId,
     required this.status,
+    required this.mode,
     required this.shareCode,
     required this.hostName,
     required this.hostUserId,
@@ -267,6 +269,7 @@ class CollabView {
   factory CollabView.fromMap(Map<String, dynamic> m) => CollabView(
         sessionId: m['sessionId'] as String,
         status: (m['status'] ?? 'OPEN') as String,
+        mode: (m['mode'] ?? 'TEAM') as String,
         shareCode: (m['shareCode'] ?? '') as String,
         hostName: (m['hostName'] ?? '익명') as String,
         hostUserId: (m['hostUserId'] ?? '') as String,
@@ -281,5 +284,6 @@ class CollabView {
 
   bool get isReady => status == 'READY';
   bool get isComplete => status == 'COMPLETE';
+  bool get isRemix => mode == 'REMIX';
   int get recordedCount => roles.where((r) => r.isRecorded).length;
 }

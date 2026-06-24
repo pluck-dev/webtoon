@@ -23,6 +23,7 @@ class CastingScreen extends StatefulWidget {
 
 class _CastingScreenState extends State<CastingScreen> {
   late final List<bool> _mine; // 배역별 '내가 더빙' 여부
+  String _mode = 'TEAM'; // TEAM(같이 한 영상) | REMIX(각자 버전)
   bool _creating = false;
 
   @override
@@ -50,6 +51,7 @@ class _CastingScreenState extends State<CastingScreen> {
       final res = await Cloud.createCollab(
         episodeId: widget.episodeId,
         assignments: assignments,
+        mode: _mode,
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
@@ -76,11 +78,27 @@ class _CastingScreenState extends State<CastingScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
         children: [
+          // 모드 선택
+          _modeCard(
+            value: 'TEAM',
+            title: '같이 한 영상',
+            subtitle: '친구들이 배역을 나눠 맡고 다 같이 하나의 영상을 완성',
+          ),
+          const SizedBox(height: 10),
+          _modeCard(
+            value: 'REMIX',
+            title: '각자 버전',
+            subtitle: '친구들이 각자 더빙해서 저마다의 영상을 만들어요 (내 배역은 공유)',
+          ),
+          const SizedBox(height: 22),
           Text('누가 어떤 배역을 맡을까요?',
               style: GoogleFonts.notoSansKr(
                   fontWeight: FontWeight.w900, fontSize: 18)),
           const SizedBox(height: 6),
-          Text('비워둔 배역은 친구를 초대해 채울 수 있어요.',
+          Text(
+              _mode == 'REMIX'
+                  ? "'초대' 배역은 참여한 친구가 각자 더빙해요. '내가'는 모든 영상에 공유돼요."
+                  : '비워둔 배역은 친구를 초대해 채울 수 있어요.',
               style: GoogleFonts.notoSansKr(
                   fontSize: 13.5, color: AppColors.muted)),
           const SizedBox(height: 18),
@@ -112,6 +130,49 @@ class _CastingScreenState extends State<CastingScreen> {
                     style:
                         GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _modeCard({
+    required String value,
+    required String title,
+    required String subtitle,
+  }) {
+    final sel = _mode == value;
+    return Pressable(
+      onTap: () => setState(() => _mode = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: sel ? AppColors.gold.withValues(alpha: 0.16) : AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: sel ? AppColors.gold : AppColors.line,
+              width: sel ? 1.5 : 1),
+        ),
+        child: Row(
+          children: [
+            Icon(sel ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: sel ? AppColors.gold : AppColors.faint),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.notoSansKr(
+                          fontWeight: FontWeight.w900, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 12.5, color: AppColors.muted)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

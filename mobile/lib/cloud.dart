@@ -410,9 +410,11 @@ class Cloud {
 
   /// 초대 더빙 세션 생성 → (sessionId, shareCode)
   /// [assignments] : 배역별 {characterId, mine(내가 더빙 여부)}
+  /// [mode] : 'TEAM'(같이 한 영상) | 'REMIX'(각자 버전)
   static Future<({String sessionId, String shareCode})> createCollab({
     required String episodeId,
     required List<({String characterId, bool mine})> assignments,
+    String mode = 'TEAM',
   }) async {
     await ensureUser();
     final res = await sb.rpc('create_collab', params: {
@@ -420,11 +422,28 @@ class Cloud {
       'p_assignments': assignments
           .map((a) => {'characterId': a.characterId, 'mine': a.mine})
           .toList(),
+      'p_mode': mode,
     }) as Map<String, dynamic>;
     return (
       sessionId: res['sessionId'] as String,
       shareCode: res['shareCode'] as String,
     );
+  }
+
+  /// REMIX 참여 → 내 전용 포크 세션의 shareCode (없으면 null)
+  static Future<String?> joinRemix(String code) async {
+    await ensureUser();
+    final res =
+        await sb.rpc('join_remix', params: {'p_code': code}) as Map<String, dynamic>;
+    if (res['ok'] != true) return null;
+    return res['shareCode'] as String;
+  }
+
+  /// 세션에서 내 모든 배역 녹음완료 표시 → 전부 끝났는지(allDone)
+  static Future<bool> setMyRolesRecorded(String sessionId) async {
+    final res = await sb.rpc('set_my_roles_recorded',
+        params: {'p_session': sessionId}) as Map<String, dynamic>;
+    return res['allDone'] == true;
   }
 
   /// 공유 코드로 콜라보 세션 조회(참여/관리 화면). 없으면 null.

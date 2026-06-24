@@ -20,14 +20,14 @@ import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
   final String episodeId;
-  // 초대 더빙: 이 배역(캐릭터) 대사만 녹음. null이면 전체(혼자 더빙).
-  final String? roleCharacterId;
-  final String? collabRoleId; // 콜라보 배역 완료 표시용
+  // 초대 더빙: 이 배역(캐릭터)들 대사만 녹음. null이면 전체(혼자 더빙).
+  final Set<String>? roleCharacterIds;
+  final String? collabSessionId; // 콜라보 세션(완료 시 내 배역 표시)
   const PerformerScreen({
     super.key,
     required this.episodeId,
-    this.roleCharacterId,
-    this.collabRoleId,
+    this.roleCharacterIds,
+    this.collabSessionId,
   });
 
   @override
@@ -200,24 +200,23 @@ class _PerformerScreenState extends State<PerformerScreen> {
     super.dispose();
   }
 
-  bool get _isCollabRole => widget.collabRoleId != null;
+  bool get _isCollabRole => widget.collabSessionId != null;
   bool _roleMarked = false;
 
-  // 초대 더빙이면 내 배역 대사만, 아니면 전체
+  // 초대 더빙이면 내 배역(들) 대사만, 아니면 전체
   List<({Cut cut, Dialogue dialogue})> get _lines {
     final all = _detail?.lines ?? [];
-    if (widget.roleCharacterId == null) return all;
-    return all
-        .where((l) => l.dialogue.characterId == widget.roleCharacterId)
-        .toList();
+    final ids = widget.roleCharacterIds;
+    if (ids == null || ids.isEmpty) return all;
+    return all.where((l) => ids.contains(l.dialogue.characterId)).toList();
   }
 
-  // 콜라보 배역 녹음 완료 표시(+축하). 1회만.
+  // 콜라보 내 배역 녹음 완료 표시(+축하). 1회만.
   Future<void> _markRoleDone() async {
     if (_roleMarked) return;
     _roleMarked = true;
     try {
-      await Cloud.setRoleRecorded(widget.collabRoleId!);
+      await Cloud.setMyRolesRecorded(widget.collabSessionId!);
     } catch (_) {}
     if (mounted) {
       HapticFeedback.heavyImpact();

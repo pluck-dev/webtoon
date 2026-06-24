@@ -123,6 +123,8 @@ model CollabSession {
   hostUserId String
   shareCode  String       @unique
   status     String       @default("OPEN") // OPEN | READY | COMPLETE | CANCELLED
+  mode       String       @default("TEAM") // TEAM(같이 한 영상) | REMIX(각자 버전)
+  parentSessionId String?  // REMIX 포크 원본 세션
   videoId    String?
   episode    Episode      @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   host       User         @relation("host", fields: [hostUserId], references: [id], onDelete: Cascade)

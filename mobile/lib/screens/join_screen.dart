@@ -7,6 +7,7 @@ import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import 'collab_manage_screen.dart';
 import 'performer_screen.dart';
 
 /// 초대 참여 — 공유 코드로 들어와 빈 배역을 맡고 내 배역만 더빙
@@ -86,8 +87,8 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
   Future<void> _dub(CollabRoleView r) async {
     Navigator.of(context).push(fadeThroughRoute(PerformerScreen(
       episodeId: _collab!.episodeId,
-      roleCharacterId: r.characterId,
-      collabRoleId: r.roleId,
+      roleCharacterIds: {r.characterId},
+      collabSessionId: _collab!.sessionId,
     )));
   }
 
@@ -118,21 +119,95 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-                children: [
-                  _intro(c),
-                  const SizedBox(height: 20),
-                  Text('배역을 골라 맡아주세요',
-                      style: GoogleFonts.notoSansKr(
-                          fontWeight: FontWeight.w900, fontSize: 17)),
-                  const SizedBox(height: 10),
-                  for (final r in c.roles) ...[
-                    _roleRow(r),
-                    const SizedBox(height: 10),
-                  ],
-                ],
+                children: c.isRemix
+                    ? _remixBody(c)
+                    : [
+                        _intro(c),
+                        const SizedBox(height: 20),
+                        Text('배역을 골라 맡아주세요',
+                            style: GoogleFonts.notoSansKr(
+                                fontWeight: FontWeight.w900, fontSize: 17)),
+                        const SizedBox(height: 10),
+                        for (final r in c.roles) ...[
+                          _roleRow(r),
+                          const SizedBox(height: 10),
+                        ],
+                      ],
               ),
             ),
     );
+  }
+
+  // REMIX(각자 버전): 내가 더빙해 내 영상 만들기
+  List<Widget> _remixBody(CollabView c) {
+    final hostRoles = c.roles.where((r) => r.assignedUserId == c.hostUserId);
+    final openRoles = c.roles.where((r) => r.assignedUserId != c.hostUserId);
+    return [
+      _intro(c),
+      const SizedBox(height: 18),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.gold),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('🎬 각자 버전 더빙',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w900, fontSize: 15)),
+            const SizedBox(height: 6),
+            Text(
+                '${c.hostName}님의 배역(${hostRoles.map((r) => r.characterName).join(', ')})은 그대로 두고, '
+                '나머지(${openRoles.map((r) => r.characterName).join(', ')})를 내가 더빙해서 '
+                '나만의 영상을 만들어요.',
+                style: GoogleFonts.notoSansKr(
+                    fontSize: 13, height: 1.4, color: AppColors.inkSoft)),
+          ],
+        ),
+      ),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: _busyRole == 'remix' ? null : _startRemix,
+          icon: _busyRole == 'remix'
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: AppColors.paper))
+              : const Icon(Icons.mic_rounded, size: 20),
+          label: Text('나도 더빙 시작하기',
+              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _startRemix() async {
+    setState(() => _busyRole = 'remix');
+    try {
+      final forkCode = await Cloud.joinRemix(widget.shareCode);
+      if (forkCode == null) {
+        if (mounted) {
+          setState(() => _busyRole = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('참여하지 못했어요. 잠시 후 다시 시도해 주세요.')),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          fadeThroughRoute(CollabManageScreen(shareCode: forkCode)),
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _busyRole = null);
+    }
   }
 
   Widget _intro(CollabView c) => Container(

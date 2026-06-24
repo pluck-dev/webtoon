@@ -91,12 +91,20 @@ class _CollabManageScreenState extends State<CollabManageScreen>
     HapticFeedback.selectionClick();
   }
 
-  void _dubRole(CollabRoleView r) =>
-      Navigator.of(context).push(fadeThroughRoute(PerformerScreen(
-        episodeId: _collab!.episodeId,
-        roleCharacterId: r.characterId,
-        collabRoleId: r.roleId,
-      )));
+  void _dubRole(CollabRoleView r) {
+    final c = _collab!;
+    // 내 미녹음 배역 전부를 한 번에 녹음(여러 배역이면 모두)
+    final myChars = c.roles
+        .where((x) => x.assignedUserId == _myId && !x.isRecorded)
+        .map((x) => x.characterId)
+        .toSet();
+    if (myChars.isEmpty) myChars.add(r.characterId);
+    Navigator.of(context).push(fadeThroughRoute(PerformerScreen(
+      episodeId: c.episodeId,
+      roleCharacterIds: myChars,
+      collabSessionId: c.sessionId,
+    )));
+  }
 
   Future<void> _viewVideo() async {
     final key = _collab?.videoId;
