@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +11,13 @@ import 'repo.dart';
 
 const _uuid = Uuid();
 String _now() => DateTime.now().toUtc().toIso8601String();
+
+/// AI 생성 월 한도 초과
+class AiQuotaException implements Exception {
+  final int used;
+  final int limit;
+  AiQuotaException({required this.used, required this.limit});
+}
 
 /// Supabase Auth 유저 ↔ User 테이블 + 공연/녹음/렌더 (RLS로 본인 것만)
 class Cloud {
@@ -406,6 +414,37 @@ class Cloud {
     final characters =
         charIdByName.entries.map((e) => (id: e.value, name: e.key)).toList();
     return (epId: epId, characters: characters);
+  }
+
+  /// AI 컷 이미지 생성 → 로컬 파일 경로 + 남은 횟수.
+  /// 월 한도 초과 시 [AiQuotaException].
+  static Future<({String path, int remaining, bool stub})> generateAiImage(
+    String prompt,
+  ) async {
+    await ensureUser();
+    final res = await sb.functions.invoke(
+      'generate-image',
+      body: {'prompt': prompt},
+    );
+    final data = (res.data ?? {}) as Map<String, dynamic>;
+    if (res.status == 402 || data['error'] == 'quota_exceeded') {
+      throw AiQuotaException(
+        used: (data['used'] ?? 0) as int,
+        limit: (data['limit'] ?? 0) as int,
+      );
+    }
+    if (res.status != 200 || data['image'] == null) {
+      throw Exception('ai_gen_failed: ${data['error'] ?? res.status}');
+    }
+    final bytes = base64Decode(data['image'] as String);
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/ai_${_uuid.v4()}.png');
+    await file.writeAsBytes(bytes);
+    return (
+      path: file.path,
+      remaining: (data['remaining'] ?? 0) as int,
+      stub: data['stub'] == true,
+    );
   }
 
   /// 초대 더빙 세션 생성 → (sessionId, shareCode)
