@@ -59,34 +59,30 @@ class _FloatingNav extends StatelessWidget {
     required this.onCreate,
   });
 
+  static const double _circle = 58; // 가운데 버튼 지름
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: SizedBox(
-        height: 82,
+        height: 86,
         child: Stack(
           clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
           children: [
-            // 플로팅 바
+            // 노치(홈) 있는 플로팅 바 — CustomPaint로 그림자+노치 직접 그림
             Positioned(
               left: 14,
               right: 14,
               bottom: 8,
-              child: Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.lineSoft),
-                  boxShadow: AppShadows.elevated,
-                ),
+              top: 28,
+              child: CustomPaint(
+                painter: _NavBarPainter(notchRadius: _circle / 2 + 7),
                 child: Row(
                   children: [
                     _tab(0, Icons.home_outlined, Icons.home_rounded, '홈'),
                     _tab(1, Icons.explore_outlined, Icons.explore_rounded, '피드'),
-                    const SizedBox(width: 64), // 가운데 버튼 자리
+                    const SizedBox(width: 78), // 노치(가운데 버튼) 자리
                     _tab(2, Icons.video_library_outlined,
                         Icons.video_library_rounded, '보관함'),
                     _tab(3, Icons.person_outline_rounded, Icons.person_rounded,
@@ -95,46 +91,35 @@ class _FloatingNav extends StatelessWidget {
                 ),
               ),
             ),
-            // 가운데 '만들기' 버튼 (떠있음)
+            // 가운데 '만들기' 버튼 — 노치에 자연스럽게 안김
             Positioned(
               top: 0,
-              child: GestureDetector(
-                onTap: onCreate,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFF6CE7E), AppColors.gold],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: onCreate,
+                  child: Container(
+                    width: _circle,
+                    height: _circle,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF6CE7E), AppColors.gold],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.5),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.card, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.gold.withValues(alpha: 0.45),
-                            blurRadius: 14,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.auto_awesome_rounded,
-                          color: AppColors.ink, size: 26),
+                      ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '만들기',
-                      style: GoogleFonts.notoSansKr(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.ink,
-                      ),
-                    ),
-                  ],
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: AppColors.ink, size: 27),
+                  ),
                 ),
               ),
             ),
@@ -172,4 +157,51 @@ class _FloatingNav extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 상단 가운데에 둥근 홈(notch)이 파인 플로팅 바 — 그림자/테두리 직접 그림
+class _NavBarPainter extends CustomPainter {
+  final double notchRadius;
+  _NavBarPainter({required this.notchRadius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const r = 24.0; // 바 모서리 라운드
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+    final nr = notchRadius;
+
+    final path = Path()
+      ..moveTo(r, 0)
+      ..lineTo(cx - nr, 0)
+      // 가운데 아래로 파인 둥근 홈 (concave)
+      ..arcToPoint(Offset(cx + nr, 0),
+          radius: Radius.circular(nr), clockwise: false)
+      ..lineTo(w - r, 0)
+      ..arcToPoint(Offset(w, r), radius: const Radius.circular(r))
+      ..lineTo(w, h - r)
+      ..arcToPoint(Offset(w - r, h), radius: const Radius.circular(r))
+      ..lineTo(r, h)
+      ..arcToPoint(Offset(0, h - r), radius: const Radius.circular(r))
+      ..lineTo(0, r)
+      ..arcToPoint(Offset(r, 0), radius: const Radius.circular(r))
+      ..close();
+
+    // 그림자
+    canvas.drawShadow(path, const Color(0x33000000), 8, false);
+    // 채움
+    canvas.drawPath(path, Paint()..color = AppColors.card);
+    // 얇은 테두리
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = AppColors.lineSoft,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_NavBarPainter old) => old.notchRadius != notchRadius;
 }
