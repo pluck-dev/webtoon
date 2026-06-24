@@ -84,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(child: _header()),
+              SliverToBoxAdapter(child: _aiBanner()),
               if (_error == null && _episodes != null && _episodes!.isNotEmpty)
                 SliverToBoxAdapter(child: _filterChips()),
               if (_featured != null)
@@ -292,6 +293,95 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$who편안한 저녁이에요 🌆';
   }
 
+  // AI 창작 전면 배너 — 홈 상단에서 핵심 기능(AI로 만들기)을 바로 진입
+  Widget _aiBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Pressable(
+        onTap: () => Navigator.of(context)
+            .push(fadeThroughRoute(const CreatorScreen())),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2B2622), AppColors.ink],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: AppShadows.elevated,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF6CE7E), AppColors.gold],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: AppColors.ink, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'AI로 웹툰 만들기',
+                          style: GoogleFonts.notoSansKr(
+                            color: AppColors.paper,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16.5,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'NEW',
+                            style: GoogleFonts.notoSansKr(
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '상황만 적으면 컷·대사·그림까지 자동으로',
+                      style: GoogleFonts.notoSansKr(
+                        color: AppColors.paper.withValues(alpha: 0.72),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded,
+                  color: AppColors.gold, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _header() {
     final email = Auth.currentUser?.email ?? '';
     final name = email.isEmpty ? '' : email.split('@').first;
@@ -309,41 +399,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: GoogleFonts.notoSansKr(
                   fontWeight: FontWeight.w900,
                   fontSize: 20,
-                ),
-              ),
-              const Spacer(),
-              Pressable(
-                onTap: () => Navigator.of(
-                  context,
-                ).push(fadeThroughRoute(const CreatorScreen())),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.edit_rounded,
-                        size: 16,
-                        color: AppColors.ink,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '만들기',
-                        style: GoogleFonts.notoSansKr(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],
