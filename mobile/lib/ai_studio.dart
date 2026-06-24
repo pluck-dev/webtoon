@@ -626,13 +626,43 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                   Text('✨ AI로 장면 만들기',
                       style: GoogleFonts.notoSansKr(
                           fontSize: 20, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 6),
-                  _SelectedSummary(
-                    count: _frags.length,
-                    onClear: () => setState(_frags.clear),
-                  ),
+                  const SizedBox(height: 14),
 
-                  // 캐릭터/사물 선택 (일관성)
+                  // 1) 어떤 장면? — 주 입력(맨 위)
+                  Text('어떤 장면을 그릴까요?',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 15, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _free,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                    style: GoogleFonts.notoSansKr(fontSize: 14.5),
+                    decoration: InputDecoration(
+                      hintText: '예: 커피를 들고 창밖을 보며 미소짓는 사람',
+                      hintStyle: GoogleFonts.notoSansKr(color: AppColors.faint),
+                      filled: true,
+                      fillColor: AppColors.paper,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.ink),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('아래에서 촬영·연출 키워드를 더하면 더 정확해져요 (선택).',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 12, color: AppColors.faint)),
+
+                  // 2) 캐릭터/사물 선택 (일관성)
                   Padding(
                     padding: const EdgeInsets.only(top: 18, bottom: 8),
                     child: Text('캐릭터 · 사물 (일관성 유지)',
@@ -649,43 +679,33 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     onNew: _newCharacter,
                   ),
 
-                  // 키워드 (아코디언)
-                  const SizedBox(height: 16),
+                  // 3) 촬영·연출 키워드 (아코디언, 보조)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18, bottom: 4),
+                    child: Row(
+                      children: [
+                        Text('촬영 · 연출 키워드',
+                            style: GoogleFonts.notoSansKr(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.muted)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SelectedSummary(
+                            count: _frags.length,
+                            onClear: () => setState(_frags.clear),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   _KeywordPicker(
                     categories: kSceneKeywords,
                     selected: _frags,
                     onChanged: () => setState(() {}),
                   ),
-
-                  // 자유 설명
-                  const SizedBox(height: 8),
-                  Text('추가 설명 (선택)',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.muted)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _free,
-                    maxLines: 2,
-                    onChanged: (_) => setState(() {}),
-                    style: GoogleFonts.notoSansKr(fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: '예: 손에 커피를 들고 창밖을 보는',
-                      hintStyle: GoogleFonts.notoSansKr(color: AppColors.faint),
-                      filled: true,
-                      fillColor: AppColors.paper,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.line),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppColors.line),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   _PrimaryButton(
                     label: _busy ? '그리는 중…' : '이 장면 그리기',
                     enabled: _canGen,
