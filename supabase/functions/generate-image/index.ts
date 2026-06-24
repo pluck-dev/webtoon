@@ -31,25 +31,42 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// 웹툰 스타일을 일관되게 유지하는 프롬프트 래퍼
-function buildPrompt(userPrompt: string): string {
-  return (
-    'Korean webtoon / manhwa style illustration, clean line art, vibrant flat colors, ' +
-    'cinematic single panel, expressive characters, no text, no speech bubbles, no watermark. ' +
-    'Scene: ' +
-    userPrompt
-  );
+const STYLE =
+  'Korean webtoon / manhwa style illustration, clean line art, vibrant flat colors, ' +
+  'cinematic single panel, expressive characters, no text, no speech bubbles, no watermark. ';
+
+// 프롬프트 래퍼. 참조 이미지(캐릭터)가 있으면 동일 인물 유지를 강하게 지시.
+function buildPrompt(userPrompt: string, hasRef: boolean): string {
+  if (hasRef) {
+    return (
+      STYLE +
+      'IMPORTANT: keep the SAME character(s) from the reference image(s) — ' +
+      'identical face, hairstyle, and outfit. Only change the scene/pose/expression. ' +
+      'New scene: ' +
+      userPrompt
+    );
+  }
+  return STYLE + 'Scene: ' + userPrompt;
 }
 
 // Gemini 이미지 생성 → base64 PNG (data 부분만)
-async function generateWithGemini(prompt: string): Promise<string> {
+// refImages: 캐릭터 일관성용 참조 이미지(base64, data 부분만). 있으면 멀티 이미지 입력.
+async function generateWithGemini(
+  prompt: string,
+  refImages: string[],
+): Promise<string> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  // 참조 이미지 먼저, 그다음 텍스트 지시
+  const parts: unknown[] = refImages.map((b64) => ({
+    inlineData: { mimeType: 'image/png', data: b64 },
+  }));
+  parts.push({ text: buildPrompt(prompt, refImages.length > 0) });
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildPrompt(prompt) }] }],
+      contents: [{ parts }],
       generationConfig: { responseModalities: ['IMAGE'] },
     }),
   });
@@ -57,8 +74,8 @@ async function generateWithGemini(prompt: string): Promise<string> {
     throw new Error(`gemini ${res.status}: ${await res.text()}`);
   }
   const data = await res.json();
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  for (const p of parts) {
+  const out = data?.candidates?.[0]?.content?.parts ?? [];
+  for (const p of out) {
     if (p.inlineData?.data) return p.inlineData.data as string;
   }
   throw new Error('gemini: no image in response');
@@ -89,11 +106,19 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!urow) return json({ error: 'no_user' }, 400);
 
-    // 3) 프롬프트
-    const { prompt } = await req.json().catch(() => ({ prompt: '' }));
+    // 3) 프롬프트 + 참조 이미지(선택, 캐릭터 일관성용)
+    const body = await req.json().catch(() => ({}));
+    const prompt = body?.prompt;
     if (!prompt || `${prompt}`.trim().length < 2) {
       return json({ error: 'prompt_required' }, 400);
     }
+    // 최대 3장, data URL 접두사 제거
+    const refImages: string[] = Array.isArray(body?.refImages)
+      ? body.refImages
+          .slice(0, 3)
+          .map((s: string) => `${s}`.replace(/^data:image\/\w+;base64,/, ''))
+          .filter((s: string) => s.length > 0)
+      : [];
 
     // 4) 월 한도 소비 (구독 한도는 추후 RevenueCat 검증으로 상향)
     const { data: credit, error: cErr } = await admin.rpc('consume_ai_credit', {
@@ -112,7 +137,7 @@ Deno.serve(async (req) => {
     // 5) 생성 (키 없으면 stub)
     let b64: string;
     if (GEMINI_API_KEY) {
-      b64 = await generateWithGemini(`${prompt}`.trim());
+      b64 = await generateWithGemini(`${prompt}`.trim(), refImages);
     } else {
       b64 = STUB_PNG_BASE64; // 흐름 검증용
     }
