@@ -1,22 +1,21 @@
-# 체크포인트 — 2026-06-24 · AI 이미지 생성 배포 직전
+# 체크포인트 — 2026-06-24 · AI 이미지 생성 (배포 완료 ✅)
 
 > 세션 재시작용 컨텍스트. 새 세션에서 이 파일 + git 로그 보면 바로 따라잡을 수 있음.
 
-## 🔴 지금 할 일 (재시작 직후)
-**AI 이미지 생성 Edge Function `generate-image` 를 Supabase에 배포한다.**
+## ✅ 완료 — Edge Function 배포 + E2E 검증 (2026-06-24)
+**`generate-image` Edge Function 배포 성공 (status ACTIVE, version 1, verify_jwt=true).**
 
-- 코드는 이미 다 작성·커밋됨 (`f613494`). 빌드·analyze 통과.
-- 막혔던 이유: Supabase MCP가 **read-only** 모드여서 `deploy_edge_function` 거부됨.
-- 해결: 프로젝트 `.mcp.json`에서 `read_only=true` 제거함(저장됨). **Claude Code 재시작해야 적용.**
-- 재시작 시 `.mcp.json` **신뢰 승인** 필요.
+- Supabase MCP OAuth 인증 후 `deploy_edge_function`으로 배포.
+- 스모크 테스트 통과: JWT없음→401, anon키→`unauthorized`(함수본문 실행 확인), OPTIONS→200.
+- **해피패스 E2E 통과**: tester@dubbingo.app 로그인 → 함수 호출 → stub PNG + `remaining:4`(쿼터 1 차감) + `stub:true`. `AiUsage.count`=1 영속 확인 후 **0으로 원복**(테스트 흔적 제거).
+- 결론: JWT검증→User.id해석→`consume_ai_credit`→이미지반환 전 구간 동작. **stub 모드**(GEMINI_API_KEY 미설정).
 
-### 재시작 후 순서
-1. MCP가 쓰기 가능해졌는지 확인 (`list_edge_functions` 등)
-2. `mcp__supabase__deploy_edge_function` 로 `supabase/functions/generate-image/index.ts` 배포 (verify_jwt=true)
-3. 배포되면 **stub 모드**로 흐름 검증 가능(키 없어도 플레이스홀더 PNG 반환)
-4. (선택) 실제 생성: 사장님이 **Gemini API 키**(aistudio.google.com, 무료) 발급 →
-   `supabase secrets set GEMINI_API_KEY=...` (또는 대시보드 Edge Functions secrets). 모델 기본값 `gemini-2.5-flash-image-preview`.
-5. 기기에서 작가 에디터 → 사진 추가 → "✨ AI로 생성" → 프롬프트 → 컷 적용 검증
+### 🔴 남은 일 (선택)
+1. **실제 AI 생성**: 사장님이 **Gemini API 키**(aistudio.google.com, 무료) 발급 →
+   `mcp__supabase__` secrets 또는 대시보드 Edge Functions secrets에 `GEMINI_API_KEY` 설정.
+   모델 기본값 `gemini-2.5-flash-image-preview`. (`AI_FREE_LIMIT`로 한도 조정 가능)
+2. **기기 UI 검증**: 작가 에디터 → 사진 추가 → "✨ AI로 생성" → 프롬프트 → 컷 적용.
+   (키 없어도 stub PNG로 버튼→로딩→컷적용 흐름 검증 가능)
 
 ## ✅ 완성된 것 (전부 git 커밋·푸시됨, origin/main)
 
