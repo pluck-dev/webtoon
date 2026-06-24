@@ -13,8 +13,10 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 const FREE_LIMIT = parseInt(Deno.env.get('AI_FREE_LIMIT') ?? '5', 10);
+// 2026-06: '-preview' 정식 출시되며 모델명 변경됨. 기본은 저렴한 flash(Nano Banana).
+// 더 고품질 원하면 GEMINI_IMAGE_MODEL=gemini-3-pro-image (비쌈) 등으로 교체.
 const GEMINI_MODEL =
-  Deno.env.get('GEMINI_IMAGE_MODEL') ?? 'gemini-2.5-flash-image-preview';
+  Deno.env.get('GEMINI_IMAGE_MODEL') ?? 'gemini-2.5-flash-image';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
