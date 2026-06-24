@@ -447,49 +447,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
     final doneCount = _lines
         .where((l) => _saved.contains(l.dialogue.id))
         .length;
-    final allSaved = _lines.isNotEmpty && doneCount == _lines.length;
 
     return Scaffold(
       backgroundColor: AppColors.deviceDark,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: (allSaved && !_recording && !_rendering)
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.height * 0.32,
-              ),
-              child: FloatingActionButton.extended(
-                onPressed: _isCollabRole
-                    ? () async {
-                        final nav = Navigator.of(context);
-                        await _markRoleDone();
-                        if (mounted) nav.maybePop();
-                      }
-                    : (_rendering ? null : _makeVideo),
-                backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.ink,
-                icon: _isCollabRole
-                    ? const Icon(Icons.check_rounded)
-                    : _rendering
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.ink,
-                            ),
-                          )
-                        : const Icon(Icons.movie_creation_rounded),
-                label: Text(
-                  _isCollabRole
-                      ? '내 배역 완료하기'
-                      : _rendering
-                          ? '만드는 중 ${(_renderProgress * 100).round()}%'
-                          : '영상 만들기',
-                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
-                ),
-              ),
-            )
-          : null,
+      // 영상 만들기는 그림을 가리지 않도록 floating 제거 → 하단 녹음 버튼이
+      // 다 녹음되면 초록으로 바뀌고, 누르면 [영상 만들기/다시 녹음하기] 팝업.
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -755,6 +717,94 @@ class _PerformerScreenState extends State<PerformerScreen> {
     ),
   );
 
+  // 다 녹음됐을 때 초록 버튼 → [영상 만들기 / 다시 녹음하기] 팝업
+  Future<void> _showFinishSheet() async {
+    HapticFeedback.mediumImpact();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                _isCollabRole ? '내 배역 다 녹음했어요!' : '모든 컷을 다 녹음했어요! 🎉',
+                style: GoogleFonts.notoSansKr(
+                    fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _isCollabRole ? '완료하면 합본 영상에 반영돼요.' : '이제 영상으로 만들 수 있어요.',
+                style: GoogleFonts.notoSansKr(
+                    fontSize: 13, color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              if (_isCollabRole)
+                _sheetButton('✓ 내 배역 완료하기', filled: true, onTap: () async {
+                  Navigator.pop(sheetCtx);
+                  final nav = Navigator.of(context);
+                  await _markRoleDone();
+                  if (mounted) nav.maybePop();
+                })
+              else ...[
+                _sheetButton('🎬 영상 만들기', filled: true, onTap: () {
+                  Navigator.pop(sheetCtx);
+                  _makeVideo();
+                }),
+                const SizedBox(height: 10),
+                _sheetButton('🎙 다시 녹음하기', filled: false, onTap: () {
+                  Navigator.pop(sheetCtx);
+                  _onRecordTap(); // 현재 컷 다시 녹음
+                }),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetButton(String label,
+      {required bool filled, required VoidCallback onTap}) {
+    const green = Color(0xFF35C75A);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: filled ? green : AppColors.paper,
+          borderRadius: BorderRadius.circular(16),
+          border: filled ? null : Border.all(color: AppColors.line),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.notoSansKr(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: filled ? Colors.white : AppColors.inkSoft,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _bottomPanel(({Cut cut, Dialogue dialogue}) line) {
     final hasTake = _takes.containsKey(line.dialogue.id);
     final next = _index < _lines.length - 1
@@ -762,6 +812,9 @@ class _PerformerScreenState extends State<PerformerScreen> {
         : null;
     final color = _colorOf(line.dialogue.character?.color);
     final d = line.dialogue;
+    final allSaved =
+        _lines.isNotEmpty && _lines.every((l) => _saved.contains(l.dialogue.id));
+    final readyToMake = allSaved && !_recording;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -866,6 +919,27 @@ class _PerformerScreenState extends State<PerformerScreen> {
             const SizedBox(height: 16),
             _WaveStrip(levels: _levels),
           ],
+          // 완료 안내 (다 녹음됨)
+          if (readyToMake) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF35C75A).withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                    color: const Color(0xFF35C75A).withValues(alpha: 0.6)),
+              ),
+              child: Text(
+                '🎉 다 녹음했어요! 초록 버튼으로 영상 만들기',
+                style: GoogleFonts.notoSansKr(
+                  color: const Color(0xFF8FE3A6),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 22),
           // 컨트롤
           Row(
@@ -881,7 +955,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 recording: _recording,
                 hasTake: hasTake,
                 level: _level,
-                onTap: _onRecordTap,
+                done: readyToMake,
+                onTap: readyToMake ? _showFinishSheet : _onRecordTap,
               ),
               const SizedBox(width: 30),
               _circleBtn(
@@ -998,6 +1073,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
 class _RecordButton extends StatefulWidget {
   final bool recording;
   final bool hasTake;
+  final bool done; // 모든 컷 녹음 완료 → 초록(영상 만들기 진입)
   final double level; // 0~1 실시간 입력 레벨
   final VoidCallback onTap;
   const _RecordButton({
@@ -1005,6 +1081,7 @@ class _RecordButton extends StatefulWidget {
     required this.hasTake,
     required this.level,
     required this.onTap,
+    this.done = false,
   });
 
   @override
@@ -1043,7 +1120,10 @@ class _RecordButtonState extends State<_RecordButton>
 
   @override
   Widget build(BuildContext context) {
-    final base = widget.recording ? AppColors.coral : AppColors.gold;
+    const green = Color(0xFF35C75A);
+    final base = widget.recording
+        ? AppColors.coral
+        : (widget.done ? green : AppColors.gold);
     final level = widget.recording ? widget.level : 0.0;
     return SizedBox(
       width: 112,
@@ -1095,10 +1175,12 @@ class _RecordButtonState extends State<_RecordButton>
                 child: Icon(
                   widget.recording
                       ? Icons.stop_rounded
+                      : widget.done
+                      ? Icons.movie_creation_rounded
                       : widget.hasTake
                       ? Icons.refresh_rounded
                       : Icons.mic_rounded,
-                  color: AppColors.ink,
+                  color: widget.done ? Colors.white : AppColors.ink,
                   size: 30,
                 ),
               ),
