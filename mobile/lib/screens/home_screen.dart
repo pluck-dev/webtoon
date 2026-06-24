@@ -61,15 +61,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return all.where((e) => e.category == _filter).toList();
   }
 
-  // 추천 배너: 전체 보기 + 작품 3개 이상일 때 첫 작품을 큰 배너로
-  EpisodeSummary? get _featured =>
-      (_filter == 'ALL' && (_episodes?.length ?? 0) >= 3)
-      ? _episodes!.first
-      : null;
+  // 오늘의 추천 캐러셀: 전체 보기 + 작품 2개 이상일 때 상위 5개를 가로 캐러셀로
+  List<EpisodeSummary> get _carousel {
+    final all = _episodes ?? [];
+    if (_filter != 'ALL' || all.length < 2) return [];
+    return all.take(5).toList();
+  }
 
-  // 그리드 목록 (추천으로 뽑힌 작품은 그리드에서 제외해 중복 방지)
+  // 둘러보기 그리드 (추천으로 뽑힌 작품은 전체보기일 때 제외해 중복 방지)
   List<EpisodeSummary> get _gridList =>
-      _featured == null ? _visible : _episodes!.skip(1).toList();
+      _filter != 'ALL' ? _visible : (_episodes ?? []).skip(_carousel.length).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -85,23 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
             slivers: [
               SliverToBoxAdapter(child: _header()),
               SliverToBoxAdapter(child: _aiBanner()),
+              if (_carousel.isNotEmpty)
+                SliverToBoxAdapter(child: _carouselSection()),
               if (_error == null && _episodes != null && _episodes!.isNotEmpty)
-                SliverToBoxAdapter(child: _filterChips()),
-              if (_featured != null)
-                SliverToBoxAdapter(child: _featuredBanner(_featured!)),
-              if (_featured != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-                    child: Text(
-                      '둘러보기',
-                      style: GoogleFonts.notoSansKr(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ),
+                SliverToBoxAdapter(child: _browseHeader()),
               _body(),
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -137,8 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final list = _gridList;
     if (list.isEmpty) {
-      // 추천 배너가 떠 있으면 빈 박스 대신 아무것도 안 보여줌
-      if (_featured != null) return const SliverToBoxAdapter(child: SizedBox());
+      // 추천 캐러셀이 떠 있으면 빈 박스 대신 아무것도 안 보여줌
+      if (_carousel.isNotEmpty) {
+        return const SliverToBoxAdapter(child: SizedBox());
+      }
       return SliverFillRemaining(hasScrollBody: false, child: _emptyBox());
     }
     return SliverPadding(
@@ -163,124 +153,23 @@ class _HomeScreenState extends State<HomeScreen> {
     childAspectRatio: 0.62,
   );
 
-  Widget _featuredBanner(EpisodeSummary ep) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
-      child: Pressable(
-        onTap: () => Navigator.of(
-          context,
-        ).push(fadeThroughRoute(PerformerScreen(episodeId: ep.id))),
-        child: Container(
-          height: 208,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: AppShadows.elevated,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              NetworkThumb(url: ep.thumbnailUrl),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x33000000), Color(0xCC000000)],
-                    stops: [0.35, 1.0],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '오늘의 추천',
-                        style: GoogleFonts.notoSansKr(
-                          color: AppColors.ink,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      ep.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.notoSansKr(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            ep.logline,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.notoSansKr(
-                              color: Colors.white70,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.mic_rounded,
-                                size: 15,
-                                color: AppColors.ink,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '더빙하기',
-                                style: GoogleFonts.notoSansKr(
-                                  color: AppColors.ink,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+  // 오늘의 추천 — 가로 캐러셀 섹션
+  Widget _carouselSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+          child: Text(
+            '오늘의 추천',
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
           ),
         ),
-      ),
+        _FeaturedCarousel(items: _carousel),
+      ],
     );
   }
 
@@ -382,53 +271,63 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 컴팩트 헤더 — 로고 + (제목/인사) 한 줄. 콘텐츠를 빨리 노출.
   Widget _header() {
     final email = Auth.currentUser?.email ?? '';
     final name = email.isEmpty ? '' : email.split('@').first;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 12, 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
+      child: Row(
         children: [
-          Row(
-            children: [
-              const BrandLogo(size: 32, animate: true),
-              const SizedBox(width: 10),
-              Text(
-                '쩌렁쩌렁',
-                style: GoogleFonts.notoSansKr(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 20,
+          const BrandLogo(size: 34, animate: true),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '쩌렁쩌렁',
+                  style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 19,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            _greeting(name),
-            style: GoogleFonts.notoSansKr(
-              color: AppColors.coral,
-              fontWeight: FontWeight.w800,
-              fontSize: 13.5,
+                const SizedBox(height: 1),
+                Text(
+                  _greeting(name),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '짧은 상황,\n내 목소리로 연기하세요.',
-            style: GoogleFonts.notoSansKr(
-              fontWeight: FontWeight.w900,
-              fontSize: 30,
-              height: 1.15,
-              letterSpacing: -0.6,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '작품을 골라 오늘의 더빙을 시작해보세요.',
-            style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 14),
           ),
         ],
       ),
+    );
+  }
+
+  // '둘러보기' 섹션 헤더 + 필터칩
+  Widget _browseHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          child: Text(
+            '둘러보기',
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        _filterChips(),
+      ],
     );
   }
 
@@ -643,6 +542,177 @@ class _EpisodeCard extends StatelessWidget {
                       color: AppColors.muted,
                       height: 1.35,
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 오늘의 추천 가로 캐러셀 (스와이프 + 페이지 점)
+class _FeaturedCarousel extends StatefulWidget {
+  final List<EpisodeSummary> items;
+  const _FeaturedCarousel({required this.items});
+
+  @override
+  State<_FeaturedCarousel> createState() => _FeaturedCarouselState();
+}
+
+class _FeaturedCarouselState extends State<_FeaturedCarousel> {
+  late final PageController _ctrl =
+      PageController(viewportFraction: 0.88);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.items;
+    return Column(
+      children: [
+        SizedBox(
+          height: 210,
+          child: PageView.builder(
+            controller: _ctrl,
+            itemCount: items.length,
+            padEnds: false,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (_, i) => Padding(
+              padding: EdgeInsets.only(left: 16, right: i == items.length - 1 ? 16 : 4),
+              child: _card(items[i]),
+            ),
+          ),
+        ),
+        if (items.length > 1) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(items.length, (i) {
+              final on = i == _page;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: on ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: on ? AppColors.ink : AppColors.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _card(EpisodeSummary ep) {
+    return Pressable(
+      onTap: () => Navigator.of(context)
+          .push(fadeThroughRoute(PerformerScreen(episodeId: ep.id))),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: AppShadows.elevated,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            NetworkThumb(url: ep.thumbnailUrl),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x22000000), Color(0xD9000000)],
+                  stops: [0.4, 1.0],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      categoryLabels[ep.category] ?? ep.category,
+                      style: GoogleFonts.notoSansKr(
+                        color: AppColors.ink,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    ep.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansKr(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 21,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          ep.logline,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSansKr(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.mic_rounded,
+                                size: 15, color: AppColors.ink),
+                            const SizedBox(width: 4),
+                            Text(
+                              '더빙하기',
+                              style: GoogleFonts.notoSansKr(
+                                color: AppColors.ink,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
