@@ -40,6 +40,7 @@ class LocalRender {
   static Future<String> render(
     List<RenderLine> lines, {
     void Function(double)? onProgress,
+    bool watermark = true, // 무료=워터마크. 구독 시 false로 깨끗하게(추후 RevenueCat)
   }) async {
     final tmp = await getTemporaryDirectory();
     final dir = Directory(
@@ -57,7 +58,7 @@ class LocalRender {
           ? imageCache[line.imageUrl]
           : (imageCache[line.imageUrl] = await _loadImage(line.imageUrl));
       final framePath = '${dir.path}/frame_$i.png';
-      await _composeFrame(line, scene, framePath);
+      await _composeFrame(line, scene, framePath, watermark);
 
       // 2) PNG + 녹음 → mp4 세그먼트
       final seg = '${dir.path}/seg_$i.mp4';
@@ -120,6 +121,7 @@ class LocalRender {
     RenderLine line,
     ui.Image? scene,
     String outPath,
+    bool watermark,
   ) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(
@@ -217,10 +219,50 @@ class LocalRender {
     y -= speakerTp.height + 20;
     speakerTp.paint(canvas, Offset((w - speakerTp.width) / 2, y));
 
+    // 워터마크 (우상단) — 무료 영상 브랜딩 + 바이럴
+    if (watermark) _drawWatermark(canvas);
+
     final pic = recorder.endRecording();
     final image = await pic.toImage(w, h);
     final png = await image.toByteData(format: ui.ImageByteFormat.png);
     await File(outPath).writeAsBytes(png!.buffer.asUint8List());
+  }
+
+  // 우상단 반투명 워터마크: 골드 음파 바(이퀄라이저) + '쩌렁쩌렁'
+  static void _drawWatermark(Canvas canvas) {
+    const op = 0.6;
+    const margin = 46.0;
+    final tp = _tp(
+      '쩌렁쩌렁',
+      TextStyle(
+        color: Colors.white.withValues(alpha: op),
+        fontSize: 34,
+        fontWeight: FontWeight.w900,
+        shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
+      ),
+      w.toDouble(),
+      TextAlign.left,
+    );
+    // 음파 바
+    const heights = [16.0, 30.0, 44.0, 26.0, 18.0];
+    const barW = 7.0, gap = 5.0, barMax = 44.0;
+    final barsW = heights.length * barW + (heights.length - 1) * gap;
+    final totalW = barsW + 12 + tp.width;
+    final startX = w - margin - totalW;
+    final cy = margin + barMax / 2;
+    final gold = AppColors.gold.withValues(alpha: op);
+    for (var i = 0; i < heights.length; i++) {
+      final bh = heights[i];
+      final bx = startX + i * (barW + gap);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(bx, cy - bh / 2, barW, bh),
+          const Radius.circular(3),
+        ),
+        Paint()..color = gold,
+      );
+    }
+    tp.paint(canvas, Offset(startX + barsW + 12, cy - tp.height / 2));
   }
 
   static TextPainter _tp(
