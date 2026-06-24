@@ -22,6 +22,7 @@ class CreatorScreen extends StatefulWidget {
 
 class _CutDraft {
   String? imagePath;
+  String? scenePrompt; // AI 스토리보드가 추천한 장면 묘사(이미지 생성 프리필용)
   final speaker = TextEditingController();
   final text = TextEditingController();
   final direction = TextEditingController();
@@ -146,7 +147,8 @@ class _CreatorScreenState extends State<CreatorScreen> {
   // ✨ AI 컷 이미지 생성 — 캐릭터 선택 + 한글 키워드 빌더 시트
   // (생성/로딩/한도 처리는 시트 내부에서. 성공 시 결과만 받아 컷에 적용)
   Future<void> _generateAi(_CutDraft cut) async {
-    final res = await showAiGenerateSheet(context);
+    final res = await showAiGenerateSheet(context,
+        initialPrompt: cut.scenePrompt);
     if (res == null || !mounted) return;
     setState(() => cut.imagePath = res.path);
     HapticFeedback.selectionClick();
@@ -158,6 +160,33 @@ class _CreatorScreenState extends State<CreatorScreen> {
   void _addCut() {
     setState(() => _cuts.add(_CutDraft()));
     HapticFeedback.selectionClick();
+  }
+
+  // 🎬 AI 스토리보드 — 상황 입력 → 컷(장면+대사) 추천받아 채우기
+  Future<void> _openStoryboard() async {
+    final r = await showStoryboardSheet(context);
+    if (r == null || !mounted) return;
+    setState(() {
+      if (_title.text.trim().isEmpty) _title.text = r.title;
+      if (_logline.text.trim().isEmpty) _logline.text = r.logline;
+      // 기존 컷 비우고 추천 컷으로 채움 (대사·화자·장면프롬프트)
+      for (final c in _cuts) {
+        c.dispose();
+      }
+      _cuts
+        ..clear()
+        ..addAll(r.cuts.map((s) {
+          final d = _CutDraft();
+          d.speaker.text = s.speaker;
+          d.text.text = s.dialogue;
+          d.direction.text = s.direction;
+          d.scenePrompt = s.scenePrompt;
+          return d;
+        }));
+      if (_cuts.isEmpty) _cuts.add(_CutDraft());
+    });
+    HapticFeedback.selectionClick();
+    _toast('컷 ${r.cuts.length}개를 채웠어요! 각 컷에서 "AI로 생성"을 누르면 그림이 그려져요.');
   }
 
   void _removeCut(int i) {
@@ -374,6 +403,47 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 170),
         children: [
           _infoCard(),
+          const SizedBox(height: 16),
+          // 🎬 AI 스토리보드로 시작 — 상황만 적으면 컷 자동 구성
+          Pressable(
+            onTap: _openStoryboard,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2B2622), AppColors.ink],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Text('🎬', style: TextStyle(fontSize: 22)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('AI 스토리보드로 시작',
+                            style: GoogleFonts.notoSansKr(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                                color: AppColors.paper)),
+                        const SizedBox(height: 2),
+                        Text('상황만 적으면 컷·대사를 자동으로 짜줘요',
+                            style: GoogleFonts.notoSansKr(
+                                fontSize: 12,
+                                color: AppColors.paper.withValues(alpha: 0.7))),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: AppColors.gold, size: 20),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),

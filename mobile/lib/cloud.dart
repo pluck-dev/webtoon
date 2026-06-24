@@ -516,6 +516,39 @@ class Cloud {
     return f.path;
   }
 
+  /// AI 스토리보드: 전체 상황 → 컷별 [장면 프롬프트 + 화자 + 대사] 추천.
+  /// 텍스트 생성이라 이미지 쿼터를 쓰지 않음.
+  static Future<
+      ({
+        String title,
+        String logline,
+        List<({String scenePrompt, String speaker, String dialogue, String direction})> cuts,
+      })> suggestCuts(String situation, {int maxCuts = 5}) async {
+    await ensureUser();
+    final res = await sb.functions.invoke(
+      'suggest-cuts',
+      body: {'situation': situation, 'maxCuts': maxCuts},
+    );
+    final data = (res.data ?? {}) as Map<String, dynamic>;
+    if (res.status != 200 || data['cuts'] == null) {
+      throw Exception('suggest_failed: ${data['error'] ?? res.status}');
+    }
+    final cuts = (data['cuts'] as List).map((e) {
+      final m = e as Map<String, dynamic>;
+      return (
+        scenePrompt: (m['scenePrompt'] ?? '') as String,
+        speaker: (m['speaker'] ?? '') as String,
+        dialogue: (m['dialogue'] ?? '') as String,
+        direction: (m['direction'] ?? '') as String,
+      );
+    }).toList();
+    return (
+      title: (data['title'] ?? '') as String,
+      logline: (data['logline'] ?? '') as String,
+      cuts: cuts,
+    );
+  }
+
   /// 초대 더빙 세션 생성 → (sessionId, shareCode)
   /// [assignments] : 배역별 {characterId, mine(내가 더빙 여부)}
   /// [mode] : 'TEAM'(같이 한 영상) | 'REMIX'(각자 버전)

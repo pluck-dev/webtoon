@@ -506,9 +506,11 @@ class _SelectedSummary extends StatelessWidget {
 // ───────────────────────── 컷 생성 시트 ─────────────────────────
 
 /// 컷 이미지 생성 시트. 성공 시 생성 결과를 pop으로 반환.
+/// [initialPrompt] : 스토리보드가 추천한 장면 묘사를 미리 채워 줌.
 Future<({String path, int remaining, bool stub})?> showAiGenerateSheet(
-  BuildContext context,
-) {
+  BuildContext context, {
+  String? initialPrompt,
+}) {
   return showModalBottomSheet<({String path, int remaining, bool stub})>(
     context: context,
     isScrollControlled: true,
@@ -516,19 +518,21 @@ Future<({String path, int remaining, bool stub})?> showAiGenerateSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => const _AiGenerateSheet(),
+    builder: (_) => _AiGenerateSheet(initialPrompt: initialPrompt),
   );
 }
 
 class _AiGenerateSheet extends StatefulWidget {
-  const _AiGenerateSheet();
+  final String? initialPrompt;
+  const _AiGenerateSheet({this.initialPrompt});
   @override
   State<_AiGenerateSheet> createState() => _AiGenerateSheetState();
 }
 
 class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   final _frags = <String>{};
-  final _free = TextEditingController();
+  late final _free =
+      TextEditingController(text: widget.initialPrompt ?? '');
   List<AiCharacter> _chars = [];
   AiCharacter? _picked;
   bool _loadingChars = true;
@@ -664,12 +668,18 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
 
                   // 2) 캐릭터/사물 선택 (일관성)
                   Padding(
-                    padding: const EdgeInsets.only(top: 18, bottom: 8),
+                    padding: const EdgeInsets.only(top: 18, bottom: 2),
                     child: Text('캐릭터 · 사물 (일관성 유지)',
                         style: GoogleFonts.notoSansKr(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: AppColors.muted)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('같은 인물·사물을 여러 컷에 똑같이 그리고 싶을 때만 골라요.',
+                        style: GoogleFonts.notoSansKr(
+                            fontSize: 11.5, color: AppColors.faint)),
                   ),
                   _CharacterStrip(
                     chars: _chars,
@@ -746,11 +756,11 @@ class _CharacterStrip extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         children: [
           _miniTile(
-            label: '없음',
+            label: '안 정함',
             selected: picked == null,
             onTap: () => onPick(null),
-            child: const Icon(Icons.block_rounded,
-                color: AppColors.faint, size: 26),
+            child: const Icon(Icons.auto_awesome_rounded,
+                color: AppColors.faint, size: 24),
           ),
           for (final c in chars)
             _miniTile(
@@ -1057,6 +1067,229 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ───────────────────────── AI 스토리보드 시트 ─────────────────────────
+
+/// 스토리보드 추천 결과 (창작 화면에서 컷으로 변환)
+typedef StoryboardResult = ({
+  String title,
+  String logline,
+  List<({String scenePrompt, String speaker, String dialogue, String direction})> cuts,
+});
+
+/// 전체 상황 → AI 컷 추천 시트. "이 구성으로 만들기" 시 결과를 pop으로 반환.
+Future<StoryboardResult?> showStoryboardSheet(BuildContext context) {
+  return showModalBottomSheet<StoryboardResult>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => const _StoryboardSheet(),
+  );
+}
+
+class _StoryboardSheet extends StatefulWidget {
+  const _StoryboardSheet();
+  @override
+  State<_StoryboardSheet> createState() => _StoryboardSheetState();
+}
+
+class _StoryboardSheetState extends State<_StoryboardSheet> {
+  final _situation = TextEditingController();
+  bool _busy = false;
+  StoryboardResult? _result;
+
+  @override
+  void dispose() {
+    _situation.dispose();
+    super.dispose();
+  }
+
+  Future<void> _suggest() async {
+    final s = _situation.text.trim();
+    if (s.length < 4 || _busy) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _busy = true);
+    try {
+      final r = await Cloud.suggestCuts(s);
+      if (!mounted) return;
+      setState(() {
+        _result = r;
+        _busy = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _toast(context, '추천에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final r = _result;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.88,
+        maxChildSize: 0.96,
+        minChildSize: 0.5,
+        builder: (_, scroll) => Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.line,
+                  borderRadius: BorderRadius.circular(99)),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scroll,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                children: [
+                  Text('🎬 AI 스토리보드',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 20, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 4),
+                  Text('전체 상황을 적으면 AI가 컷(장면+대사)으로 나눠줘요.',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 12.5, color: AppColors.muted)),
+
+                  // 상황 입력
+                  const SizedBox(height: 16),
+                  Text('어떤 이야기인가요?',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 15, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _situation,
+                    maxLines: 4,
+                    style: GoogleFonts.notoSansKr(fontSize: 14.5),
+                    decoration: InputDecoration(
+                      hintText: '예: 소개팅 나갔는데 상대가 전 여친이었던 남자의 당황',
+                      hintStyle: GoogleFonts.notoSansKr(color: AppColors.faint),
+                      filled: true,
+                      fillColor: AppColors.paper,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.ink),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _PrimaryButton(
+                    label: _busy
+                        ? '콘티 짜는 중…'
+                        : (r == null ? '컷 추천 받기' : '다시 추천'),
+                    enabled: _situation.text.trim().length >= 4,
+                    busy: _busy,
+                    onTap: _suggest,
+                  ),
+
+                  // 추천 결과
+                  if (r != null) ...[
+                    const SizedBox(height: 22),
+                    Text(r.title,
+                        style: GoogleFonts.notoSansKr(
+                            fontSize: 17, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 2),
+                    Text(r.logline,
+                        style: GoogleFonts.notoSansKr(
+                            fontSize: 12.5, color: AppColors.muted)),
+                    const SizedBox(height: 14),
+                    for (var i = 0; i < r.cuts.length; i++)
+                      _StoryCutPreview(index: i + 1, cut: r.cuts[i]),
+                    const SizedBox(height: 16),
+                    _PrimaryButton(
+                      label: '이 구성으로 만들기 (컷 ${r.cuts.length}개)',
+                      onTap: () => Navigator.of(context).pop(r),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 추천된 컷 한 개 미리보기 카드
+class _StoryCutPreview extends StatelessWidget {
+  final int index;
+  final ({String scenePrompt, String speaker, String dialogue, String direction}) cut;
+  const _StoryCutPreview({required this.index, required this.cut});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.lineSoft),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                    color: AppColors.ink,
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text('컷 $index',
+                    style: GoogleFonts.notoSansKr(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.paper)),
+              ),
+              const SizedBox(width: 8),
+              Text(cut.speaker,
+                  style: GoogleFonts.notoSansKr(
+                      fontSize: 13, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('"${cut.dialogue}"',
+              style: GoogleFonts.notoSansKr(
+                  fontSize: 14, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.image_outlined,
+                  size: 14, color: AppColors.faint),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(cut.scenePrompt,
+                    style: GoogleFonts.notoSansKr(
+                        fontSize: 11.5, color: AppColors.faint)),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
