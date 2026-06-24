@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../ai_studio.dart';
 import '../cloud.dart';
 import '../config.dart';
 import '../widgets/app_widgets.dart';
@@ -142,77 +143,16 @@ class _CreatorScreenState extends State<CreatorScreen> {
     }
   }
 
-  // ✨ AI 컷 이미지 생성
+  // ✨ AI 컷 이미지 생성 — 캐릭터 선택 + 한글 키워드 빌더 시트
+  // (생성/로딩/한도 처리는 시트 내부에서. 성공 시 결과만 받아 컷에 적용)
   Future<void> _generateAi(_CutDraft cut) async {
-    final ctrl = TextEditingController();
-    final prompt = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text('✨ AI로 장면 그리기',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLines: 3,
-          style: GoogleFonts.notoSansKr(fontSize: 14),
-          decoration: const InputDecoration(
-            hintText: '예: 카페에서 깜짝 놀란 표정의 여대생, 창밖 노을',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('취소',
-                style: GoogleFonts.notoSansKr(
-                    fontWeight: FontWeight.w800, color: AppColors.muted)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-            child: Text('생성',
-                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-          ),
-        ],
-      ),
-    );
-    if (prompt == null || prompt.isEmpty || !mounted) return;
-
-    // 생성 중 풀스크린 로딩
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: Card(
-          color: AppColors.card,
-          child: Padding(
-            padding: EdgeInsets.all(28),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              CircularProgressIndicator(color: AppColors.gold),
-              SizedBox(height: 16),
-              Text('AI가 그리는 중…'),
-            ]),
-          ),
-        ),
-      ),
-    );
-    try {
-      final res = await Cloud.generateAiImage(prompt);
-      if (!mounted) return;
-      Navigator.of(context).pop(); // 로딩 닫기
-      setState(() => cut.imagePath = res.path);
-      HapticFeedback.selectionClick();
-      _toast(res.stub
-          ? 'AI 미리보기(데모) 적용 — 실제 생성은 키 설정 후'
-          : 'AI 이미지 생성 완료! (남은 횟수 ${res.remaining})');
-    } on AiQuotaException catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      _toast('이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
-    } catch (_) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      _toast('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    }
+    final res = await showAiGenerateSheet(context);
+    if (res == null || !mounted) return;
+    setState(() => cut.imagePath = res.path);
+    HapticFeedback.selectionClick();
+    _toast(res.stub
+        ? 'AI 미리보기(데모) 적용 — 실제 생성은 키 설정 후'
+        : 'AI 이미지 생성 완료! (남은 횟수 ${res.remaining})');
   }
 
   void _addCut() {

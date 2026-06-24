@@ -103,6 +103,28 @@ class Character {
   );
 }
 
+/// 재사용 가능한 AI 캐릭터(레퍼런스 이미지). 컷 생성 시 같은 인물 유지에 사용.
+/// [localPath]는 다운로드 캐시 경로(없을 수 있음).
+class AiCharacter {
+  final String id;
+  final String name;
+  final String imageUrl;
+  final String? localPath;
+
+  AiCharacter({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    this.localPath,
+  });
+
+  factory AiCharacter.fromMap(Map<String, dynamic> m) => AiCharacter(
+    id: m['id'] as String,
+    name: (m['name'] ?? '') as String,
+    imageUrl: (m['imageUrl'] ?? '') as String,
+  );
+}
+
 class Dialogue {
   final String id;
   final String cutId;

@@ -417,14 +417,24 @@ class Cloud {
   }
 
   /// AI 컷 이미지 생성 → 로컬 파일 경로 + 남은 횟수.
+  /// [refImagePaths] : 캐릭터 일관성용 참조 이미지(로컬 경로, 최대 3장).
   /// 월 한도 초과 시 [AiQuotaException].
   static Future<({String path, int remaining, bool stub})> generateAiImage(
-    String prompt,
-  ) async {
+    String prompt, {
+    List<String> refImagePaths = const [],
+  }) async {
     await ensureUser();
+    final refs = <String>[];
+    for (final p in refImagePaths.take(3)) {
+      try {
+        refs.add(base64Encode(await File(p).readAsBytes()));
+      } catch (_) {
+        // 참조 이미지 못 읽으면 일관성만 포기하고 생성은 진행
+      }
+    }
     final res = await sb.functions.invoke(
       'generate-image',
-      body: {'prompt': prompt},
+      body: {'prompt': prompt, if (refs.isNotEmpty) 'refImages': refs},
     );
     final data = (res.data ?? {}) as Map<String, dynamic>;
     if (res.status == 402 || data['error'] == 'quota_exceeded') {
@@ -445,6 +455,65 @@ class Cloud {
       remaining: (data['remaining'] ?? 0) as int,
       stub: data['stub'] == true,
     );
+  }
+
+  /// 내 AI 캐릭터 목록 (최신순)
+  static Future<List<AiCharacter>> listAiCharacters() async {
+    final uid = await ensureUser();
+    final rows = await sb
+        .from('AiCharacter')
+        .select('id,name,imageUrl,createdAt')
+        .eq('userId', uid)
+        .order('createdAt', ascending: false);
+    return (rows as List)
+        .map((r) => AiCharacter.fromMap(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// AI 캐릭터 저장: 로컬 이미지 업로드 → 행 생성.
+  /// 반환 객체에 방금 만든 [localPath]를 캐시해 바로 컷 생성에 쓸 수 있음.
+  static Future<AiCharacter> createAiCharacter({
+    required String name,
+    required String localImagePath,
+  }) async {
+    final uid = await ensureUser();
+    final id = _uuid.v4();
+    final key = 'user/characters/$id.png';
+    // 경로가 매번 새 UUID라 충돌 없음 → 일반 INSERT(upsert=false), RLS UPDATE 회피
+    await sb.storage.from(Env.bucketImages).upload(
+          key,
+          File(localImagePath),
+          fileOptions: const FileOptions(contentType: 'image/png', upsert: false),
+        );
+    final url = Env.publicImageUrl(key);
+    await sb.from('AiCharacter').insert({
+      'id': id,
+      'userId': uid,
+      'name': name,
+      'imageUrl': url,
+      'createdAt': _now(),
+    });
+    return AiCharacter(
+        id: id, name: name, imageUrl: url, localPath: localImagePath);
+  }
+
+  /// AI 캐릭터 삭제 (행만; 스토리지 이미지는 남겨도 무방)
+  static Future<void> deleteAiCharacter(String id) async {
+    await sb.from('AiCharacter').delete().eq('id', id);
+  }
+
+  /// 캐릭터 레퍼런스 이미지를 로컬 파일로 확보(캐시). 컷 생성 시 refImagePaths용.
+  static Future<String> characterLocalImage(AiCharacter c) async {
+    if (c.localPath != null && await File(c.localPath!).exists()) {
+      return c.localPath!;
+    }
+    final dir = await getTemporaryDirectory();
+    final f = File('${dir.path}/char_${c.id}.png');
+    if (await f.exists()) return f.path;
+    final bytes =
+        await sb.storage.from(Env.bucketImages).download('user/characters/${c.id}.png');
+    await f.writeAsBytes(bytes);
+    return f.path;
   }
 
   /// 초대 더빙 세션 생성 → (sessionId, shareCode)
