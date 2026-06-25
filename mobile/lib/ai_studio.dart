@@ -540,7 +540,10 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   late final _free =
       TextEditingController(text: widget.initialPrompt ?? '');
   List<AiCharacter> _chars = [];
-  late AiCharacter? _picked = widget.initialCharacter;
+  // 한 컷에 여러 인물이 나올 수 있어 다중 선택(최대 3명)
+  late final List<AiCharacter> _picked =
+      widget.initialCharacter != null ? [widget.initialCharacter!] : [];
+  static const _maxChars = 3;
   bool _loadingChars = true;
   bool _busy = false;
 
@@ -577,10 +580,10 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
     setState(() => _busy = true);
     try {
       final refs = <String>[];
-      if (_picked != null) {
+      for (final c in _picked.take(_maxChars)) {
         try {
-          refs.add(await Cloud.characterLocalImage(_picked!));
-        } catch (_) {/* 레퍼런스 실패 시 일관성만 포기 */}
+          refs.add(await Cloud.characterLocalImage(c));
+        } catch (_) {/* 레퍼런스 실패 시 그 인물만 포기 */}
       }
       final prompt = _composePrompt(_frags, _free.text);
       final res = await Cloud.generateAiImage(prompt, refImagePaths: refs);
@@ -607,9 +610,22 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
     if (c != null && mounted) {
       setState(() {
         _chars = [c, ..._chars];
-        _picked = c;
+        if (_picked.length < _maxChars) _picked.add(c);
       });
     }
+  }
+
+  void _toggleChar(AiCharacter c) {
+    setState(() {
+      final i = _picked.indexWhere((x) => x.id == c.id);
+      if (i >= 0) {
+        _picked.removeAt(i);
+      } else if (_picked.length < _maxChars) {
+        _picked.add(c);
+      } else {
+        _toast(context, '한 컷에는 최대 $_maxChars명까지 넣을 수 있어요.');
+      }
+    });
   }
 
   @override
@@ -676,10 +692,13 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                       style: GoogleFonts.notoSansKr(
                           fontSize: 12, color: AppColors.faint)),
 
-                  // 2) 캐릭터/사물 선택 (일관성)
+                  // 2) 이 컷에 나올 인물 (다중 선택, 일관성)
                   Padding(
                     padding: const EdgeInsets.only(top: 18, bottom: 2),
-                    child: Text('캐릭터 · 사물 (일관성 유지)',
+                    child: Text(
+                        _picked.isEmpty
+                            ? '이 컷에 나올 인물 (일관성 유지)'
+                            : '이 컷에 나올 인물 · ${_picked.length}명 선택',
                         style: GoogleFonts.notoSansKr(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
@@ -687,7 +706,7 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('같은 인물·사물을 여러 컷에 똑같이 그리고 싶을 때만 골라요.',
+                    child: Text('여러 명 고르면 한 컷에 같이 나와요 (최대 3명).',
                         style: GoogleFonts.notoSansKr(
                             fontSize: 11.5, color: AppColors.faint)),
                   ),
@@ -695,7 +714,8 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     chars: _chars,
                     loading: _loadingChars,
                     picked: _picked,
-                    onPick: (c) => setState(() => _picked = c),
+                    onToggle: _toggleChar,
+                    onClear: () => setState(_picked.clear),
                     onNew: _newCharacter,
                   ),
 
@@ -743,40 +763,42 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   }
 }
 
-/// 캐릭터 가로 스트립: [없음] + 캐릭터 아바타들 + [새로 만들기]
+/// 캐릭터 가로 스트립(다중 선택): [안 정함] + 캐릭터 아바타들 + [새로 만들기]
 class _CharacterStrip extends StatelessWidget {
   final List<AiCharacter> chars;
   final bool loading;
-  final AiCharacter? picked;
-  final ValueChanged<AiCharacter?> onPick;
+  final List<AiCharacter> picked;
+  final ValueChanged<AiCharacter> onToggle;
+  final VoidCallback onClear;
   final VoidCallback onNew;
   const _CharacterStrip({
     required this.chars,
     required this.loading,
     required this.picked,
-    required this.onPick,
+    required this.onToggle,
+    required this.onClear,
     required this.onNew,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 92,
+      height: 94,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           _miniTile(
             label: '안 정함',
-            selected: picked == null,
-            onTap: () => onPick(null),
+            selected: picked.isEmpty,
+            onTap: onClear,
             child: const Icon(Icons.auto_awesome_rounded,
                 color: AppColors.faint, size: 24),
           ),
           for (final c in chars)
             _miniTile(
               label: c.name,
-              selected: picked?.id == c.id,
-              onTap: () => onPick(c),
+              selected: picked.any((p) => p.id == c.id),
+              onTap: () => onToggle(c),
               child: ClipOval(
                 child: Image.network(c.imageUrl,
                     width: 60,
@@ -823,19 +845,40 @@ class _CharacterStrip extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.paper,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? AppColors.ink : AppColors.line,
-                  width: selected ? 2.5 : 1,
+            Stack(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.paper,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: selected ? AppColors.ink : AppColors.line,
+                      width: selected ? 2.5 : 1,
+                    ),
+                  ),
+                  child: child,
                 ),
-              ),
-              child: child,
+                // 다중 선택 체크 배지
+                if (selected && label != '안 정함')
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: AppColors.ink,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.card, width: 2),
+                      ),
+                      child: const Icon(Icons.check_rounded,
+                          color: AppColors.paper, size: 12),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 5),
             Text(
