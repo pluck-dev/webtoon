@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../ai_studio.dart';
 import '../cloud.dart';
 import '../config.dart';
+import '../models.dart';
 import '../widgets/app_widgets.dart';
 import 'casting_screen.dart';
 import 'performer_screen.dart';
@@ -42,6 +43,31 @@ class _CreatorScreenState extends State<CreatorScreen> {
   final List<_CutDraft> _cuts = [_CutDraft()];
   final _picker = ImagePicker();
   bool _publishing = false;
+
+  // 등장인물(AI 캐릭터) — 먼저 만들면 컷마다 같은 인물로 일관성 유지
+  List<AiCharacter> _characters = [];
+  AiCharacter? _activeCharacter; // 컷 생성 시 기본 선택될 인물
+  bool _loadingChars = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCharacters();
+  }
+
+  Future<void> _loadCharacters() async {
+    try {
+      final list = await Cloud.listAiCharacters();
+      if (!mounted) return;
+      setState(() {
+        _characters = list;
+        _activeCharacter ??= list.isNotEmpty ? list.first : null;
+        _loadingChars = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingChars = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -148,7 +174,8 @@ class _CreatorScreenState extends State<CreatorScreen> {
   // (생성/로딩/한도 처리는 시트 내부에서. 성공 시 결과만 받아 컷에 적용)
   Future<void> _generateAi(_CutDraft cut) async {
     final res = await showAiGenerateSheet(context,
-        initialPrompt: cut.scenePrompt);
+        initialPrompt: cut.scenePrompt, initialCharacter: _activeCharacter);
+    _loadCharacters(); // 시트에서 새 캐릭터를 만들었을 수도 있으니 갱신
     if (res == null || !mounted) return;
     setState(() => cut.imagePath = res.path);
     HapticFeedback.selectionClick();
@@ -160,6 +187,197 @@ class _CreatorScreenState extends State<CreatorScreen> {
   void _addCut() {
     setState(() => _cuts.add(_CutDraft()));
     HapticFeedback.selectionClick();
+  }
+
+  // 🎭 새 등장인물 만들기 → 생성 후 기본 인물로 지정
+  Future<void> _newCharacter() async {
+    final c = await showCharacterCreateSheet(context);
+    if (c == null || !mounted) return;
+    setState(() {
+      _characters = [c, ..._characters];
+      _activeCharacter = c;
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  Future<void> _deleteCharacter(AiCharacter c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('“${c.name}” 삭제할까요?',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text('이미 만든 컷 그림은 그대로 남아요.',
+            style: GoogleFonts.notoSansKr(color: AppColors.muted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('삭제',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.coral, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await Cloud.deleteAiCharacter(c.id);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _characters = _characters.where((x) => x.id != c.id).toList();
+      if (_activeCharacter?.id == c.id) {
+        _activeCharacter = _characters.isNotEmpty ? _characters.first : null;
+      }
+    });
+  }
+
+  // 등장인물 섹션 — 캐릭터를 먼저 만들어 컷 일관성 유지
+  Widget _charactersSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text('등장인물',
+              style: GoogleFonts.notoSansKr(
+                  fontWeight: FontWeight.w900, fontSize: 17)),
+        ),
+        const SizedBox(height: 2),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, right: 4),
+          child: Text('주인공을 먼저 만들면 모든 컷에 같은 인물로 그려져요.',
+              style:
+                  GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 12)),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 98,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (final c in _characters) _charTile(c),
+              _addCharTile(),
+              if (_loadingChars)
+                const Padding(
+                  padding: EdgeInsets.all(34),
+                  child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _charTile(AiCharacter c) {
+    final active = _activeCharacter?.id == c.id;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _activeCharacter = c);
+      },
+      onLongPress: () => _deleteCharacter(c),
+      child: SizedBox(
+        width: 76,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: active ? AppColors.ink : AppColors.line,
+                      width: active ? 2.5 : 1,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(c.imageUrl,
+                        width: 66,
+                        height: 66,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, e, s) => const Icon(
+                            Icons.person_rounded, color: AppColors.faint)),
+                  ),
+                ),
+                if (active)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.ink,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(color: AppColors.card, width: 1.5),
+                      ),
+                      child: Text('기본',
+                          style: GoogleFonts.notoSansKr(
+                              color: AppColors.paper,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(c.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansKr(
+                    fontSize: 11.5,
+                    fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                    color: active ? AppColors.ink : AppColors.muted)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _addCharTile() {
+    return GestureDetector(
+      onTap: _newCharacter,
+      child: SizedBox(
+        width: 76,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 66,
+              height: 66,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.gold.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.gold, width: 1.5),
+              ),
+              child: const Icon(Icons.add_rounded,
+                  color: AppColors.ink, size: 28),
+            ),
+            const SizedBox(height: 4),
+            Text('캐릭터 만들기',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansKr(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.inkSoft)),
+          ],
+        ),
+      ),
+    );
   }
 
   // 🎬 AI 스토리보드 — 상황 입력 → 컷(장면+대사) 추천받아 채우기
@@ -444,7 +662,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
+          _charactersSection(),
+          const SizedBox(height: 22),
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text('컷 (${_cuts.length})',

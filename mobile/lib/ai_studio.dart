@@ -507,9 +507,11 @@ class _SelectedSummary extends StatelessWidget {
 
 /// 컷 이미지 생성 시트. 성공 시 생성 결과를 pop으로 반환.
 /// [initialPrompt] : 스토리보드가 추천한 장면 묘사를 미리 채워 줌.
+/// [initialCharacter] : 작가 화면에서 고른 등장인물을 기본 선택(일관성).
 Future<({String path, int remaining, bool stub})?> showAiGenerateSheet(
   BuildContext context, {
   String? initialPrompt,
+  AiCharacter? initialCharacter,
 }) {
   return showModalBottomSheet<({String path, int remaining, bool stub})>(
     context: context,
@@ -518,13 +520,17 @@ Future<({String path, int remaining, bool stub})?> showAiGenerateSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (_) => _AiGenerateSheet(initialPrompt: initialPrompt),
+    builder: (_) => _AiGenerateSheet(
+      initialPrompt: initialPrompt,
+      initialCharacter: initialCharacter,
+    ),
   );
 }
 
 class _AiGenerateSheet extends StatefulWidget {
   final String? initialPrompt;
-  const _AiGenerateSheet({this.initialPrompt});
+  final AiCharacter? initialCharacter;
+  const _AiGenerateSheet({this.initialPrompt, this.initialCharacter});
   @override
   State<_AiGenerateSheet> createState() => _AiGenerateSheetState();
 }
@@ -534,7 +540,7 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   late final _free =
       TextEditingController(text: widget.initialPrompt ?? '');
   List<AiCharacter> _chars = [];
-  AiCharacter? _picked;
+  late AiCharacter? _picked = widget.initialCharacter;
   bool _loadingChars = true;
   bool _busy = false;
 
