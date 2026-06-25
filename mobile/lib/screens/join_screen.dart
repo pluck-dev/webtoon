@@ -77,19 +77,21 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
       HapticFeedback.mediumImpact();
       await _load();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이미 다른 사람이 맡은 배역이에요.')),
-      );
+      showAppToast(context, '이미 다른 사람이 맡은 배역이에요.');
       await _load();
     }
   }
 
   Future<void> _dub(CollabRoleView r) async {
-    Navigator.of(context).push(fadeThroughRoute(PerformerScreen(
-      episodeId: _collab!.episodeId,
-      roleCharacterIds: {r.characterId},
-      collabSessionId: _collab!.sessionId,
-    )));
+    Navigator.of(context).push(
+      fadeThroughRoute(
+        PerformerScreen(
+          episodeId: _collab!.episodeId,
+          roleCharacterIds: {r.characterId},
+          collabSessionId: _collab!.sessionId,
+        ),
+      ),
+    );
   }
 
   @override
@@ -98,19 +100,24 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
     final c = _collab;
     return Scaffold(
       appBar: AppBar(
-        title: Text('초대 더빙',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        title: Text(
+          '초대 더빙',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
       ),
       body: c == null
           ? Center(
               child: _error != null
                   ? Padding(
                       padding: const EdgeInsets.all(32),
-                      child: Text(_error!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.notoSansKr(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.muted)),
+                      child: Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.notoSansKr(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted,
+                        ),
+                      ),
                     )
                   : const CircularProgressIndicator(color: AppColors.coral),
             )
@@ -124,9 +131,13 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
                     : [
                         _intro(c),
                         const SizedBox(height: 20),
-                        Text('배역을 골라 맡아주세요',
-                            style: GoogleFonts.notoSansKr(
-                                fontWeight: FontWeight.w900, fontSize: 17)),
+                        Text(
+                          '배역을 골라 맡아주세요',
+                          style: GoogleFonts.notoSansKr(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 17,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         for (final r in c.roles) ...[
                           _roleRow(r),
@@ -155,16 +166,24 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('🎬 각자 버전 더빙',
-                style: GoogleFonts.notoSansKr(
-                    fontWeight: FontWeight.w900, fontSize: 15)),
+            Text(
+              '🎬 각자 버전 더빙',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
+            ),
             const SizedBox(height: 6),
             Text(
-                '${c.hostName}님의 배역(${hostRoles.map((r) => r.characterName).join(', ')})은 그대로 두고, '
-                '나머지(${openRoles.map((r) => r.characterName).join(', ')})를 내가 더빙해서 '
-                '나만의 영상을 만들어요.',
-                style: GoogleFonts.notoSansKr(
-                    fontSize: 13, height: 1.4, color: AppColors.inkSoft)),
+              '${c.hostName}님의 배역(${hostRoles.map((r) => r.characterName).join(', ')})은 그대로 두고, '
+              '나머지(${openRoles.map((r) => r.characterName).join(', ')})를 내가 더빙해서 '
+              '나만의 영상을 만들어요.',
+              style: GoogleFonts.notoSansKr(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.inkSoft,
+              ),
+            ),
           ],
         ),
       ),
@@ -178,10 +197,15 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2.5, color: AppColors.paper))
+                    strokeWidth: 2.5,
+                    color: AppColors.paper,
+                  ),
+                )
               : const Icon(Icons.mic_rounded, size: 20),
-          label: Text('나도 더빙 시작하기',
-              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          label: Text(
+            '나도 더빙 시작하기',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+          ),
         ),
       ),
     ];
@@ -194,9 +218,7 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
       if (forkCode == null) {
         if (mounted) {
           setState(() => _busyRole = null);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('참여하지 못했어요. 잠시 후 다시 시도해 주세요.')),
-          );
+          showAppToast(context, '참여하지 못했어요. 잠시 후 다시 시도해 주세요.');
         }
         return;
       }
@@ -211,55 +233,67 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
   }
 
   Widget _intro(CollabView c) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.line),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: AppColors.line),
+    ),
+    child: Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 64,
+            height: 64,
+            child: c.thumbnailUrl != null
+                ? Image.network(
+                    c.thumbnailUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        Container(color: AppColors.cream),
+                  )
+                : Container(color: AppColors.cream),
+          ),
         ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: c.thumbnailUrl != null
-                    ? Image.network(c.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            Container(color: AppColors.cream))
-                    : Container(color: AppColors.cream),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${c.hostName}님의 초대',
+                style: GoogleFonts.notoSansKr(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.muted,
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${c.hostName}님의 초대',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.muted)),
-                  const SizedBox(height: 3),
-                  Text(c.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.notoSansKr(
-                          fontWeight: FontWeight.w900, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('🎭 같이 더빙하고 한 영상으로 완성해요',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.inkSoft)),
-                ],
+              const SizedBox(height: 3),
+              Text(
+                c.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansKr(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                '🎭 같이 더빙하고 한 영상으로 완성해요',
+                style: GoogleFonts.notoSansKr(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.inkSoft,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   Widget _roleRow(CollabRoleView r) {
     Color hex(String s) =>
@@ -268,47 +302,73 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
     final busy = _busyRole == r.roleId;
 
     // 앱 표준 Pressable 알약 버튼 (Material 버튼은 Row 안에서 렌더 이슈가 있어 사용 안 함)
-    Widget pill(String label, Color bg, Color fg, VoidCallback? onTap,
-            {bool spin = false, bool outline = false}) =>
-        Pressable(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(999),
-              border: outline ? Border.all(color: AppColors.line) : null,
-            ),
-            child: spin
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : Text(label,
-                    style: GoogleFonts.notoSansKr(
-                        fontWeight: FontWeight.w900, fontSize: 13, color: fg)),
-          ),
-        );
+    Widget pill(
+      String label,
+      Color bg,
+      Color fg,
+      VoidCallback? onTap, {
+      bool spin = false,
+      bool outline = false,
+    }) => Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: outline ? Border.all(color: AppColors.line) : null,
+        ),
+        child: spin
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.notoSansKr(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                  color: fg,
+                ),
+              ),
+      ),
+    );
 
     Widget trailing;
     if (mine && !r.isRecorded) {
       trailing = pill('더빙하기', AppColors.ink, AppColors.paper, () => _dub(r));
     } else if (r.isRecorded) {
-      trailing = Text(mine ? '내 녹음 완료 ✓' : '완료 ✓',
-          style: GoogleFonts.notoSansKr(
-              fontWeight: FontWeight.w800,
-              fontSize: 12.5,
-              color: AppColors.teal));
+      trailing = Text(
+        mine ? '내 녹음 완료 ✓' : '완료 ✓',
+        style: GoogleFonts.notoSansKr(
+          fontWeight: FontWeight.w800,
+          fontSize: 12.5,
+          color: AppColors.teal,
+        ),
+      );
     } else if (r.isOpen) {
-      trailing = pill('맡기', AppColors.gold, AppColors.ink,
-          busy ? null : () => _claim(r),
-          spin: busy);
+      trailing = pill(
+        '맡기',
+        AppColors.gold,
+        AppColors.ink,
+        busy ? null : () => _claim(r),
+        spin: busy,
+      );
     } else {
-      trailing = Text('${r.assigneeName ?? "친구"}님이 맡음',
+      trailing = Flexible(
+        child: Text(
+          '${r.assigneeName ?? "친구"}님이 맡음',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.end,
           style: GoogleFonts.notoSansKr(
-              fontWeight: FontWeight.w700,
-              fontSize: 12.5,
-              color: AppColors.muted));
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+            color: AppColors.muted,
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -324,22 +384,30 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
             width: 38,
             height: 38,
             alignment: Alignment.center,
-            decoration:
-                BoxDecoration(color: hex(r.color), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: hex(r.color),
+              shape: BoxShape.circle,
+            ),
             child: Text(
-                r.characterName.isEmpty ? '?' : r.characterName.characters.first,
-                style: GoogleFonts.notoSansKr(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16)),
+              r.characterName.isEmpty ? '?' : r.characterName.characters.first,
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(r.characterName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.notoSansKr(
-                    fontWeight: FontWeight.w900, fontSize: 15)),
+            child: Text(
+              r.characterName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
+            ),
           ),
           trailing,
         ],
@@ -348,34 +416,46 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
   }
 
   Widget _loginPrompt() => Scaffold(
-        appBar: AppBar(),
-        body: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.lock_outline_rounded,
-                    size: 44, color: AppColors.faint),
-                const SizedBox(height: 14),
-                Text('로그인하고 참여해요',
-                    style: GoogleFonts.notoSansKr(
-                        fontWeight: FontWeight.w900, fontSize: 17)),
-                const SizedBox(height: 6),
-                Text('초대 더빙에 참여하려면 로그인이 필요해요.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.notoSansKr(
-                        fontSize: 13.5, color: AppColors.muted)),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  child: Text('확인',
-                      style:
-                          GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-                ),
-              ],
+    appBar: AppBar(),
+    body: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              size: 44,
+              color: AppColors.faint,
             ),
-          ),
+            const SizedBox(height: 14),
+            Text(
+              '로그인하고 참여해요',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                fontSize: 17,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '초대 더빙에 참여하려면 로그인이 필요해요.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.notoSansKr(
+                fontSize: 13.5,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: Text(
+                '확인',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

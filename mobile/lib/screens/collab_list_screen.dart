@@ -67,26 +67,29 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('내 초대 더빙',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        title: Text(
+          '내 초대 더빙',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
       ),
       body: _error != null
           ? _msg('목록을 불러오지 못했어요.')
           : _items == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.coral))
-              : _items!.isEmpty
-                  ? _msg('진행 중인 초대 더빙이 없어요.\n만화를 만들 때 "친구와 같이 더빙"을 골라보세요!')
-                  : RefreshIndicator(
-                      color: AppColors.coral,
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-                        itemCount: _items!.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, i) => _row(_items![i]),
-                      ),
-                    ),
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.coral),
+            )
+          : _items!.isEmpty
+          ? _msg('진행 중인 초대 더빙이 없어요.\n만화를 만들 때 "친구와 같이 더빙"을 골라보세요!')
+          : RefreshIndicator(
+              color: AppColors.coral,
+              onRefresh: _load,
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+                itemCount: _items!.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (_, i) => _row(_items![i]),
+              ),
+            ),
     );
   }
 
@@ -94,8 +97,11 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
     final thumb = m['thumbnailUrl'] as String?;
     final isHost = m['isHost'] == true;
     return Pressable(
-      onTap: () => Navigator.of(context).push(fadeThroughRoute(
-          CollabManageScreen(shareCode: m['shareCode'] as String))),
+      onTap: () => Navigator.of(context).push(
+        fadeThroughRoute(
+          CollabManageScreen(shareCode: m['shareCode'] as String),
+        ),
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.card,
@@ -109,10 +115,12 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
               width: 80,
               height: 80,
               child: thumb != null
-                  ? Image.network(thumb,
+                  ? Image.network(
+                      thumb,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) =>
-                          Container(color: AppColors.cream))
+                          Container(color: AppColors.cream),
+                    )
                   : Container(color: AppColors.cream),
             ),
             Expanded(
@@ -122,35 +130,50 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text((m['title'] ?? '') as String,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansKr(
-                            fontWeight: FontWeight.w900, fontSize: 15)),
+                    Text(
+                      (m['title'] ?? '') as String,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.notoSansKr(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: (isHost ? AppColors.gold : AppColors.teal)
                                 .withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Text(isHost ? '내가 호스트' : '참여 중',
-                              style: GoogleFonts.notoSansKr(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11,
-                                  color:
-                                      isHost ? AppColors.ink : AppColors.teal)),
+                          child: Text(
+                            isHost ? '내가 호스트' : '참여 중',
+                            style: GoogleFonts.notoSansKr(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                              color: isHost ? AppColors.ink : AppColors.teal,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        Text(_statusText(m),
+                        Flexible(
+                          child: Text(
+                            _statusText(m),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.notoSansKr(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.muted)),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -159,8 +182,7 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
             ),
             const Padding(
               padding: EdgeInsets.only(right: 10),
-              child:
-                  Icon(Icons.chevron_right_rounded, color: AppColors.faint),
+              child: Icon(Icons.chevron_right_rounded, color: AppColors.faint),
             ),
           ],
         ),
@@ -169,12 +191,16 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
   }
 
   Widget _msg(String m) => Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(m,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.notoSansKr(
-                  fontWeight: FontWeight.w700, color: AppColors.muted)),
+    padding: const EdgeInsets.all(32),
+    child: Center(
+      child: Text(
+        m,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.notoSansKr(
+          fontWeight: FontWeight.w700,
+          color: AppColors.muted,
         ),
-      );
+      ),
+    ),
+  );
 }

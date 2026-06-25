@@ -9,7 +9,9 @@ import 'performer_screen.dart';
 import 'video_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  /// embedded=true 이면 상단 "보관함" 제목/부제 헤더를 렌더하지 않음
+  final bool embedded;
+  const LibraryScreen({super.key, this.embedded = false});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -56,9 +58,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (mounted) showVideoSheet(context, url);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('영상을 불러오지 못했어요.')));
+        showAppToast(context, '영상을 불러오지 못했어요.');
       }
     } finally {
       if (mounted) setState(() => _opening = null);
@@ -105,9 +105,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       await Cloud.deleteWork(w.performanceId);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('삭제하지 못했어요. 다시 시도해 주세요.')));
+        showAppToast(context, '삭제하지 못했어요. 다시 시도해 주세요.');
         _refresh();
       }
     }
@@ -125,32 +123,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '보관함',
-                        style: GoogleFonts.notoSansKr(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 28,
-                          letterSpacing: -0.6,
+              // embedded 모드에서는 상단 제목/부제 헤더를 숨김
+              if (!widget.embedded)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '보관함',
+                          style: GoogleFonts.notoSansKr(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 28,
+                            letterSpacing: -0.6,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '내가 더빙한 작품과 완성한 영상',
-                        style: GoogleFonts.notoSansKr(
-                          color: AppColors.muted,
-                          fontSize: 14,
+                        const SizedBox(height: 4),
+                        Text(
+                          '내가 더빙한 작품과 완성한 영상',
+                          style: GoogleFonts.notoSansKr(
+                            color: AppColors.muted,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
               _body(),
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -322,10 +322,11 @@ class _WorkCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
                         _tag(categoryLabels[work.category] ?? work.category),
-                        const SizedBox(width: 6),
                         if (work.hasVideo)
                           _tag('영상 완성', bg: AppColors.gold, fg: AppColors.ink),
                       ],
@@ -349,7 +350,9 @@ class _WorkCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         if (work.hasVideo)
                           _btn(
@@ -359,7 +362,6 @@ class _WorkCard extends StatelessWidget {
                             loading: opening,
                             onTap: onPlay,
                           ),
-                        if (work.hasVideo) const SizedBox(width: 8),
                         _btn(
                           icon: Icons.mic_rounded,
                           label: '이어서 더빙',

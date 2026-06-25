@@ -15,6 +15,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'widgets/app_widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -30,214 +31,262 @@ Kw _k(String ko, String en) => (ko: ko, en: en);
 
 /// 장면(컷) 키워드 — 영화/촬영 전문 용어 기반. 드롭다운 섹션별 다중 선택.
 final List<KwCategory> kSceneKeywords = [
-  (title: '화각 · 샷 크기', items: [
-    _k('익스트림 클로즈업', 'extreme close-up'),
-    _k('클로즈업', 'close-up shot'),
-    _k('바스트샷', 'bust shot'),
-    _k('미디엄샷', 'medium shot'),
-    _k('카우보이샷', 'cowboy shot'),
-    _k('풀샷', 'full body shot'),
-    _k('와이드샷', 'wide shot'),
-    _k('익스트림 와이드', 'extreme wide establishing shot'),
-    _k('투샷', 'two shot'),
-    _k('오버더숄더', 'over-the-shoulder shot'),
-  ]),
-  (title: '촬영 각도', items: [
-    _k('정면(아이레벨)', 'eye-level angle'),
-    _k('하이앵글', 'high angle'),
-    _k('로우앵글', 'low angle'),
-    _k('버드아이뷰', "bird's-eye view"),
-    _k('웜즈아이뷰', "worm's-eye view"),
-    _k('더치앵글', 'dutch angle tilt'),
-    _k('탑다운', 'top-down overhead'),
-    _k('뒤에서', 'from behind'),
-    _k('POV 시점', 'first-person POV'),
-  ]),
-  (title: '렌즈 · 심도', items: [
-    _k('광각', 'wide-angle lens'),
-    _k('망원', 'telephoto lens'),
-    _k('어안렌즈', 'fisheye lens'),
-    _k('아웃포커스(보케)', 'shallow depth of field, bokeh'),
-    _k('팬포커스', 'deep focus'),
-    _k('매크로', 'macro close detail'),
-    _k('틸트시프트', 'tilt-shift miniature'),
-  ]),
-  (title: '조명', items: [
-    _k('자연광', 'natural light'),
-    _k('황금시간대', 'golden hour light'),
-    _k('역광', 'backlight'),
-    _k('림라이트', 'rim lighting'),
-    _k('실루엣', 'silhouette'),
-    _k('하드라이트', 'hard directional light'),
-    _k('소프트라이트', 'soft diffused light'),
-    _k('네온', 'neon lighting'),
-    _k('캔들라이트', 'candlelight glow'),
-    _k('로우키(무드)', 'low-key moody lighting'),
-    _k('하이키(밝은)', 'high-key bright lighting'),
-  ]),
-  (title: '연출 기법', items: [
-    _k('모션블러', 'motion blur'),
-    _k('스피드라인', 'manga speed lines'),
-    _k('집중선', 'focus concentration lines'),
-    _k('더블 익스포저', 'double exposure'),
-    _k('렌즈플레어', 'lens flare'),
-    _k('비네팅', 'vignette'),
-    _k('필름그레인', 'film grain'),
-    _k('god ray(광선)', 'volumetric god rays'),
-    _k('보케 배경', 'bokeh background'),
-    _k('롱 익스포저', 'long exposure light trails'),
-  ]),
-  (title: '분위기 · 톤', items: [
-    _k('따뜻한 톤', 'warm color tone'),
-    _k('차가운 톤', 'cool color tone'),
-    _k('몽환적', 'dreamy atmosphere'),
-    _k('음울한', 'gloomy somber'),
-    _k('긴장감', 'tense suspenseful'),
-    _k('로맨틱', 'romantic'),
-    _k('코믹', 'comedic lighthearted'),
-    _k('서사적', 'epic cinematic'),
-    _k('노스탤지어', 'nostalgic'),
-    _k('공포', 'eerie horror'),
-  ]),
-  (title: '배경 · 장소', items: [
-    _k('교실', 'classroom'),
-    _k('카페', 'cozy cafe'),
-    _k('도시 거리', 'city street'),
-    _k('골목', 'narrow alley'),
-    _k('공원', 'park'),
-    _k('침실', 'bedroom'),
-    _k('옥상', 'rooftop'),
-    _k('바닷가', 'beach'),
-    _k('숲', 'forest'),
-    _k('지하철', 'subway train'),
-    _k('사무실', 'office'),
-    _k('학교 운동장', 'schoolyard'),
-    _k('판타지 성', 'fantasy castle'),
-    _k('우주', 'outer space'),
-  ]),
-  (title: '시간 · 날씨', items: [
-    _k('아침', 'morning light'),
-    _k('한낮', 'midday'),
-    _k('노을', 'sunset glow'),
-    _k('황혼', 'dusk twilight'),
-    _k('밤', 'night'),
-    _k('비', 'rain'),
-    _k('폭우', 'heavy downpour'),
-    _k('눈', 'snow'),
-    _k('안개', 'fog mist'),
-    _k('맑음', 'clear sky'),
-    _k('흐림', 'overcast'),
-    _k('벚꽃', 'cherry blossoms'),
-    _k('단풍', 'autumn leaves'),
-  ]),
-  (title: '표정 · 감정', items: [
-    _k('미소', 'gentle smile'),
-    _k('환한 웃음', 'big bright grin'),
-    _k('놀람', 'surprised shocked'),
-    _k('눈물', 'crying tearful'),
-    _k('분노', 'angry furious'),
-    _k('무표정', 'deadpan neutral'),
-    _k('부끄러움', 'blushing shy'),
-    _k('진지함', 'serious'),
-    _k('졸림', 'sleepy'),
-    _k('설렘', 'excited fluttering'),
-    _k('절망', 'despair'),
-    _k('결의', 'determined'),
-  ]),
-  (title: '동작 · 포즈', items: [
-    _k('서있기', 'standing'),
-    _k('앉기', 'sitting'),
-    _k('달리기', 'running'),
-    _k('점프', 'jumping mid-air'),
-    _k('뒤돌아보기', 'looking back over shoulder'),
-    _k('손 흔들기', 'waving hand'),
-    _k('팔짱', 'arms crossed'),
-    _k('기대기', 'leaning against wall'),
-    _k('쓰러지기', 'collapsing'),
-    _k('포옹', 'hugging'),
-    _k('전투 자세', 'fighting stance'),
-  ]),
-  (title: '화풍 · 스타일', items: [
-    _k('웹툰', 'korean webtoon style'),
-    _k('순정만화', 'shoujo manga style'),
-    _k('소년만화', 'shonen manga style'),
-    _k('수채화', 'watercolor painting'),
-    _k('셀 애니', 'cel-shaded anime'),
-    _k('느와르 흑백', 'noir black and white'),
-    _k('파스텔', 'soft pastel colors'),
-    _k('비비드', 'vivid saturated colors'),
-    _k('미니멀 라인', 'minimal clean line art'),
-  ]),
+  (
+    title: '화각 · 샷 크기',
+    items: [
+      _k('익스트림 클로즈업', 'extreme close-up'),
+      _k('클로즈업', 'close-up shot'),
+      _k('바스트샷', 'bust shot'),
+      _k('미디엄샷', 'medium shot'),
+      _k('카우보이샷', 'cowboy shot'),
+      _k('풀샷', 'full body shot'),
+      _k('와이드샷', 'wide shot'),
+      _k('익스트림 와이드', 'extreme wide establishing shot'),
+      _k('투샷', 'two shot'),
+      _k('오버더숄더', 'over-the-shoulder shot'),
+    ],
+  ),
+  (
+    title: '촬영 각도',
+    items: [
+      _k('정면(아이레벨)', 'eye-level angle'),
+      _k('하이앵글', 'high angle'),
+      _k('로우앵글', 'low angle'),
+      _k('버드아이뷰', "bird's-eye view"),
+      _k('웜즈아이뷰', "worm's-eye view"),
+      _k('더치앵글', 'dutch angle tilt'),
+      _k('탑다운', 'top-down overhead'),
+      _k('뒤에서', 'from behind'),
+      _k('POV 시점', 'first-person POV'),
+    ],
+  ),
+  (
+    title: '렌즈 · 심도',
+    items: [
+      _k('광각', 'wide-angle lens'),
+      _k('망원', 'telephoto lens'),
+      _k('어안렌즈', 'fisheye lens'),
+      _k('아웃포커스(보케)', 'shallow depth of field, bokeh'),
+      _k('팬포커스', 'deep focus'),
+      _k('매크로', 'macro close detail'),
+      _k('틸트시프트', 'tilt-shift miniature'),
+    ],
+  ),
+  (
+    title: '조명',
+    items: [
+      _k('자연광', 'natural light'),
+      _k('황금시간대', 'golden hour light'),
+      _k('역광', 'backlight'),
+      _k('림라이트', 'rim lighting'),
+      _k('실루엣', 'silhouette'),
+      _k('하드라이트', 'hard directional light'),
+      _k('소프트라이트', 'soft diffused light'),
+      _k('네온', 'neon lighting'),
+      _k('캔들라이트', 'candlelight glow'),
+      _k('로우키(무드)', 'low-key moody lighting'),
+      _k('하이키(밝은)', 'high-key bright lighting'),
+    ],
+  ),
+  (
+    title: '연출 기법',
+    items: [
+      _k('모션블러', 'motion blur'),
+      _k('스피드라인', 'manga speed lines'),
+      _k('집중선', 'focus concentration lines'),
+      _k('더블 익스포저', 'double exposure'),
+      _k('렌즈플레어', 'lens flare'),
+      _k('비네팅', 'vignette'),
+      _k('필름그레인', 'film grain'),
+      _k('god ray(광선)', 'volumetric god rays'),
+      _k('보케 배경', 'bokeh background'),
+      _k('롱 익스포저', 'long exposure light trails'),
+    ],
+  ),
+  (
+    title: '분위기 · 톤',
+    items: [
+      _k('따뜻한 톤', 'warm color tone'),
+      _k('차가운 톤', 'cool color tone'),
+      _k('몽환적', 'dreamy atmosphere'),
+      _k('음울한', 'gloomy somber'),
+      _k('긴장감', 'tense suspenseful'),
+      _k('로맨틱', 'romantic'),
+      _k('코믹', 'comedic lighthearted'),
+      _k('서사적', 'epic cinematic'),
+      _k('노스탤지어', 'nostalgic'),
+      _k('공포', 'eerie horror'),
+    ],
+  ),
+  (
+    title: '배경 · 장소',
+    items: [
+      _k('교실', 'classroom'),
+      _k('카페', 'cozy cafe'),
+      _k('도시 거리', 'city street'),
+      _k('골목', 'narrow alley'),
+      _k('공원', 'park'),
+      _k('침실', 'bedroom'),
+      _k('옥상', 'rooftop'),
+      _k('바닷가', 'beach'),
+      _k('숲', 'forest'),
+      _k('지하철', 'subway train'),
+      _k('사무실', 'office'),
+      _k('학교 운동장', 'schoolyard'),
+      _k('판타지 성', 'fantasy castle'),
+      _k('우주', 'outer space'),
+    ],
+  ),
+  (
+    title: '시간 · 날씨',
+    items: [
+      _k('아침', 'morning light'),
+      _k('한낮', 'midday'),
+      _k('노을', 'sunset glow'),
+      _k('황혼', 'dusk twilight'),
+      _k('밤', 'night'),
+      _k('비', 'rain'),
+      _k('폭우', 'heavy downpour'),
+      _k('눈', 'snow'),
+      _k('안개', 'fog mist'),
+      _k('맑음', 'clear sky'),
+      _k('흐림', 'overcast'),
+      _k('벚꽃', 'cherry blossoms'),
+      _k('단풍', 'autumn leaves'),
+    ],
+  ),
+  (
+    title: '표정 · 감정',
+    items: [
+      _k('미소', 'gentle smile'),
+      _k('환한 웃음', 'big bright grin'),
+      _k('놀람', 'surprised shocked'),
+      _k('눈물', 'crying tearful'),
+      _k('분노', 'angry furious'),
+      _k('무표정', 'deadpan neutral'),
+      _k('부끄러움', 'blushing shy'),
+      _k('진지함', 'serious'),
+      _k('졸림', 'sleepy'),
+      _k('설렘', 'excited fluttering'),
+      _k('절망', 'despair'),
+      _k('결의', 'determined'),
+    ],
+  ),
+  (
+    title: '동작 · 포즈',
+    items: [
+      _k('서있기', 'standing'),
+      _k('앉기', 'sitting'),
+      _k('달리기', 'running'),
+      _k('점프', 'jumping mid-air'),
+      _k('뒤돌아보기', 'looking back over shoulder'),
+      _k('손 흔들기', 'waving hand'),
+      _k('팔짱', 'arms crossed'),
+      _k('기대기', 'leaning against wall'),
+      _k('쓰러지기', 'collapsing'),
+      _k('포옹', 'hugging'),
+      _k('전투 자세', 'fighting stance'),
+    ],
+  ),
+  (
+    title: '화풍 · 스타일',
+    items: [
+      _k('웹툰', 'korean webtoon style'),
+      _k('순정만화', 'shoujo manga style'),
+      _k('소년만화', 'shonen manga style'),
+      _k('수채화', 'watercolor painting'),
+      _k('셀 애니', 'cel-shaded anime'),
+      _k('느와르 흑백', 'noir black and white'),
+      _k('파스텔', 'soft pastel colors'),
+      _k('비비드', 'vivid saturated colors'),
+      _k('미니멀 라인', 'minimal clean line art'),
+    ],
+  ),
 ];
 
 /// 캐릭터·사물 외형 키워드 — 레퍼런스 생성용.
 final List<KwCategory> kCharacterKeywords = [
-  (title: '종류', items: [
-    _k('소녀', 'a young girl'),
-    _k('소년', 'a young boy'),
-    _k('여성', 'a young woman'),
-    _k('남성', 'a young man'),
-    _k('중년 여성', 'a middle-aged woman'),
-    _k('중년 남성', 'a middle-aged man'),
-    _k('동물', 'an animal character'),
-    _k('사물·소품', 'an object prop'),
-  ]),
-  (title: '머리', items: [
-    _k('긴 머리', 'long hair'),
-    _k('단발', 'bob cut hair'),
-    _k('숏컷', 'short hair'),
-    _k('포니테일', 'ponytail'),
-    _k('곱슬', 'curly hair'),
-    _k('검은 머리', 'black hair'),
-    _k('갈색 머리', 'brown hair'),
-    _k('금발', 'blonde hair'),
-    _k('분홍 머리', 'pink hair'),
-    _k('파란 머리', 'blue hair'),
-  ]),
-  (title: '의상', items: [
-    _k('교복', 'school uniform'),
-    _k('캐주얼', 'casual clothes'),
-    _k('후드티', 'hoodie'),
-    _k('정장', 'business suit'),
-    _k('드레스', 'dress'),
-    _k('운동복', 'sportswear'),
-    _k('한복', 'hanbok'),
-    _k('판타지 의상', 'fantasy outfit'),
-    _k('교련복/제복', 'military-style uniform'),
-  ]),
-  (title: '특징', items: [
-    _k('안경', 'wearing glasses'),
-    _k('주근깨', 'freckles'),
-    _k('보조개', 'dimples'),
-    _k('흉터', 'a scar'),
-    _k('모자', 'wearing a hat'),
-    _k('액세서리', 'accessories'),
-    _k('문신', 'tattoo'),
-  ]),
-  (title: '분위기', items: [
-    _k('명랑한', 'cheerful'),
-    _k('차분한', 'calm'),
-    _k('새침한', 'cool aloof'),
-    _k('청순한', 'innocent'),
-    _k('카리스마', 'charismatic'),
-    _k('귀여운', 'cute'),
-    _k('시크한', 'chic'),
-  ]),
-  (title: '화풍', items: [
-    _k('웹툰', 'korean webtoon style'),
-    _k('순정만화', 'shoujo manga style'),
-    _k('소년만화', 'shonen manga style'),
-    _k('파스텔', 'soft pastel colors'),
-    _k('미니멀 라인', 'minimal clean line art'),
-  ]),
+  (
+    title: '종류',
+    items: [
+      _k('소녀', 'a young girl'),
+      _k('소년', 'a young boy'),
+      _k('여성', 'a young woman'),
+      _k('남성', 'a young man'),
+      _k('중년 여성', 'a middle-aged woman'),
+      _k('중년 남성', 'a middle-aged man'),
+      _k('동물', 'an animal character'),
+      _k('사물·소품', 'an object prop'),
+    ],
+  ),
+  (
+    title: '머리',
+    items: [
+      _k('긴 머리', 'long hair'),
+      _k('단발', 'bob cut hair'),
+      _k('숏컷', 'short hair'),
+      _k('포니테일', 'ponytail'),
+      _k('곱슬', 'curly hair'),
+      _k('검은 머리', 'black hair'),
+      _k('갈색 머리', 'brown hair'),
+      _k('금발', 'blonde hair'),
+      _k('분홍 머리', 'pink hair'),
+      _k('파란 머리', 'blue hair'),
+    ],
+  ),
+  (
+    title: '의상',
+    items: [
+      _k('교복', 'school uniform'),
+      _k('캐주얼', 'casual clothes'),
+      _k('후드티', 'hoodie'),
+      _k('정장', 'business suit'),
+      _k('드레스', 'dress'),
+      _k('운동복', 'sportswear'),
+      _k('한복', 'hanbok'),
+      _k('판타지 의상', 'fantasy outfit'),
+      _k('교련복/제복', 'military-style uniform'),
+    ],
+  ),
+  (
+    title: '특징',
+    items: [
+      _k('안경', 'wearing glasses'),
+      _k('주근깨', 'freckles'),
+      _k('보조개', 'dimples'),
+      _k('흉터', 'a scar'),
+      _k('모자', 'wearing a hat'),
+      _k('액세서리', 'accessories'),
+      _k('문신', 'tattoo'),
+    ],
+  ),
+  (
+    title: '분위기',
+    items: [
+      _k('명랑한', 'cheerful'),
+      _k('차분한', 'calm'),
+      _k('새침한', 'cool aloof'),
+      _k('청순한', 'innocent'),
+      _k('카리스마', 'charismatic'),
+      _k('귀여운', 'cute'),
+      _k('시크한', 'chic'),
+    ],
+  ),
+  (
+    title: '화풍',
+    items: [
+      _k('웹툰', 'korean webtoon style'),
+      _k('순정만화', 'shoujo manga style'),
+      _k('소년만화', 'shonen manga style'),
+      _k('파스텔', 'soft pastel colors'),
+      _k('미니멀 라인', 'minimal clean line art'),
+    ],
+  ),
 ];
 
 /// 선택된 영문 조각 + 자유 텍스트 → 최종 프롬프트
 String _composePrompt(Set<String> frags, String free) {
-  final parts = <String>[
-    if (free.trim().isNotEmpty) free.trim(),
-    ...frags,
-  ];
+  final parts = <String>[if (free.trim().isNotEmpty) free.trim(), ...frags];
   return parts.join(', ');
 }
 
@@ -248,8 +297,11 @@ class _Pill extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _Pill(
-      {required this.label, required this.selected, required this.onTap});
+  const _Pill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +317,9 @@ class _Pill extends StatelessWidget {
           color: selected ? AppColors.ink : AppColors.paper,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: selected ? AppColors.ink : AppColors.line, width: 1),
+            color: selected ? AppColors.ink : AppColors.line,
+            width: 1,
+          ),
         ),
         child: Text(
           label,
@@ -306,8 +360,9 @@ class _AccordionSection extends StatelessWidget {
         color: AppColors.paper,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: count > 0 ? AppColors.ink : AppColors.lineSoft,
-            width: count > 0 ? 1.5 : 1),
+          color: count > 0 ? AppColors.ink : AppColors.lineSoft,
+          width: count > 0 ? 1.5 : 1,
+        ),
       ),
       child: Column(
         children: [
@@ -322,29 +377,41 @@ class _AccordionSection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
               child: Row(
                 children: [
-                  Text(title,
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 14.5, fontWeight: FontWeight.w900)),
+                  Text(
+                    title,
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   if (count > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                          color: AppColors.coral,
-                          borderRadius: BorderRadius.circular(999)),
-                      child: Text('$count',
-                          style: GoogleFonts.notoSansKr(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white)),
+                        color: AppColors.coral,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   const Spacer(),
                   AnimatedRotation(
                     turns: open ? 0.5 : 0,
                     duration: AppMotion.fast,
-                    child: const Icon(Icons.expand_more_rounded,
-                        color: AppColors.muted),
+                    child: const Icon(
+                      Icons.expand_more_rounded,
+                      color: AppColors.muted,
+                    ),
                   ),
                 ],
               ),
@@ -371,8 +438,9 @@ class _AccordionSection extends StatelessWidget {
                 ],
               ),
             ),
-            crossFadeState:
-                open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: open
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: AppMotion.fast,
           ),
         ],
@@ -386,10 +454,11 @@ class _KeywordPicker extends StatefulWidget {
   final List<KwCategory> categories;
   final Set<String> selected; // 영문 조각 집합 (상위에서 보유)
   final VoidCallback onChanged;
-  const _KeywordPicker(
-      {required this.categories,
-      required this.selected,
-      required this.onChanged});
+  const _KeywordPicker({
+    required this.categories,
+    required this.selected,
+    required this.onChanged,
+  });
 
   @override
   State<_KeywordPicker> createState() => _KeywordPickerState();
@@ -427,11 +496,12 @@ class _PrimaryButton extends StatelessWidget {
   final bool enabled;
   final bool busy;
   final VoidCallback onTap;
-  const _PrimaryButton(
-      {required this.label,
-      required this.onTap,
-      this.enabled = true,
-      this.busy = false});
+  const _PrimaryButton({
+    required this.label,
+    required this.onTap,
+    this.enabled = true,
+    this.busy = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -450,23 +520,25 @@ class _PrimaryButton extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2.4, color: AppColors.paper))
-            : Text(label,
+                  strokeWidth: 2.4,
+                  color: AppColors.paper,
+                ),
+              )
+            : Text(
+                label,
                 style: GoogleFonts.notoSansKr(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.paper)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.paper,
+                ),
+              ),
       ),
     );
   }
 }
 
 void _toast(BuildContext ctx, String msg) {
-  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-    content:
-        Text(msg, style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
-    behavior: SnackBarBehavior.floating,
-  ));
+  showAppToast(ctx, msg);
 }
 
 /// 선택 개수 요약 줄 ("키워드 N개 선택됨")
@@ -478,25 +550,32 @@ class _SelectedSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (count == 0) {
-      return Text('키워드를 안 골라도 돼요 — 그러면 적은 설명대로 그려요.',
-          style:
-              GoogleFonts.notoSansKr(fontSize: 12.5, color: AppColors.faint));
+      return Text(
+        '키워드를 안 골라도 돼요 — 그러면 적은 설명대로 그려요.',
+        style: GoogleFonts.notoSansKr(fontSize: 12.5, color: AppColors.faint),
+      );
     }
     return Row(
       children: [
-        Text('키워드 $count개 선택됨',
-            style: GoogleFonts.notoSansKr(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: AppColors.coral)),
+        Text(
+          '키워드 $count개 선택됨',
+          style: GoogleFonts.notoSansKr(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: AppColors.coral,
+          ),
+        ),
         const Spacer(),
         GestureDetector(
           onTap: onClear,
-          child: Text('모두 해제',
-              style: GoogleFonts.notoSansKr(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.muted)),
+          child: Text(
+            '모두 해제',
+            style: GoogleFonts.notoSansKr(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted,
+            ),
+          ),
         ),
       ],
     );
@@ -539,12 +618,12 @@ class _AiGenerateSheet extends StatefulWidget {
 
 class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   final _frags = <String>{};
-  late final _free =
-      TextEditingController(text: widget.initialPrompt ?? '');
+  late final _free = TextEditingController(text: widget.initialPrompt ?? '');
   List<AiCharacter> _chars = [];
   // 한 컷에 여러 인물이 나올 수 있어 다중 선택(최대 3명)
-  late final List<AiCharacter> _picked =
-      widget.initialCharacter != null ? [widget.initialCharacter!] : [];
+  late final List<AiCharacter> _picked = widget.initialCharacter != null
+      ? [widget.initialCharacter!]
+      : [];
   static const _maxChars = 3;
   bool _loadingChars = true;
 
@@ -625,24 +704,37 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99)),
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
             Expanded(
               child: ListView(
                 controller: scroll,
                 padding: EdgeInsets.fromLTRB(
-                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
+                  20,
+                  16,
+                  20,
+                  16 + MediaQuery.of(context).padding.bottom,
+                ),
                 children: [
-                  Text('✨ AI로 장면 만들기',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 20, fontWeight: FontWeight.w900)),
+                  Text(
+                    '✨ AI로 장면 만들기',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 14),
 
                   // 1) 어떤 장면? — 주 입력(맨 위)
-                  Text('어떤 장면을 그릴까요?',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 15, fontWeight: FontWeight.w900)),
+                  Text(
+                    '어떤 장면을 그릴까요?',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _free,
@@ -669,27 +761,37 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text('아래에서 촬영·연출 키워드를 더하면 더 정확해져요 (선택).',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 12, color: AppColors.faint)),
+                  Text(
+                    '아래에서 촬영·연출 키워드를 더하면 더 정확해져요 (선택).',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 12,
+                      color: AppColors.faint,
+                    ),
+                  ),
 
                   // 2) 이 컷에 나올 인물 (다중 선택, 일관성)
                   Padding(
                     padding: const EdgeInsets.only(top: 18, bottom: 2),
                     child: Text(
-                        _picked.isEmpty
-                            ? '이 컷에 나올 인물 (일관성 유지)'
-                            : '이 컷에 나올 인물 · ${_picked.length}명 선택',
-                        style: GoogleFonts.notoSansKr(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.muted)),
+                      _picked.isEmpty
+                          ? '이 컷에 나올 인물 (일관성 유지)'
+                          : '이 컷에 나올 인물 · ${_picked.length}명 선택',
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.muted,
+                      ),
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('여러 명 고르면 한 컷에 같이 나와요 (최대 3명).',
-                        style: GoogleFonts.notoSansKr(
-                            fontSize: 11.5, color: AppColors.faint)),
+                    child: Text(
+                      '여러 명 고르면 한 컷에 같이 나와요 (최대 3명).',
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 11.5,
+                        color: AppColors.faint,
+                      ),
+                    ),
                   ),
                   _CharacterStrip(
                     chars: _chars,
@@ -705,11 +807,14 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     padding: const EdgeInsets.only(top: 18, bottom: 4),
                     child: Row(
                       children: [
-                        Text('촬영 · 연출 키워드',
-                            style: GoogleFonts.notoSansKr(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.muted)),
+                        Text(
+                          '촬영 · 연출 키워드',
+                          style: GoogleFonts.notoSansKr(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.muted,
+                          ),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _SelectedSummary(
@@ -771,8 +876,11 @@ class _CharacterStrip extends StatelessWidget {
             label: '안 정함',
             selected: picked.isEmpty,
             onTap: onClear,
-            child: const Icon(Icons.auto_awesome_rounded,
-                color: AppColors.faint, size: 24),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.faint,
+              size: 24,
+            ),
           ),
           for (final c in chars)
             _miniTile(
@@ -780,28 +888,34 @@ class _CharacterStrip extends StatelessWidget {
               selected: picked.any((p) => p.id == c.id),
               onTap: () => onToggle(c),
               child: ClipOval(
-                child: Image.network(c.imageUrl,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, e, s) => const Icon(Icons.person_rounded,
-                        color: AppColors.faint)),
+                child: Image.network(
+                  c.imageUrl,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, e, s) =>
+                      const Icon(Icons.person_rounded, color: AppColors.faint),
+                ),
               ),
             ),
           _miniTile(
             label: '새로 만들기',
             selected: false,
             onTap: onNew,
-            child:
-                const Icon(Icons.add_rounded, color: AppColors.coral, size: 26),
+            child: const Icon(
+              Icons.add_rounded,
+              color: AppColors.coral,
+              size: 26,
+            ),
           ),
           if (loading)
             const Padding(
               padding: EdgeInsets.all(28),
               child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
         ],
       ),
@@ -854,8 +968,11 @@ class _CharacterStrip extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.card, width: 2),
                       ),
-                      child: const Icon(Icons.check_rounded,
-                          color: AppColors.paper, size: 12),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: AppColors.paper,
+                        size: 12,
+                      ),
                     ),
                   ),
               ],
@@ -921,8 +1038,10 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
     setState(() => _busy = true);
     try {
       // 레퍼런스용: 전신 + 단순 배경 지시 추가
-      final prompt = _composePrompt(_frags,
-          '${_free.text}, full body character reference, plain background');
+      final prompt = _composePrompt(
+        _frags,
+        '${_free.text}, full body character reference, plain background',
+      );
       final res = await Cloud.generateAiImage(prompt);
       if (!mounted) return;
       setState(() {
@@ -932,8 +1051,7 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
     } on AiQuotaException catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      _toast(context,
-          '이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
+      _toast(context, '이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
     } on AiNoImageException catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -950,7 +1068,9 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
     setState(() => _busy = true);
     try {
       final c = await Cloud.createAiCharacter(
-          name: _name.text.trim(), localImagePath: _previewPath!);
+        name: _name.text.trim(),
+        localImagePath: _previewPath!,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(c);
     } catch (_) {
@@ -977,30 +1097,46 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99)),
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
             Expanded(
               child: ListView(
                 controller: scroll,
                 padding: EdgeInsets.fromLTRB(
-                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
+                  20,
+                  16,
+                  20,
+                  16 + MediaQuery.of(context).padding.bottom,
+                ),
                 children: [
-                  Text('🎭 캐릭터 · 사물 만들기',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 20, fontWeight: FontWeight.w900)),
+                  Text(
+                    '🎭 캐릭터 · 사물 만들기',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('한 번 만들면 컷마다 같은 모습으로 그릴 수 있어요.',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 12.5, color: AppColors.muted)),
+                  Text(
+                    '한 번 만들면 컷마다 같은 모습으로 그릴 수 있어요.',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 12.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
 
                   // 이름
                   const SizedBox(height: 18),
-                  Text('이름',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.muted)),
+                  Text(
+                    '이름',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.muted,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _name,
@@ -1027,16 +1163,22 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
                     const SizedBox(height: 18),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.file(File(_previewPath!),
-                          height: 220,
-                          width: double.infinity,
-                          fit: BoxFit.cover),
+                      child: Image.file(
+                        File(_previewPath!),
+                        height: 220,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Center(
-                      child: Text('마음에 안 들면 키워드를 바꿔 다시 생성하세요',
-                          style: GoogleFonts.notoSansKr(
-                              fontSize: 11.5, color: AppColors.faint)),
+                      child: Text(
+                        '마음에 안 들면 키워드를 바꿔 다시 생성하세요',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 11.5,
+                          color: AppColors.faint,
+                        ),
+                      ),
                     ),
                   ],
 
@@ -1055,11 +1197,14 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
 
                   // 자유 설명
                   const SizedBox(height: 8),
-                  Text('추가 설명 (선택)',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.muted)),
+                  Text(
+                    '추가 설명 (선택)',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.muted,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _free,
@@ -1116,7 +1261,10 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
 typedef StoryboardResult = ({
   String title,
   String logline,
-  List<({String scenePrompt, String speaker, String dialogue, String direction})> cuts,
+  List<
+    ({String scenePrompt, String speaker, String dialogue, String direction})
+  >
+  cuts,
 });
 
 /// 전체 상황 → AI 컷 추천 시트. "이 구성으로 만들기" 시 결과를 pop으로 반환.
@@ -1186,28 +1334,45 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(99)),
+                color: AppColors.line,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
             Expanded(
               child: ListView(
                 controller: scroll,
                 padding: EdgeInsets.fromLTRB(
-                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
+                  20,
+                  16,
+                  20,
+                  16 + MediaQuery.of(context).padding.bottom,
+                ),
                 children: [
-                  Text('🎬 AI 스토리보드',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 20, fontWeight: FontWeight.w900)),
+                  Text(
+                    '🎬 AI 스토리보드',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('전체 상황을 적으면 AI가 컷(장면+대사)으로 나눠줘요.',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 12.5, color: AppColors.muted)),
+                  Text(
+                    '전체 상황을 적으면 AI가 컷(장면+대사)으로 나눠줘요.',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 12.5,
+                      color: AppColors.muted,
+                    ),
+                  ),
 
                   // 상황 입력
                   const SizedBox(height: 16),
-                  Text('어떤 이야기인가요?',
-                      style: GoogleFonts.notoSansKr(
-                          fontSize: 15, fontWeight: FontWeight.w900)),
+                  Text(
+                    '어떤 이야기인가요?',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _situation,
@@ -1248,7 +1413,9 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 20),
+                        horizontal: 16,
+                        vertical: 20,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.paper,
                         borderRadius: BorderRadius.circular(16),
@@ -1260,17 +1427,26 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                             width: 30,
                             height: 30,
                             child: CircularProgressIndicator(
-                                color: AppColors.gold, strokeWidth: 3),
+                              color: AppColors.gold,
+                              strokeWidth: 3,
+                            ),
                           ),
                           const SizedBox(height: 14),
-                          Text('🎬 AI가 장면을 컷으로 나누는 중…',
-                              style: GoogleFonts.notoSansKr(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900)),
+                          Text(
+                            '🎬 AI가 장면을 컷으로 나누는 중…',
+                            style: GoogleFonts.notoSansKr(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                           const SizedBox(height: 3),
-                          Text('약 10초 정도 걸려요. 잠깐만 기다려 주세요.',
-                              style: GoogleFonts.notoSansKr(
-                                  fontSize: 12, color: AppColors.muted)),
+                          Text(
+                            '약 10초 정도 걸려요. 잠깐만 기다려 주세요.',
+                            style: GoogleFonts.notoSansKr(
+                              fontSize: 12,
+                              color: AppColors.muted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1279,13 +1455,21 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                   // 추천 결과
                   if (r != null) ...[
                     const SizedBox(height: 22),
-                    Text(r.title,
-                        style: GoogleFonts.notoSansKr(
-                            fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      r.title,
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(r.logline,
-                        style: GoogleFonts.notoSansKr(
-                            fontSize: 12.5, color: AppColors.muted)),
+                    Text(
+                      r.logline,
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 12.5,
+                        color: AppColors.muted,
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     for (var i = 0; i < r.cuts.length; i++)
                       _StoryCutPreview(index: i + 1, cut: r.cuts[i]),
@@ -1309,7 +1493,13 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
 /// 추천된 컷 한 개 미리보기 카드
 class _StoryCutPreview extends StatelessWidget {
   final int index;
-  final ({String scenePrompt, String speaker, String dialogue, String direction}) cut;
+  final ({
+    String scenePrompt,
+    String speaker,
+    String dialogue,
+    String direction,
+  })
+  cut;
   const _StoryCutPreview({required this.index, required this.cut});
 
   @override
@@ -1330,35 +1520,58 @@ class _StoryCutPreview extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(
-                    color: AppColors.ink,
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text('컷 $index',
-                    style: GoogleFonts.notoSansKr(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.paper)),
+                  color: AppColors.ink,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '컷 $index',
+                  style: GoogleFonts.notoSansKr(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.paper,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
-              Text(cut.speaker,
+              Expanded(
+                child: Text(
+                  cut.speaker,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.notoSansKr(
-                      fontSize: 13, fontWeight: FontWeight.w900)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('"${cut.dialogue}"',
-              style: GoogleFonts.notoSansKr(
-                  fontSize: 14, fontWeight: FontWeight.w700)),
+          Text(
+            '"${cut.dialogue}"',
+            style: GoogleFonts.notoSansKr(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.image_outlined,
-                  size: 14, color: AppColors.faint),
+              const Icon(
+                Icons.image_outlined,
+                size: 14,
+                color: AppColors.faint,
+              ),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(cut.scenePrompt,
-                    style: GoogleFonts.notoSansKr(
-                        fontSize: 11.5, color: AppColors.faint)),
+                child: Text(
+                  cut.scenePrompt,
+                  style: GoogleFonts.notoSansKr(
+                    fontSize: 11.5,
+                    color: AppColors.faint,
+                  ),
+                ),
               ),
             ],
           ),

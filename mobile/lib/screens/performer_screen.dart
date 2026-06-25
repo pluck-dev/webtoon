@@ -96,22 +96,34 @@ class _PerformerScreenState extends State<PerformerScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('녹음을 전부 지울까요?',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-        content: Text('지금까지 녹음한 게 모두 지워지고 처음부터 다시 녹음해요.',
-            style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4)),
+        title: Text(
+          '녹음을 전부 지울까요?',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          '지금까지 녹음한 게 모두 지워지고 처음부터 다시 녹음해요.',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('취소',
-                style: GoogleFonts.notoSansKr(
-                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+            child: Text(
+              '취소',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w800,
+                color: AppColors.muted,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('전부 지우기',
-                style: GoogleFonts.notoSansKr(
-                    color: AppColors.coral, fontWeight: FontWeight.w900)),
+            child: Text(
+              '전부 지우기',
+              style: GoogleFonts.notoSansKr(
+                color: AppColors.coral,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -130,11 +142,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
       _celebrated = false;
     });
     HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('녹음을 초기화했어요. 처음부터 다시 녹음하세요.',
-          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
-      behavior: SnackBarBehavior.floating,
-    ));
+    showAppToast(context, '녹음을 초기화했어요. 처음부터 다시 녹음하세요.');
   }
 
   Future<void> _uploadTake(
@@ -272,6 +280,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
       showCelebration(context);
     }
   }
+
   ({Cut cut, Dialogue dialogue})? get _current =>
       _lines.isEmpty ? null : _lines[_index];
 
@@ -422,9 +431,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
   }
 
   void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
-    );
+    showAppToast(context, msg);
   }
 
   @override
@@ -724,10 +731,14 @@ class _PerformerScreenState extends State<PerformerScreen> {
               if (done > 0 && !_isCollabRole)
                 IconButton(
                   tooltip: '녹음 초기화',
-                  onPressed:
-                      (_recording || _rendering) ? null : _resetRecordings,
-                  icon: const Icon(Icons.restart_alt_rounded,
-                      color: Colors.white70, size: 22),
+                  onPressed: (_recording || _rendering)
+                      ? null
+                      : _resetRecordings,
+                  icon: const Icon(
+                    Icons.restart_alt_rounded,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
                 ),
             ],
           ),
@@ -741,17 +752,23 @@ class _PerformerScreenState extends State<PerformerScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                Text('CUT ${line.cut.order} / ${detail.cuts.length}',
-                    style: GoogleFonts.notoSansKr(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12.5)),
+                Text(
+                  'CUT ${line.cut.order} / ${detail.cuts.length}',
+                  style: GoogleFonts.notoSansKr(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
                 const Spacer(),
-                Text('녹음 $done / $total',
-                    style: GoogleFonts.notoSansKr(
-                        color: AppColors.gold,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12.5)),
+                Text(
+                  '녹음 $done / $total',
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -814,32 +831,48 @@ class _PerformerScreenState extends State<PerformerScreen> {
               Text(
                 _isCollabRole ? '내 배역 다 녹음했어요!' : '모든 컷을 다 녹음했어요! 🎉',
                 style: GoogleFonts.notoSansKr(
-                    fontSize: 18, fontWeight: FontWeight.w900),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 _isCollabRole ? '완료하면 합본 영상에 반영돼요.' : '이제 영상으로 만들 수 있어요.',
                 style: GoogleFonts.notoSansKr(
-                    fontSize: 13, color: AppColors.muted),
+                  fontSize: 13,
+                  color: AppColors.muted,
+                ),
               ),
               const SizedBox(height: 20),
               if (_isCollabRole)
-                _sheetButton('✓ 내 배역 완료하기', filled: true, onTap: () async {
-                  Navigator.pop(sheetCtx);
-                  final nav = Navigator.of(context);
-                  await _markRoleDone();
-                  if (mounted) nav.maybePop();
-                })
+                _sheetButton(
+                  '✓ 내 배역 완료하기',
+                  filled: true,
+                  onTap: () async {
+                    Navigator.pop(sheetCtx);
+                    final nav = Navigator.of(context);
+                    await _markRoleDone();
+                    if (mounted) nav.maybePop();
+                  },
+                )
               else ...[
-                _sheetButton('🎬 영상 만들기', filled: true, onTap: () {
-                  Navigator.pop(sheetCtx);
-                  _makeVideo();
-                }),
+                _sheetButton(
+                  '🎬 영상 만들기',
+                  filled: true,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _makeVideo();
+                  },
+                ),
                 const SizedBox(height: 10),
-                _sheetButton('🎙 다시 녹음하기', filled: false, onTap: () {
-                  Navigator.pop(sheetCtx);
-                  _onRecordTap(); // 현재 컷 다시 녹음
-                }),
+                _sheetButton(
+                  '🎙 다시 녹음하기',
+                  filled: false,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _onRecordTap(); // 현재 컷 다시 녹음
+                  },
+                ),
               ],
             ],
           ),
@@ -848,8 +881,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
     );
   }
 
-  Widget _sheetButton(String label,
-      {required bool filled, required VoidCallback onTap}) {
+  Widget _sheetButton(
+    String label, {
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
     const green = Color(0xFF35C75A);
     return GestureDetector(
       onTap: onTap,
@@ -882,7 +918,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
     final color = _colorOf(line.dialogue.character?.color);
     final d = line.dialogue;
     final allSaved =
-        _lines.isNotEmpty && _lines.every((l) => _saved.contains(l.dialogue.id));
+        _lines.isNotEmpty &&
+        _lines.every((l) => _saved.contains(l.dialogue.id));
     final readyToMake = allSaved && !_recording;
 
     return Padding(
@@ -905,13 +942,17 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 7),
-              Text(
-                d.speaker,
-                style: GoogleFonts.notoSansKr(
-                  color: AppColors.gold,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
+              Flexible(
+                child: Text(
+                  d.speaker,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    shadows: const [Shadow(color: Colors.black, blurRadius: 8)],
+                  ),
                 ),
               ),
             ],
@@ -997,7 +1038,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 color: const Color(0xFF35C75A).withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                    color: const Color(0xFF35C75A).withValues(alpha: 0.6)),
+                  color: const Color(0xFF35C75A).withValues(alpha: 0.6),
+                ),
               ),
               child: Text(
                 '🎉 다 녹음했어요! 초록 버튼으로 영상 만들기',
