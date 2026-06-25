@@ -229,28 +229,42 @@ class LocalRender {
   }
 
   // 우상단 반투명 워터마크: 골드 음파 바(이퀄라이저) + '쩌렁쩌렁'
+  // 우상단 워터마크: 어두운 알약 + 골드 음파 바 + '쩌렁쩌렁' (어떤 장면에서도 또렷)
   static void _drawWatermark(Canvas canvas) {
-    const op = 0.6;
-    const margin = 46.0;
+    const margin = 40.0;
     final tp = _tp(
       '쩌렁쩌렁',
       TextStyle(
-        color: Colors.white.withValues(alpha: op),
-        fontSize: 34,
+        color: Colors.white.withValues(alpha: 0.95),
+        fontSize: 36,
         fontWeight: FontWeight.w900,
-        shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
       ),
       w.toDouble(),
       TextAlign.left,
     );
     // 음파 바
-    const heights = [16.0, 30.0, 44.0, 26.0, 18.0];
-    const barW = 7.0, gap = 5.0, barMax = 44.0;
+    const heights = [17.0, 32.0, 48.0, 30.0, 19.0];
+    const barW = 7.5, gap = 5.0, barMax = 48.0;
     final barsW = heights.length * barW + (heights.length - 1) * gap;
-    final totalW = barsW + 12 + tp.width;
-    final startX = w - margin - totalW;
-    final cy = margin + barMax / 2;
-    final gold = AppColors.gold.withValues(alpha: op);
+    final contentW = barsW + 13 + tp.width;
+    const padX = 20.0, padY = 13.0;
+    final pillW = contentW + padX * 2;
+    final pillH = barMax + padY * 2;
+    final pillX = w - margin - pillW;
+    const pillY = margin;
+    final cy = pillY + pillH / 2;
+
+    // 어두운 알약 배경(대비)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(pillX, pillY, pillW, pillH),
+        Radius.circular(pillH / 2),
+      ),
+      Paint()..color = Colors.black.withValues(alpha: 0.42),
+    );
+
+    final startX = pillX + padX;
+    final gold = AppColors.gold.withValues(alpha: 0.95);
     for (var i = 0; i < heights.length; i++) {
       final bh = heights[i];
       final bx = startX + i * (barW + gap);
@@ -262,7 +276,7 @@ class LocalRender {
         Paint()..color = gold,
       );
     }
-    tp.paint(canvas, Offset(startX + barsW + 12, cy - tp.height / 2));
+    tp.paint(canvas, Offset(startX + barsW + 13, cy - tp.height / 2));
   }
 
   static TextPainter _tp(
