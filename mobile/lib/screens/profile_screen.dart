@@ -6,6 +6,7 @@ import '../cloud.dart';
 import '../config.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import '../widgets/paywall.dart';
 import 'collab_list_screen.dart';
 import 'creator_screen.dart';
 import 'my_episodes_screen.dart';
@@ -63,6 +64,79 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+
+  // 계정 삭제 — 출시 전까지는 요청 메일로(앱 내 즉시삭제는 추후 Edge Function)
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('계정 삭제',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text(
+          '계정과 모든 작품·녹음·영상이 삭제되며 되돌릴 수 없어요.\n삭제를 요청할까요?',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('취소',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _mailDelete(context);
+            },
+            child: Text('삭제 요청',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.coral, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _mailDelete(BuildContext context) async {
+    final email = Auth.currentUser?.email ?? '';
+    final uri = Uri(
+      scheme: 'mailto',
+      path: Env.supportEmail,
+      queryParameters: {
+        'subject': '계정 삭제 요청',
+        'body': '계정($email) 삭제를 요청합니다.',
+      },
+    );
+    if (!await launchUrl(uri) && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('메일 앱을 열 수 없어요: ${Env.supportEmail}')));
+    }
+  }
+
+  Widget _aiUsageLine() => FutureBuilder<int>(
+        future: Cloud.aiUsageCount(),
+        builder: (context, snap) {
+          final n = snap.data;
+          return Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome_rounded,
+                    size: 14, color: AppColors.faint),
+                const SizedBox(width: 5),
+                Text(
+                  n == null ? '이번 달 AI 생성 …' : '이번 달 AI 생성 $n회',
+                  style: GoogleFonts.notoSansKr(
+                      color: AppColors.muted,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          );
+        },
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +217,11 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
+            // Pro 구독 (인앱) — 출시 후 RevenueCat 연결
+            const ProSubscribeCard(),
+            const SizedBox(height: 10),
+            _aiUsageLine(),
+            const SizedBox(height: 18),
             _statsCard(),
             const SizedBox(height: 24),
             _section('내 콘텐츠'),
@@ -192,8 +271,14 @@ class ProfileScreen extends StatelessWidget {
             _tile(
               Icons.logout_rounded,
               '로그아웃',
-              color: AppColors.coral,
               onTap: () => _confirmSignOut(context),
+            ),
+            _tile(
+              Icons.delete_forever_rounded,
+              '계정 삭제',
+              subtitle: '계정과 모든 작품·녹음 삭제',
+              color: AppColors.coral,
+              onTap: () => _confirmDeleteAccount(context),
             ),
             const SizedBox(height: 32),
             Center(

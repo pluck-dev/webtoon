@@ -806,6 +806,20 @@ class Cloud {
     await sb.from('Recording').delete().eq('performanceId', performanceId);
   }
 
+  /// 이번 달 AI 생성 사용 횟수 (프로필 표시용). 실패 시 0.
+  static Future<int> aiUsageCount() async {
+    try {
+      final uid = await ensureUser();
+      final res = await sb.rpc('check_ai_credit',
+          params: {'p_user': uid, 'p_limit': 999999});
+      final r =
+          (res is List && res.isNotEmpty ? res.first : res) as Map<String, dynamic>;
+      return (r['used'] ?? 0) as int;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
   static Future<void> deleteWork(String performanceId) async {
     await sb.from('Recording').delete().eq('performanceId', performanceId);
