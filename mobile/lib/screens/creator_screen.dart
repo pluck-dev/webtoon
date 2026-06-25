@@ -896,48 +896,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 MediaQuery.of(context).padding.bottom +
                 170),
         children: [
+          // 🎬 AI 스토리보드 — 맨 위, 명확한 버튼(광고 아님)
+          _storyboardCta(),
+          const SizedBox(height: 18),
           _infoCard(),
-          const SizedBox(height: 16),
-          // 🎬 AI 스토리보드로 시작 — 상황만 적으면 컷 자동 구성
-          Pressable(
-            onTap: _openStoryboard,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2B2622), AppColors.ink],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  const Text('🎬', style: TextStyle(fontSize: 22)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('AI 스토리보드로 시작',
-                            style: GoogleFonts.notoSansKr(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                                color: AppColors.paper)),
-                        const SizedBox(height: 2),
-                        Text('상황만 적으면 컷·대사를 자동으로 짜줘요',
-                            style: GoogleFonts.notoSansKr(
-                                fontSize: 12,
-                                color: AppColors.paper.withValues(alpha: 0.7))),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_rounded,
-                      color: AppColors.gold, size: 20),
-                ],
-              ),
-            ),
-          ),
           const SizedBox(height: 22),
           _charactersSection(),
           const SizedBox(height: 22),
@@ -1004,6 +966,74 @@ class _CreatorScreenState extends State<CreatorScreen> {
           ),
         ),
       );
+
+  // AI 스토리보드 진입 — 광고 배너처럼 안 보이게 '버튼' 느낌으로
+  Widget _storyboardCta() {
+    return Pressable(
+      onTap: _openStoryboard,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.gold, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.gold,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('🎬', style: TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('AI로 웹툰 시작하기',
+                      style: GoogleFonts.notoSansKr(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          color: AppColors.ink)),
+                  const SizedBox(height: 2),
+                  Text('상황만 적으면 컷·대사·그림까지 자동',
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 12, color: AppColors.muted)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 명확한 버튼 알약
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.ink,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('시작',
+                      style: GoogleFonts.notoSansKr(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          color: AppColors.paper)),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: AppColors.paper, size: 15),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _infoCard() => Container(
         padding: const EdgeInsets.all(16),
