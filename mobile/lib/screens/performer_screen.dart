@@ -88,6 +88,55 @@ class _PerformerScreenState extends State<PerformerScreen> {
     }
   }
 
+  // 녹음 전부 초기화 — 처음부터 다시
+  Future<void> _resetRecordings() async {
+    final pid = _performanceId;
+    if (pid == null || _recording || _rendering) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('녹음을 전부 지울까요?',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text('지금까지 녹음한 게 모두 지워지고 처음부터 다시 녹음해요.',
+            style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('취소',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('전부 지우기',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.coral, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await Cloud.clearRecordings(pid);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _takes.clear();
+      _takeMs.clear();
+      _saved.clear();
+      _uploading.clear();
+      _index = 0;
+      _celebrated = false;
+    });
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('녹음을 초기화했어요. 처음부터 다시 녹음하세요.',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
   Future<void> _uploadTake(
     String dialogueId,
     String path,
@@ -663,6 +712,14 @@ class _PerformerScreenState extends State<PerformerScreen> {
               _pill('CUT ${line.cut.order} / ${detail.cuts.length}'),
               const Spacer(),
               _pill('$done / $total 완료', color: AppColors.gold),
+              if (done > 0 && !_isCollabRole)
+                IconButton(
+                  tooltip: '녹음 초기화',
+                  onPressed:
+                      (_recording || _rendering) ? null : _resetRecordings,
+                  icon: const Icon(Icons.restart_alt_rounded,
+                      color: Colors.white70, size: 22),
+                ),
             ],
           ),
           const SizedBox(height: 12),

@@ -801,6 +801,11 @@ class Cloud {
     await sb.from('Comment').delete().eq('id', id);
   }
 
+  /// 이 공연의 녹음 전부 삭제(공연은 유지) — 처음부터 다시 녹음용
+  static Future<void> clearRecordings(String performanceId) async {
+    await sb.from('Recording').delete().eq('performanceId', performanceId);
+  }
+
   /// 공연 1건 삭제 (녹음/영상/렌더잡 → 공연 순서로, RLS상 본인 것만)
   static Future<void> deleteWork(String performanceId) async {
     await sb.from('Recording').delete().eq('performanceId', performanceId);
