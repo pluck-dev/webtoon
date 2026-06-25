@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../widgets/app_widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -85,9 +86,7 @@ class _VideoSheetState extends State<_VideoSheet> {
       ], text: '쩌렁쩌렁으로 만든 내 더빙 영상 🎬');
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('영상을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.')),
-        );
+        showAppToast(context, '영상을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -109,99 +108,114 @@ class _VideoSheetState extends State<_VideoSheet> {
         top: 16,
         bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Text(
-                '완성된 영상 🎬',
-                style: GoogleFonts.notoSansKr(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.92,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+            ),
+            Row(
+              children: [
+                Text(
+                  '완성된 영상 🎬',
+                  style: GoogleFonts.notoSansKr(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: AspectRatio(
+                    aspectRatio: 9 / 16,
+                    child: Container(
+                      color: Colors.black,
+                      child: !_ready
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.gold,
+                              ),
+                            )
+                          : _controller != null &&
+                                _controller!.value.isInitialized
+                          ? GestureDetector(
+                              onTap: () => setState(() {
+                                _controller!.value.isPlaying
+                                    ? _controller!.pause()
+                                    : _controller!.play();
+                              }),
+                              child: VideoPlayer(_controller!),
+                            )
+                          : const Center(
+                              child: Text(
+                                '영상을 불러오지 못했어요.',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 9 / 16,
-              child: Container(
-                color: Colors.black,
-                child: !_ready
-                    ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
-                      )
-                    : _controller != null && _controller!.value.isInitialized
-                    ? GestureDetector(
-                        onTap: () => setState(() {
-                          _controller!.value.isPlaying
-                              ? _controller!.pause()
-                              : _controller!.play();
-                        }),
-                        child: VideoPlayer(_controller!),
-                      )
-                    : const Center(
-                        child: Text(
-                          '영상을 불러오지 못했어요.',
-                          style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _sharing ? null : _share,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: AppColors.ink,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                icon: _sharing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.ink,
                         ),
-                      ),
+                      )
+                    : const Icon(Icons.ios_share_rounded, size: 20),
+                label: Text(
+                  _sharing ? '준비 중…' : '공유 · 저장',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _sharing ? null : _share,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.ink,
-                minimumSize: const Size.fromHeight(52),
-              ),
-              icon: _sharing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: AppColors.ink,
-                      ),
-                    )
-                  : const Icon(Icons.ios_share_rounded, size: 20),
-              label: Text(
-                _sharing ? '준비 중…' : '공유 · 저장',
-                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+            const SizedBox(height: 10),
+            Text(
+              '보관함에서 언제든 다시 볼 수 있어요.',
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white54,
+                fontSize: 13,
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '보관함에서 언제든 다시 볼 수 있어요.',
-            style: GoogleFonts.notoSansKr(color: Colors.white54, fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
