@@ -56,6 +56,10 @@ dependencies:
 # 인터페이스 1.6.0과 호환되며 startStream을 구현한 record_linux 1.3.1로 고정한다.
 dependency_overrides:
   record_linux: 1.3.1
+  # passkeys_doctor(→supabase_flutter)가 끌어오는 device_info_plus 12.4.0은
+  # iOS 26.1 SDK 전용 API(isiOSAppOnVision)를 참조해, 현 Xcode 26.0(iOS 26.0 SDK)에선
+  # 컴파일이 깨진다. 그 코드가 없던 직전 버전 12.3.0으로 고정한다(우린 패스키 미사용).
+  device_info_plus: 12.3.0
 
 dev_dependencies:
   flutter_test:
