@@ -686,7 +686,78 @@ class _CreatorScreenState extends State<CreatorScreen> {
     setState(() {
       _cuts[i].dispose();
       _cuts.removeAt(i);
+      if (_cuts.isEmpty) {
+        final c = _CutDraft();
+        _attachAutosave(c);
+        _cuts.add(c);
+      }
     });
+    HapticFeedback.selectionClick();
+    _scheduleSave();
+  }
+
+  // 내용 있는 컷은 확인 후 삭제
+  Future<void> _confirmRemoveCut(int i) async {
+    final cut = _cuts[i];
+    final hasContent =
+        cut.imagePath != null || cut.text.text.trim().isNotEmpty;
+    if (hasContent) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.card,
+          title: Text('컷 ${i + 1}을 삭제할까요?',
+              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          content: Text('그림과 대사가 함께 지워져요.',
+              style: GoogleFonts.notoSansKr(color: AppColors.muted)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('취소',
+                  style: GoogleFonts.notoSansKr(
+                      fontWeight: FontWeight.w800, color: AppColors.muted)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('삭제',
+                  style: GoogleFonts.notoSansKr(
+                      color: AppColors.coral, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    _removeCut(i);
+  }
+
+  // 전체 초기화 — 제목·컷·이미지 모두 지우고 새로
+  Future<void> _confirmReset() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('전부 지우고 새로 시작할까요?',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text('제목·컷·그림이 모두 지워져요. (등장인물은 남아요)',
+            style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('취소',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('초기화',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.coral, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) _startFresh();
   }
 
   String? _validate() {
@@ -866,6 +937,12 @@ class _CreatorScreenState extends State<CreatorScreen> {
         title: Text('만화 만들기',
             style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
         actions: [
+          // 전체 초기화
+          IconButton(
+            tooltip: '초기화',
+            onPressed: _publishing ? null : _confirmReset,
+            icon: const Icon(Icons.restart_alt_rounded, color: AppColors.muted),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
@@ -1226,12 +1303,31 @@ class _CreatorScreenState extends State<CreatorScreen> {
                               fontSize: 12)),
                     ),
                     const Spacer(),
-                    if (_cuts.length > 1)
-                      GestureDetector(
-                        onTap: () => _removeCut(i),
-                        child: const Icon(Icons.delete_outline_rounded,
-                            color: AppColors.faint, size: 22),
+                    GestureDetector(
+                      onTap: () => _confirmRemoveCut(i),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.lineSoft),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.delete_outline_rounded,
+                                color: AppColors.muted, size: 15),
+                            const SizedBox(width: 3),
+                            Text('삭제',
+                                style: GoogleFonts.notoSansKr(
+                                    color: AppColors.muted,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 11.5)),
+                          ],
+                        ),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
