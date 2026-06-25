@@ -1242,6 +1242,40 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                     onTap: _suggest,
                   ),
 
+                  // 로딩 중 — 명확한 안내(닫지 말고 기다리게)
+                  if (_busy) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.paper,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.lineSoft),
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(
+                            width: 30,
+                            height: 30,
+                            child: CircularProgressIndicator(
+                                color: AppColors.gold, strokeWidth: 3),
+                          ),
+                          const SizedBox(height: 14),
+                          Text('🎬 AI가 장면을 컷으로 나누는 중…',
+                              style: GoogleFonts.notoSansKr(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 3),
+                          Text('약 10초 정도 걸려요. 잠깐만 기다려 주세요.',
+                              style: GoogleFonts.notoSansKr(
+                                  fontSize: 12, color: AppColors.muted)),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // 추천 결과
                   if (r != null) ...[
                     const SizedBox(height: 22),

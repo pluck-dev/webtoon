@@ -600,7 +600,86 @@ class _CreatorScreenState extends State<CreatorScreen> {
     });
     HapticFeedback.selectionClick();
     _scheduleSave();
-    _toast('컷 ${r.cuts.length}개를 채웠어요! 각 컷에서 "AI로 생성"을 누르면 그림이 그려져요.');
+    _offerGenerateAll(); // 대본·대사 채웠으니 → 컷 그림도 한 번에 만들지 물어봄
+  }
+
+  // 스토리보드/추천 장면이 있는 컷들 그림을 한 번에 자동 생성할지 제안
+  Future<void> _offerGenerateAll() async {
+    final pending = _cuts
+        .where((c) => (c.scenePrompt ?? '').trim().isNotEmpty && c.imagePath == null)
+        .toList();
+    if (pending.isEmpty || !mounted) return;
+    final hasChar = _activeCharacter != null;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('컷 그림도 자동으로 만들까요?',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text(
+          hasChar
+              ? '${pending.length}개 컷을 "${_activeCharacter!.name}" 캐릭터로 일관되게 그려요. (조금 걸려요)'
+              : '${pending.length}개 컷을 그려요.\n캐릭터를 안 골라서 컷마다 인물이 달라질 수 있어요. (등장인물을 먼저 만들면 같은 인물로 나와요)',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('나중에',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('그림 만들기',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      _generateAllCuts();
+    } else if (mounted) {
+      _toast('각 컷에서 "AI로 생성"으로 그림을 만들 수 있어요.');
+    }
+  }
+
+  // 추천 장면이 있는 컷들을 순서대로 생성(활성 캐릭터로 일관성)
+  Future<void> _generateAllCuts() async {
+    final refs = <String>[];
+    if (_activeCharacter != null) {
+      try {
+        refs.add(await Cloud.characterLocalImage(_activeCharacter!));
+      } catch (_) {}
+    }
+    for (final cut in List<_CutDraft>.of(_cuts)) {
+      if (!mounted) return;
+      if (cut.imagePath != null || (cut.scenePrompt ?? '').trim().isEmpty) {
+        continue;
+      }
+      setState(() => cut.generating = true);
+      try {
+        final res =
+            await Cloud.generateAiImage(cut.scenePrompt!, refImagePaths: refs);
+        final saved = await _persistImage(res.path);
+        if (!mounted) return;
+        setState(() {
+          cut.imagePath = saved;
+          cut.generating = false;
+        });
+        _scheduleSave();
+      } on AiQuotaException catch (e) {
+        if (!mounted) return;
+        setState(() => cut.generating = false);
+        _toast('이번 달 한도(${e.limit}회) 도달 — 나머지 컷은 못 만들었어요.');
+        break;
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => cut.generating = false);
+        // 이 컷만 실패하고 계속
+      }
+    }
+    if (mounted) _toast('컷 그림 생성을 마쳤어요!');
   }
 
   void _removeCut(int i) {
