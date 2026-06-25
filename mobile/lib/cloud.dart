@@ -19,6 +19,12 @@ class AiQuotaException implements Exception {
   AiQuotaException({required this.used, required this.limit});
 }
 
+/// 이미지가 안 나옴(주제 부족 등) — 쿼터 미소비. 친절 안내 메시지 포함.
+class AiNoImageException implements Exception {
+  final String message;
+  AiNoImageException(this.message);
+}
+
 /// Supabase Auth 유저 ↔ User 테이블 + 공연/녹음/렌더 (RLS로 본인 것만)
 class Cloud {
   /// 현재 로그인 유저에 대응하는 User 행을 보장하고 User.id 반환
@@ -441,6 +447,11 @@ class Cloud {
       throw AiQuotaException(
         used: (data['used'] ?? 0) as int,
         limit: (data['limit'] ?? 0) as int,
+      );
+    }
+    if (data['error'] == 'no_image') {
+      throw AiNoImageException(
+        (data['message'] ?? '장면 설명을 조금 더 적어 주세요.') as String,
       );
     }
     if (res.status != 200 || data['image'] == null) {

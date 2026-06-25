@@ -33,7 +33,10 @@ function json(body: unknown, status = 200) {
 
 const STYLE =
   'Korean webtoon / manhwa style illustration, clean line art, vibrant flat colors, ' +
-  'cinematic single panel, expressive characters, no text, no speech bubbles, no watermark. ';
+  'cinematic single panel, expressive characters, no text, no speech bubbles, no watermark. ' +
+  // 키워드(화각/조명 등)만 와도 텍스트로 답하지 말고 반드시 이미지를 그리게 강제
+  'ALWAYS output a single illustration image, never text. If the subject is not specified, ' +
+  'invent a fitting Korean character and setting that matches the given keywords. ';
 
 // 프롬프트 래퍼. 참조 이미지(캐릭터)가 있으면 동일 인물 유지를 강하게 지시.
 function buildPrompt(userPrompt: string, hasRef: boolean): string {
@@ -51,10 +54,11 @@ function buildPrompt(userPrompt: string, hasRef: boolean): string {
 
 // Gemini 이미지 생성 → base64 PNG (data 부분만)
 // refImages: 캐릭터 일관성용 참조 이미지(base64, data 부분만). 있으면 멀티 이미지 입력.
+// 이미지가 나오면 base64 반환, Gemini가 텍스트만 반환(이미지 없음)하면 null.
 async function generateWithGemini(
   prompt: string,
   refImages: string[],
-): Promise<string> {
+): Promise<string | null> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
   // 참조 이미지 먼저, 그다음 텍스트 지시
@@ -78,7 +82,7 @@ async function generateWithGemini(
   for (const p of out) {
     if (p.inlineData?.data) return p.inlineData.data as string;
   }
-  throw new Error('gemini: no image in response');
+  return null; // 텍스트만 반환됨(주제 부족/거부) → 호출부에서 친절 안내
 }
 
 // 키 없을 때 흐름 검증용 1x1 PNG (실서비스 전 stub)
@@ -120,7 +124,39 @@ Deno.serve(async (req) => {
           .filter((s: string) => s.length > 0)
       : [];
 
-    // 4) 월 한도 소비 (구독 한도는 추후 RevenueCat 검증으로 상향)
+    // 4) 한도 체크(읽기, 미소비) — 생성 실패해도 쿼터 안 깎이게
+    const { data: chk, error: chkErr } = await admin.rpc('check_ai_credit', {
+      p_user: urow.id,
+      p_limit: FREE_LIMIT,
+    });
+    if (chkErr) return json({ error: 'quota_error', detail: chkErr.message }, 500);
+    const c = Array.isArray(chk) ? chk[0] : chk;
+    if (!c?.allowed) {
+      return json(
+        { error: 'quota_exceeded', used: c?.used ?? FREE_LIMIT, limit: FREE_LIMIT },
+        402,
+      );
+    }
+
+    // 5) 생성 (키 없으면 stub)
+    let b64: string | null;
+    if (GEMINI_API_KEY) {
+      b64 = await generateWithGemini(`${prompt}`.trim(), refImages);
+      // 이미지가 안 나오면(주제 부족 등) 쿼터 소비 없이 친절 안내
+      if (b64 === null) {
+        return json(
+          {
+            error: 'no_image',
+            message: '무엇을 그릴지(인물·장면)도 한 줄 적어 주세요. 예: 카페에서 웃는 여성',
+          },
+          422,
+        );
+      }
+    } else {
+      b64 = STUB_PNG_BASE64; // 흐름 검증용
+    }
+
+    // 6) 성공 → 이제 월 한도 소비 (구독 한도는 추후 RevenueCat로 상향)
     const { data: credit, error: cErr } = await admin.rpc('consume_ai_credit', {
       p_user: urow.id,
       p_limit: FREE_LIMIT,
@@ -128,18 +164,11 @@ Deno.serve(async (req) => {
     if (cErr) return json({ error: 'quota_error', detail: cErr.message }, 500);
     const row = Array.isArray(credit) ? credit[0] : credit;
     if (!row?.allowed) {
+      // 경합으로 막 한도 도달 → 이미 생성된 이미지는 버리고 안내
       return json(
         { error: 'quota_exceeded', used: row?.used ?? FREE_LIMIT, limit: FREE_LIMIT },
         402,
       );
-    }
-
-    // 5) 생성 (키 없으면 stub)
-    let b64: string;
-    if (GEMINI_API_KEY) {
-      b64 = await generateWithGemini(`${prompt}`.trim(), refImages);
-    } else {
-      b64 = STUB_PNG_BASE64; // 흐름 검증용
     }
 
     return json({

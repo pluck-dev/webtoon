@@ -585,6 +585,10 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
       setState(() => _busy = false);
       _toast(context,
           '이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
+    } on AiNoImageException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _toast(context, e.message);
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -901,6 +905,10 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
       setState(() => _busy = false);
       _toast(context,
           '이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
+    } on AiNoImageException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _toast(context, e.message);
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
