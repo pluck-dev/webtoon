@@ -135,29 +135,34 @@ class _SplashGateState extends State<SplashGate> {
   }
 }
 
-class _SplashView extends StatelessWidget {
+/// 네이티브 스플래시(정지 로고)에서 매끄럽게 이어지도록 설계.
+/// 로고는 네이티브와 똑같이 화면 정중앙·풀사이즈로 고정(점프/팝 없음),
+/// 막대 진동은 잠깐 정지 상태를 보여준 뒤 시작, 텍스트는 로고 위치를
+/// 건드리지 않고 아래에서 페이드인 한다.
+class _SplashView extends StatefulWidget {
   const _SplashView();
 
+  @override
+  State<_SplashView> createState() => _SplashViewState();
+}
+
+class _SplashViewState extends State<_SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.ink,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutBack,
-              builder: (context, t, child) => Transform.scale(
-                scale: 0.6 + 0.4 * t.clamp(0, 1),
-                child: Opacity(opacity: t.clamp(0, 1), child: child),
-              ),
-              child: const BrandLogo(size: 104, animate: true, badge: false),
-            ),
-            const SizedBox(height: 22),
-            TweenAnimationBuilder<double>(
+      body: Stack(
+        children: [
+          // 로고: 네이티브(Android 12+) 스플래시와 동일 크기·정중앙 고정.
+          // 실측 기준 네이티브 막대 ≈ size 196 에 해당(점프 없이 이어지도록 맞춤).
+          // 진동은 BrandLogo 내부에서 정적 모양→진폭 ramp 로 부드럽게 시작한다.
+          Center(
+            child: BrandLogo(size: 196, animate: true, badge: false),
+          ),
+          // 텍스트: 로고 아래에 페이드인 (로고 위치엔 영향 없음)
+          Align(
+            alignment: const Alignment(0, 0.28),
+            child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeOut,
@@ -173,8 +178,8 @@ class _SplashView extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

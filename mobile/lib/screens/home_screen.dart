@@ -279,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
       child: Row(
         children: [
-          const BrandLogo(size: 34, animate: true),
+          const BrandLogo(size: 34, tapToAnimate: true),
           const SizedBox(width: 11),
           Expanded(
             child: Column(

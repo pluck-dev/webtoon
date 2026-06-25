@@ -13,11 +13,13 @@ class Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scale;
+  final HitTestBehavior behavior;
   const Pressable({
     super.key,
     required this.child,
     this.onTap,
     this.scale = 0.96,
+    this.behavior = HitTestBehavior.deferToChild,
   });
 
   @override
@@ -34,6 +36,7 @@ class _PressableState extends State<Pressable> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: widget.behavior,
       onTapDown: (_) => _set(true),
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),

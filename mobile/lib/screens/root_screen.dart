@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
 import '../widgets/app_widgets.dart';
+import '../widgets/brand_icons.dart';
 import 'creator_screen.dart';
 import 'feed_screen.dart';
 import 'home_screen.dart';
@@ -61,149 +62,186 @@ class _FloatingNav extends StatelessWidget {
     required this.onCreate,
   });
 
-  static const double _circle = 58; // 가운데 버튼 지름
-
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 86,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // 노치(홈) 있는 플로팅 바 — CustomPaint로 그림자+노치 직접 그림
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 8,
-              top: 28,
-              child: CustomPaint(
-                painter: _NavBarPainter(notchRadius: _circle / 2 + 7),
-                child: Row(
-                  children: [
-                    _tab(0, Icons.home_outlined, Icons.home_rounded, '홈'),
-                    _tab(1, Icons.explore_outlined, Icons.explore_rounded, '피드'),
-                    const SizedBox(width: 78), // 노치(가운데 버튼) 자리
-                    _tab(2, Icons.video_library_outlined,
-                        Icons.video_library_rounded, '보관함'),
-                    _tab(3, Icons.person_outline_rounded, Icons.person_rounded,
-                        '프로필'),
-                  ],
-                ),
+    // 풀폭 솔리드 바(가장자리까지) + 가운데 버튼은 바 윗선에 걸친(raised) 형태
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    const barH = 58.0; // 바 컨텐츠 높이
+    const headroom = 18.0; // 가운데 버튼이 위로 걸치는 여유(투명)
+
+    return SizedBox(
+      height: headroom + barH + bottomInset,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // 풀폭 솔리드 바 배경 (하단, 가장자리까지)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: barH + bottomInset,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                border:
+                    Border(top: BorderSide(color: AppColors.lineSoft, width: 1)),
+                boxShadow: [
+                  BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 16,
+                      offset: Offset(0, -3)),
+                ],
               ),
             ),
-            // 가운데 '만들기' 버튼 — 노치에 자연스럽게 안김
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: onCreate,
-                  child: Container(
-                    width: _circle,
-                    height: _circle,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFF6CE7E), AppColors.gold],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.gold.withValues(alpha: 0.5),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.auto_awesome_rounded,
-                        color: AppColors.ink, size: 27),
-                  ),
-                ),
+          ),
+          // 탭들 (바 컨텐츠 영역) — 가운데는 빈 슬롯
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomInset,
+            height: barH,
+            child: Row(
+              children: [
+                _tab(0, BrandIconType.home, '홈'),
+                _tab(1, BrandIconType.feed, '피드'),
+                const Expanded(child: SizedBox()),
+                _tab(2, BrandIconType.library, '보관함'),
+                _tab(3, BrandIconType.profile, '프로필'),
+              ],
+            ),
+          ),
+          // 가운데 만들기 — 바 윗선에 걸친 라이즈드 골드 버튼 + 라벨
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomInset,
+            height: barH,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: _CreateButton(onTap: onCreate),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _tab(int i, IconData icon, IconData activeIcon, String label) {
+  Widget _tab(int i, BrandIconType type, String label) {
     final selected = index == i;
     return Expanded(
+      // behavior: opaque → 슬롯 전체가 터치 타깃(빈 공간도 눌림)
       child: Pressable(
         onTap: () => onTab(i),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              selected ? activeIcon : icon,
-              color: selected ? AppColors.ink : AppColors.faint,
-              size: 24,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: GoogleFonts.notoSansKr(
-                fontSize: 10.5,
-                fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-                color: selected ? AppColors.ink : AppColors.faint,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          // 라벨을 하단 정렬 → 가운데 만들기 라벨과 같은 줄에 맞춤
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              AnimatedScale(
+                scale: selected ? 1.0 : 0.9,
+                duration: AppMotion.normal,
+                curve: AppMotion.spring,
+                child: BrandIcon(
+                  type,
+                  filled: selected,
+                  size: 25,
+                  color: selected ? AppColors.ink : AppColors.faint,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.notoSansKr(
+                  fontSize: 10.5,
+                  fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                  color: selected ? AppColors.ink : AppColors.faint,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// 상단 가운데에 둥근 홈(notch)이 파인 플로팅 바 — 그림자/테두리 직접 그림
-class _NavBarPainter extends CustomPainter {
-  final double notchRadius;
-  _NavBarPainter({required this.notchRadius});
+/// 가운데 '만들기' 골드 원형 버튼 — 누르면 살짝 줄었다 튀는 탭 모션(OKX 느낌)
+class _CreateButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _CreateButton({required this.onTap});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    const r = 24.0; // 바 모서리 라운드
-    final w = size.width;
-    final h = size.height;
-    final cx = w / 2;
-    final nr = notchRadius;
+  State<_CreateButton> createState() => _CreateButtonState();
+}
 
-    final path = Path()
-      ..moveTo(r, 0)
-      ..lineTo(cx - nr, 0)
-      // 가운데 아래로 파인 둥근 홈 (concave)
-      ..arcToPoint(Offset(cx + nr, 0),
-          radius: Radius.circular(nr), clockwise: false)
-      ..lineTo(w - r, 0)
-      ..arcToPoint(Offset(w, r), radius: const Radius.circular(r))
-      ..lineTo(w, h - r)
-      ..arcToPoint(Offset(w - r, h), radius: const Radius.circular(r))
-      ..lineTo(r, h)
-      ..arcToPoint(Offset(0, h - r), radius: const Radius.circular(r))
-      ..lineTo(0, r)
-      ..arcToPoint(Offset(r, 0), radius: const Radius.circular(r))
-      ..close();
+class _CreateButtonState extends State<_CreateButton> {
+  bool _down = false;
 
-    // 그림자
-    canvas.drawShadow(path, const Color(0x33000000), 8, false);
-    // 채움
-    canvas.drawPath(path, Paint()..color = AppColors.card);
-    // 얇은 테두리
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = AppColors.lineSoft,
-    );
+  void _set(bool v) {
+    if (_down != v) setState(() => _down = v);
   }
 
   @override
-  bool shouldRepaint(_NavBarPainter old) => old.notchRadius != notchRadius;
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _set(true),
+      onTapCancel: () => _set(false),
+      onTapUp: (_) => _set(false),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      // 라이즈드 원 + 라벨 — 다른 탭과 같은 줄에 '만들기'
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedScale(
+            scale: _down ? 0.84 : 1.0,
+            duration: AppMotion.fast,
+            curve: AppMotion.spring,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF6CE7E), AppColors.gold],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x66F0BD62),
+                    blurRadius: 12,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const BrandIcon(
+                BrandIconType.create,
+                filled: true,
+                size: 22,
+                color: AppColors.ink,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '만들기',
+            style: GoogleFonts.notoSansKr(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.ink,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
