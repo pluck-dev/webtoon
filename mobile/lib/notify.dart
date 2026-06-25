@@ -26,16 +26,29 @@ class Notify {
     await _local.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        // iOS는 설정을 반드시 넣어야 함(없으면 초기화 시 예외). 권한은 즉시 묻지 않고
+        // requestPermission()에서 필요할 때 요청한다.
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
       ),
     );
   }
 
-  /// 알림 권한 요청(Android 13+)
+  /// 알림 권한 요청(Android 13+ / iOS)
   static Future<void> requestPermission() async {
     final p = await FlutterForegroundTask.checkNotificationPermission();
     if (p != NotificationPermission.granted) {
       await FlutterForegroundTask.requestNotificationPermission();
     }
+    // iOS: 로컬 알림 권한 요청
+    await _local
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   /// 렌더 시작 — 포그라운드 서비스 켜기(백그라운드/화면잠금에도 유지)
@@ -67,6 +80,7 @@ class Notify {
           importance: Importance.high,
           priority: Priority.high,
         ),
+        iOS: DarwinNotificationDetails(),
       ),
     );
   }
