@@ -505,15 +505,17 @@ class _SelectedSummary extends StatelessWidget {
 
 // ───────────────────────── 컷 생성 시트 ─────────────────────────
 
-/// 컷 이미지 생성 시트. 성공 시 생성 결과를 pop으로 반환.
+/// 컷 생성 '요청'을 받는 시트 — 실제 생성은 호출부(작가 화면)가 진행해
+/// 시트는 바로 닫히고 컷 영역에 스피너가 뜨게 함.
+/// 반환: { prompt, characters } / 취소 시 null.
 /// [initialPrompt] : 스토리보드가 추천한 장면 묘사를 미리 채워 줌.
 /// [initialCharacter] : 작가 화면에서 고른 등장인물을 기본 선택(일관성).
-Future<({String path, int remaining, bool stub})?> showAiGenerateSheet(
+Future<({String prompt, List<AiCharacter> characters})?> showAiGenerateSheet(
   BuildContext context, {
   String? initialPrompt,
   AiCharacter? initialCharacter,
 }) {
-  return showModalBottomSheet<({String path, int remaining, bool stub})>(
+  return showModalBottomSheet<({String prompt, List<AiCharacter> characters})>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
@@ -545,7 +547,6 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
       widget.initialCharacter != null ? [widget.initialCharacter!] : [];
   static const _maxChars = 3;
   bool _loadingChars = true;
-  bool _busy = false;
 
   @override
   void initState() {
@@ -575,34 +576,13 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
 
   bool get _canGen => _frags.isNotEmpty || _free.text.trim().isNotEmpty;
 
-  Future<void> _generate() async {
-    if (!_canGen || _busy) return;
-    setState(() => _busy = true);
-    try {
-      final refs = <String>[];
-      for (final c in _picked.take(_maxChars)) {
-        try {
-          refs.add(await Cloud.characterLocalImage(c));
-        } catch (_) {/* 레퍼런스 실패 시 그 인물만 포기 */}
-      }
-      final prompt = _composePrompt(_frags, _free.text);
-      final res = await Cloud.generateAiImage(prompt, refImagePaths: refs);
-      if (!mounted) return;
-      Navigator.of(context).pop(res);
-    } on AiQuotaException catch (e) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      _toast(context,
-          '이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
-    } on AiNoImageException catch (e) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      _toast(context, e.message);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      _toast(context, 'AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    }
+  // 생성하지 않고 '무엇을 그릴지'만 모아서 닫음 → 작가 화면이 컷에서 생성
+  void _submit() {
+    if (!_canGen) return;
+    Navigator.of(context).pop((
+      prompt: _composePrompt(_frags, _free.text),
+      characters: List<AiCharacter>.of(_picked.take(_maxChars)),
+    ));
   }
 
   Future<void> _newCharacter() async {
@@ -651,7 +631,8 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
             Expanded(
               child: ListView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                padding: EdgeInsets.fromLTRB(
+                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
                 children: [
                   Text('✨ AI로 장면 만들기',
                       style: GoogleFonts.notoSansKr(
@@ -747,10 +728,9 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                   ),
                   const SizedBox(height: 12),
                   _PrimaryButton(
-                    label: _busy ? '그리는 중…' : '이 장면 그리기',
+                    label: '이 장면 그리기',
                     enabled: _canGen,
-                    busy: _busy,
-                    onTap: _generate,
+                    onTap: _submit,
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -1003,7 +983,8 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
             Expanded(
               child: ListView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                padding: EdgeInsets.fromLTRB(
+                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
                 children: [
                   Text('🎭 캐릭터 · 사물 만들기',
                       style: GoogleFonts.notoSansKr(
@@ -1211,7 +1192,8 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
             Expanded(
               child: ListView(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                padding: EdgeInsets.fromLTRB(
+                    20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
                 children: [
                   Text('🎬 AI 스토리보드',
                       style: GoogleFonts.notoSansKr(

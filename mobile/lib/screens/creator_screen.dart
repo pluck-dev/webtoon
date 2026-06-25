@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ai_studio.dart';
 import '../cloud.dart';
@@ -24,6 +28,7 @@ class CreatorScreen extends StatefulWidget {
 class _CutDraft {
   String? imagePath;
   String? scenePrompt; // AI 스토리보드가 추천한 장면 묘사(이미지 생성 프리필용)
+  bool generating = false; // AI 이미지 생성 중 → 컷 영역에 스피너
   final speaker = TextEditingController();
   final text = TextEditingController();
   final direction = TextEditingController();
@@ -49,10 +54,16 @@ class _CreatorScreenState extends State<CreatorScreen> {
   AiCharacter? _activeCharacter; // 컷 생성 시 기본 선택될 인물
   bool _loadingChars = true;
 
+  // 임시저장(자동) — 앱이 꺼져도 작업이 안 날아가게
+  static const _draftKey = 'creator_draft_v1';
+  Timer? _saveDebounce;
+  bool _restoring = true; // 복원 중엔 자동저장 막기
+
   @override
   void initState() {
     super.initState();
     _loadCharacters();
+    _restoreDraft();
   }
 
   Future<void> _loadCharacters() async {
@@ -69,8 +80,151 @@ class _CreatorScreenState extends State<CreatorScreen> {
     }
   }
 
+  // ── 임시저장(자동) ──────────────────────────────────────────────
+  void _scheduleSave() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 700), _saveDraft);
+  }
+
+  void _attachAutosave(_CutDraft c) {
+    c.speaker.addListener(_scheduleSave);
+    c.text.addListener(_scheduleSave);
+    c.direction.addListener(_scheduleSave);
+  }
+
+  void _wireInitialAutosave() {
+    _title.addListener(_scheduleSave);
+    _logline.addListener(_scheduleSave);
+    for (final c in _cuts) {
+      _attachAutosave(c);
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    if (_restoring) return;
+    final empty = _title.text.trim().isEmpty &&
+        _logline.text.trim().isEmpty &&
+        _cuts.every((c) =>
+            c.imagePath == null &&
+            c.text.text.trim().isEmpty &&
+            c.speaker.text.trim().isEmpty);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (empty) {
+        await prefs.remove(_draftKey);
+        return;
+      }
+      final data = {
+        'title': _title.text,
+        'logline': _logline.text,
+        'category': _category,
+        'cuts': _cuts
+            .map((c) => {
+                  'imagePath': c.imagePath,
+                  'scenePrompt': c.scenePrompt,
+                  'speaker': c.speaker.text,
+                  'text': c.text.text,
+                  'direction': c.direction.text,
+                })
+            .toList(),
+      };
+      await prefs.setString(_draftKey, jsonEncode(data));
+    } catch (_) {}
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_draftKey);
+    } catch (_) {}
+  }
+
+  // 생성/촬영 이미지를 영구 폴더로 복사 → 앱 꺼져도 안 사라지게
+  Future<String> _persistImage(String tempPath) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final d = Directory('${dir.path}/draft_images');
+      if (!await d.exists()) await d.create(recursive: true);
+      final dest =
+          '${d.path}/cut_${DateTime.now().microsecondsSinceEpoch}.png';
+      await File(tempPath).copy(dest);
+      return dest;
+    } catch (_) {
+      return tempPath;
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_draftKey);
+      if (raw == null) {
+        _restoring = false;
+        _wireInitialAutosave();
+        return;
+      }
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final cutsJson = (data['cuts'] as List?) ?? [];
+      if (!mounted) return;
+      setState(() {
+        _title.text = (data['title'] ?? '') as String;
+        _logline.text = (data['logline'] ?? '') as String;
+        _category = (data['category'] ?? 'ROLEPLAY') as String;
+        for (final c in _cuts) {
+          c.dispose();
+        }
+        _cuts
+          ..clear()
+          ..addAll(cutsJson.map((j) {
+            final m = j as Map<String, dynamic>;
+            final d = _CutDraft();
+            final p = m['imagePath'] as String?;
+            d.imagePath = (p != null && File(p).existsSync()) ? p : null;
+            d.scenePrompt = m['scenePrompt'] as String?;
+            d.speaker.text = (m['speaker'] ?? '') as String;
+            d.text.text = (m['text'] ?? '') as String;
+            d.direction.text = (m['direction'] ?? '') as String;
+            return d;
+          }));
+        if (_cuts.isEmpty) _cuts.add(_CutDraft());
+      });
+      _restoring = false;
+      _wireInitialAutosave();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('이전에 만들던 작업을 불러왔어요.',
+              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(label: '새로 시작', onPressed: _startFresh),
+        ));
+      }
+    } catch (_) {
+      _restoring = false;
+      _wireInitialAutosave();
+    }
+  }
+
+  void _startFresh() {
+    setState(() {
+      _title.clear();
+      _logline.clear();
+      _category = 'ROLEPLAY';
+      for (final c in _cuts) {
+        c.dispose();
+      }
+      _cuts
+        ..clear()
+        ..add(_CutDraft());
+      _attachAutosave(_cuts.first);
+    });
+    _clearDraft();
+  }
+
   @override
   void dispose() {
+    _saveDebounce?.cancel();
+    _saveDraft(); // 화면 빠져나갈 때 마지막 저장
     _title.dispose();
     _logline.dispose();
     for (final c in _cuts) {
@@ -147,6 +301,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         if (x != null && mounted) {
           setState(() => cut.imagePath = x.path);
           HapticFeedback.selectionClick();
+          _scheduleSave();
         }
         return;
       }
@@ -159,11 +314,13 @@ class _CreatorScreenState extends State<CreatorScreen> {
         final extras = xs.skip(1).map((x) {
           final d = _CutDraft();
           d.imagePath = x.path;
+          _attachAutosave(d);
           return d;
         }).toList();
         if (extras.isNotEmpty) _cuts.insertAll(at, extras);
       });
       HapticFeedback.selectionClick();
+      _scheduleSave();
       if (xs.length > 1) _toast('사진 ${xs.length}장으로 컷 ${xs.length}개를 만들었어요!');
     } catch (_) {
       if (mounted) _toast('사진을 불러오지 못했어요.');
@@ -173,20 +330,57 @@ class _CreatorScreenState extends State<CreatorScreen> {
   // ✨ AI 컷 이미지 생성 — 캐릭터 선택 + 한글 키워드 빌더 시트
   // (생성/로딩/한도 처리는 시트 내부에서. 성공 시 결과만 받아 컷에 적용)
   Future<void> _generateAi(_CutDraft cut) async {
-    final res = await showAiGenerateSheet(context,
+    // 시트는 '무엇을 그릴지'만 받고 바로 닫힘 → 생성은 컷 영역에서 진행
+    final req = await showAiGenerateSheet(context,
         initialPrompt: cut.scenePrompt, initialCharacter: _activeCharacter);
     _loadCharacters(); // 시트에서 새 캐릭터를 만들었을 수도 있으니 갱신
-    if (res == null || !mounted) return;
-    setState(() => cut.imagePath = res.path);
-    HapticFeedback.selectionClick();
-    _toast(res.stub
-        ? 'AI 미리보기(데모) 적용 — 실제 생성은 키 설정 후'
-        : 'AI 이미지 생성 완료! (남은 횟수 ${res.remaining})');
+    if (req == null || !mounted) return;
+
+    setState(() => cut.generating = true); // 컷 영역에 스피너
+    _scheduleSave();
+    try {
+      final refs = <String>[];
+      for (final c in req.characters.take(3)) {
+        try {
+          refs.add(await Cloud.characterLocalImage(c));
+        } catch (_) {/* 그 인물만 포기 */}
+      }
+      final res = await Cloud.generateAiImage(req.prompt, refImagePaths: refs);
+      final saved = await _persistImage(res.path); // 앱 꺼져도 남게 복사
+      if (!mounted) return;
+      setState(() {
+        cut.imagePath = saved;
+        cut.scenePrompt = req.prompt; // 다시 만들 때 프리필용
+        cut.generating = false;
+      });
+      _scheduleSave();
+      HapticFeedback.selectionClick();
+      _toast(res.stub
+          ? 'AI 미리보기(데모) 적용 — 실제 생성은 키 설정 후'
+          : 'AI 이미지 생성 완료! (남은 횟수 ${res.remaining})');
+    } on AiQuotaException catch (e) {
+      if (!mounted) return;
+      setState(() => cut.generating = false);
+      _toast('이번 달 AI 생성 ${e.limit}회를 모두 썼어요. 구독하면 더 만들 수 있어요.');
+    } on AiNoImageException catch (e) {
+      if (!mounted) return;
+      setState(() => cut.generating = false);
+      _toast(e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => cut.generating = false);
+      _toast('AI 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    }
   }
 
   void _addCut() {
-    setState(() => _cuts.add(_CutDraft()));
+    setState(() {
+      final c = _CutDraft();
+      _attachAutosave(c);
+      _cuts.add(c);
+    });
     HapticFeedback.selectionClick();
+    _scheduleSave();
   }
 
   // 🎭 새 등장인물 만들기 → 생성 후 기본 인물로 지정
@@ -399,11 +593,13 @@ class _CreatorScreenState extends State<CreatorScreen> {
           d.text.text = s.dialogue;
           d.direction.text = s.direction;
           d.scenePrompt = s.scenePrompt;
+          _attachAutosave(d);
           return d;
         }));
       if (_cuts.isEmpty) _cuts.add(_CutDraft());
     });
     HapticFeedback.selectionClick();
+    _scheduleSave();
     _toast('컷 ${r.cuts.length}개를 채웠어요! 각 컷에서 "AI로 생성"을 누르면 그림이 그려져요.');
   }
 
@@ -469,6 +665,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
       );
       if (!mounted) return;
       HapticFeedback.heavyImpact();
+      _clearDraft(); // 발행 완료 → 임시저장 비움
       if (collab) {
         // 캐스팅 화면으로 (배역 분배 → 초대)
         Navigator.of(context).pushReplacement(
@@ -789,6 +986,43 @@ class _CreatorScreenState extends State<CreatorScreen> {
         ),
       );
 
+  // AI 생성 중 — 컷 이미지 영역에 표시
+  Widget _generatingBox(_CutDraft cut) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (cut.imagePath != null)
+          Image.file(File(cut.imagePath!), fit: BoxFit.cover)
+        else
+          Container(color: AppColors.cream),
+        Container(color: Colors.black.withValues(alpha: 0.55)),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(
+                    color: AppColors.gold, strokeWidth: 3),
+              ),
+              const SizedBox(height: 12),
+              Text('AI가 그리는 중…',
+                  style: GoogleFonts.notoSansKr(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14)),
+              const SizedBox(height: 3),
+              Text('다른 컷 작업해도 돼요',
+                  style: GoogleFonts.notoSansKr(
+                      color: Colors.white70, fontSize: 11.5)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _cutCard(int i) {
     final cut = _cuts[i];
     return Container(
@@ -803,10 +1037,12 @@ class _CreatorScreenState extends State<CreatorScreen> {
         children: [
           // 사진 영역
           Pressable(
-            onTap: () => _pickImage(cut),
+            onTap: cut.generating ? null : () => _pickImage(cut),
             child: AspectRatio(
               aspectRatio: 16 / 10,
-              child: cut.imagePath != null
+              child: cut.generating
+                  ? _generatingBox(cut)
+                  : cut.imagePath != null
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
