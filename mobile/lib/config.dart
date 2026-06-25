@@ -30,6 +30,7 @@ class Env {
   static const siteBaseUrl = 'https://webtoon-flax.vercel.app';
   static const termsUrl = '$siteBaseUrl/terms';
   static const privacyUrl = '$siteBaseUrl/privacy';
+  static const guidelinesUrl = '$siteBaseUrl/guidelines';
   static const supportEmail = 'admin@pluck.co.kr';
 }
 
