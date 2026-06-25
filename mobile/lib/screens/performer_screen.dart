@@ -386,7 +386,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
           _index < _lines.length - 1 &&
           !_saved.contains(_lines[_index + 1].dialogue.id)) {
         await Future.delayed(const Duration(milliseconds: 380));
-        if (mounted && !_recording) _go(1);
+        if (mounted && !_recording) _go(1, auto: true);
       }
     }
   }
@@ -403,8 +403,18 @@ class _PerformerScreenState extends State<PerformerScreen> {
     }
   }
 
-  void _go(int delta) {
+  int _autoAdvanceAtMs = 0; // 자동 이동 시각 — 직후 무심코 누른 '다음' 흡수용
+
+  void _go(int delta, {bool auto = false}) {
     if (_recording || _countdown > 0) return;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (auto) {
+      _autoAdvanceAtMs = nowMs;
+    } else if (delta > 0 && nowMs - _autoAdvanceAtMs < 900) {
+      // 방금 녹음 후 자동으로 넘어갔는데 또 '다음'을 누름 → 건너뜀 방지(1회 흡수)
+      _autoAdvanceAtMs = 0;
+      return;
+    }
     final next = _index + delta;
     if (next < 0 || next >= _lines.length) return;
     HapticFeedback.selectionClick();
@@ -699,6 +709,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 코너: 뒤로 / 초기화
           Row(
             children: [
               IconButton(
@@ -709,9 +720,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                   size: 20,
                 ),
               ),
-              _pill('CUT ${line.cut.order} / ${detail.cuts.length}'),
               const Spacer(),
-              _pill('$done / $total 완료', color: AppColors.gold),
               if (done > 0 && !_isCollabRole)
                 IconButton(
                   tooltip: '녹음 초기화',
@@ -722,10 +731,29 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: _progressBar(total == 0 ? 0 : done / total),
+          ),
+          const SizedBox(height: 9),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Text('CUT ${line.cut.order} / ${detail.cuts.length}',
+                    style: GoogleFonts.notoSansKr(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12.5)),
+                const Spacer(),
+                Text('녹음 $done / $total',
+                    style: GoogleFonts.notoSansKr(
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12.5)),
+              ],
+            ),
           ),
         ],
       ),
@@ -755,22 +783,6 @@ class _PerformerScreenState extends State<PerformerScreen> {
           ),
         ),
       ],
-    ),
-  );
-
-  Widget _pill(String text, {Color color = Colors.white}) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(
-      text,
-      style: GoogleFonts.notoSansKr(
-        color: color,
-        fontWeight: FontWeight.w900,
-        fontSize: 12,
-      ),
     ),
   );
 
@@ -994,6 +1006,20 @@ class _PerformerScreenState extends State<PerformerScreen> {
                   fontWeight: FontWeight.w800,
                   fontSize: 12.5,
                 ),
+              ),
+            ),
+          ],
+          // 자동 이동 안내(처음 헷갈리지 않게)
+          if (!_recording && !readyToMake) ...[
+            const SizedBox(height: 14),
+            Text(
+              '녹음을 마치면 다음 컷으로 자동으로 넘어가요',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.notoSansKr(
+                color: Colors.white60,
+                fontWeight: FontWeight.w700,
+                fontSize: 11.5,
+                shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
               ),
             ),
           ],
