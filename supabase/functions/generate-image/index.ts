@@ -12,7 +12,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
-const FREE_LIMIT = parseInt(Deno.env.get('AI_FREE_LIMIT') ?? '5', 10);
+// 개발/테스트용 기본 50회. 출시 전 5회로 낮추거나 RevenueCat 구독으로 게이트.
+const FREE_LIMIT = parseInt(Deno.env.get('AI_FREE_LIMIT') ?? '50', 10);
 // 2026-06: '-preview' 정식 출시되며 모델명 변경됨. 기본은 저렴한 flash(Nano Banana).
 // 더 고품질 원하면 GEMINI_IMAGE_MODEL=gemini-3-pro-image (비쌈) 등으로 교체.
 const GEMINI_MODEL =
