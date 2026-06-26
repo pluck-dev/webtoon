@@ -169,8 +169,7 @@ class _CollabManageScreenState extends State<CollabManageScreen>
     }
   }
 
-  void _snack(String m) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(m), behavior: SnackBarBehavior.floating));
+  void _snack(String m) => showAppToast(context, m);
 
   @override
   Widget build(BuildContext context) {

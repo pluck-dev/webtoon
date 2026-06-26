@@ -279,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
       child: Row(
         children: [
-          const BrandLogo(size: 34, tapToAnimate: true),
+          const BrandLogo(size: 34, animate: true),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -375,30 +375,74 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _emptyBox() => Padding(
-    padding: const EdgeInsets.all(40),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.theaters_outlined, color: AppColors.faint, size: 44),
-        const SizedBox(height: 14),
-        Text(
-          _filter == 'ALL' ? '아직 공개된 작품이 없어요.' : '이 카테고리엔 작품이 없어요.',
-          style: GoogleFonts.notoSansKr(
-            fontWeight: FontWeight.w800,
-            color: AppColors.muted,
-          ),
+  Widget _emptyBox() {
+    // 전체 보기 + 작품 없음: 만들기 유도 강화
+    if (_filter == 'ALL') {
+      return Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.auto_stories_rounded, color: AppColors.gold, size: 48),
+            const SizedBox(height: 14),
+            Text(
+              '아직 만화가 없어요',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                fontSize: 17,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '첫 만화를 만들어보세요',
+              style: GoogleFonts.notoSansKr(
+                fontSize: 14,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () async {
+                await Navigator.of(
+                  context,
+                ).push(fadeThroughRoute(const CreatorScreen()));
+                if (mounted) _refresh();
+              },
+              icon: const Icon(Icons.edit_rounded, size: 18),
+              label: Text(
+                '만화 만들기',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
         ),
-        if (_filter != 'ALL') ...[
+      );
+    }
+    // 카테고리 필터 + 결과 없음
+    return Padding(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.theaters_outlined, color: AppColors.faint, size: 44),
+          const SizedBox(height: 14),
+          Text(
+            '이 카테고리엔 작품이 없어요.',
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted,
+            ),
+          ),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () => setState(() => _filter = 'ALL'),
             child: const Text('전체 보기'),
           ),
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
   Widget _errorBox(String msg) => Padding(
     padding: const EdgeInsets.all(24),

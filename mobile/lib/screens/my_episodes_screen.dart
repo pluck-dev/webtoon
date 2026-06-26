@@ -11,7 +11,9 @@ import 'performer_screen.dart';
 
 /// 내가 만든(발행한) 만화 목록 — 더빙하러 가기 / 삭제
 class MyEpisodesScreen extends StatefulWidget {
-  const MyEpisodesScreen({super.key});
+  /// embedded=true 이면 Scaffold의 appBar를 null로(상위 MyWorkScreen이 제목 표시)
+  final bool embedded;
+  const MyEpisodesScreen({super.key, this.embedded = false});
 
   @override
   State<MyEpisodesScreen> createState() => _MyEpisodesScreenState();
@@ -87,9 +89,7 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('삭제에 실패했어요.')),
-        );
+        showAppToast(context, '삭제에 실패했어요.');
       }
     }
   }
@@ -97,12 +97,15 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '내가 만든 만화',
-          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
-        ),
-      ),
+      // embedded 모드: 상위 MyWorkScreen이 제목을 표시하므로 appBar 숨김
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(
+                '내가 만든 만화',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+              ),
+            ),
       body: _error != null
           ? _msg('목록을 불러오지 못했어요.')
           : _items == null

@@ -926,9 +926,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         ),
       );
 
-  void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(m), behavior: SnackBarBehavior.floating),
-      );
+  void _toast(String m) => showAppToast(context, m);
 
   @override
   Widget build(BuildContext context) {

@@ -8,7 +8,7 @@ import '../widgets/brand_icons.dart';
 import 'creator_screen.dart';
 import 'feed_screen.dart';
 import 'home_screen.dart';
-import 'library_screen.dart';
+import 'my_work_screen.dart';
 import 'profile_screen.dart';
 
 /// 로그인 후 메인 셸 — 홈/피드/보관함/프로필 + 가운데 '만들기' 버튼
@@ -36,7 +36,7 @@ class _RootScreenState extends State<RootScreen> {
       body: switch (_index) {
         0 => const HomeScreen(),
         1 => const FeedScreen(),
-        2 => const LibraryScreen(),
+        2 => const MyWorkScreen(),
         _ => const ProfileScreen(),
       },
       bottomNavigationBar: _FloatingNav(
@@ -105,17 +105,18 @@ class _FloatingNav extends StatelessWidget {
                 _tab(0, BrandIconType.home, '홈'),
                 _tab(1, BrandIconType.feed, '피드'),
                 const Expanded(child: SizedBox()),
-                _tab(2, BrandIconType.library, '보관함'),
+                _tab(2, BrandIconType.library, '내 작업'),
                 _tab(3, BrandIconType.profile, '프로필'),
               ],
             ),
           ),
           // 가운데 만들기 — 바 윗선에 걸친 라이즈드 골드 버튼 + 라벨
+          // headroom 까지 포함한 전체 높이를 줘서 라이즈드 버튼이 넘치지 않게(오버플로우 방지)
           Positioned(
             left: 0,
             right: 0,
+            top: 0,
             bottom: bottomInset,
-            height: barH,
             child: Align(
               alignment: Alignment.bottomCenter,
               child: Padding(

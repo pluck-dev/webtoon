@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../config.dart';
 
@@ -231,4 +234,111 @@ class SkeletonCard extends StatelessWidget {
     borderRadius: BorderRadius.circular(r),
     child: SizedBox(width: w, height: h, child: const Shimmer()),
   );
+}
+
+/// 공용 토스트 — 화면 상단에서 약 20% 내려온 위치에 뜬다.
+/// 하단 바텀 네비와 겹치지 않도록 SnackBar(하단) 대신 사용한다.
+void showAppToast(
+  BuildContext context,
+  String message, {
+  Duration duration = const Duration(milliseconds: 2400),
+}) {
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) return;
+  late OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _ToastView(
+      message: message,
+      duration: duration,
+      onDismiss: () => entry.remove(),
+    ),
+  );
+  overlay.insert(entry);
+}
+
+class _ToastView extends StatefulWidget {
+  final String message;
+  final Duration duration;
+  final VoidCallback onDismiss;
+  const _ToastView({
+    required this.message,
+    required this.duration,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_ToastView> createState() => _ToastViewState();
+}
+
+class _ToastViewState extends State<_ToastView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+  );
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _c.forward();
+    _timer = Timer(widget.duration, _hide);
+  }
+
+  Future<void> _hide() async {
+    if (!mounted) return;
+    await _c.reverse();
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.of(context).size.height;
+    final curved = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+    return Positioned(
+      top: h * 0.2, // 상단에서 20% 내려온 지점
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: FadeTransition(
+          opacity: _c,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, -0.18),
+              end: Offset.zero,
+            ).animate(curved),
+            child: Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.ink.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: AppShadows.modal,
+                ),
+                child: Text(
+                  widget.message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.paper,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

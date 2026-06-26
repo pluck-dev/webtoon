@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -84,9 +85,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     } catch (_) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('댓글을 등록하지 못했어요.')),
-        );
+        showAppToast(context, '댓글을 등록하지 못했어요.');
       }
     }
   }

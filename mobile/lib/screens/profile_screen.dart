@@ -20,18 +20,14 @@ class ProfileScreen extends StatelessWidget {
       mode: LaunchMode.externalApplication,
     );
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('링크를 열 수 없어요: $url')));
+      showAppToast(context, '링크를 열 수 없어요: $url');
     }
   }
 
   Future<void> _mail(BuildContext context) async {
     final uri = Uri(scheme: 'mailto', path: Env.supportEmail);
     if (!await launchUrl(uri) && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('메일 앱을 열 수 없어요: ${Env.supportEmail}')),
-      );
+      showAppToast(context, '메일 앱을 열 수 없어요: ${Env.supportEmail}');
     }
   }
 
@@ -109,8 +105,7 @@ class ProfileScreen extends StatelessWidget {
       },
     );
     if (!await launchUrl(uri) && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('메일 앱을 열 수 없어요: ${Env.supportEmail}')));
+      showAppToast(context, '메일 앱을 열 수 없어요: ${Env.supportEmail}');
     }
   }
 

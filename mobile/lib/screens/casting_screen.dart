@@ -37,9 +37,7 @@ class _CastingScreenState extends State<CastingScreen> {
 
   Future<void> _create() async {
     if (_inviteCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('초대할 배역을 하나 이상 비워두세요.')),
-      );
+      showAppToast(context, '초대할 배역을 하나 이상 비워두세요.');
       return;
     }
     setState(() => _creating = true);
@@ -61,9 +59,7 @@ class _CastingScreenState extends State<CastingScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _creating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('초대 만들기에 실패했어요.')),
-        );
+        showAppToast(context, '초대 만들기에 실패했어요.');
       }
     }
   }
