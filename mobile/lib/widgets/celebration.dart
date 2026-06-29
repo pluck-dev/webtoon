@@ -113,7 +113,7 @@ class _CelebrationState extends State<_Celebration>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🎉', style: TextStyle(fontSize: 40)),
+                          const Icon(Icons.celebration_rounded, size: 40, color: Colors.white),
                           const SizedBox(height: 10),
                           Text(
                             '모든 장면을 더빙했어요!',

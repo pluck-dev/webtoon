@@ -58,9 +58,9 @@ class _CollabListScreenState extends State<CollabListScreen> with RouteAware {
     final s = m['status'] as String? ?? 'OPEN';
     final rec = m['recorded'] ?? 0;
     final total = m['total'] ?? 0;
-    if (s == 'COMPLETE') return '✅ 완성됨';
-    if (s == 'READY') return '🎬 완성 대기';
-    return '🎭 배역 $rec/$total';
+    if (s == 'COMPLETE') return '완성됨';
+    if (s == 'READY') return '완성 대기';
+    return '배역 $rec/$total';
   }
 
   @override

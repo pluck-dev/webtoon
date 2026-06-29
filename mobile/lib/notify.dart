@@ -70,7 +70,7 @@ class Notify {
   static Future<void> renderDone() async {
     await _local.show(
       id: 1001,
-      title: '🎬 영상이 완성됐어요!',
+      title: '영상이 완성됐어요!',
       body: '탭해서 확인하세요',
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(

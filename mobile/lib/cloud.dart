@@ -422,6 +422,171 @@ class Cloud {
     return (epId: epId, characters: characters);
   }
 
+  /// 발행된 에피소드를 같은 id로 수정(in-place). 좋아요·댓글·공유링크 유지.
+  /// [cuts] 각 항목:
+  ///   - cutId/dialogueId : 기존 컷이면 보유(유지·갱신), 신규 컷이면 null
+  ///   - imagePath : 새/교체 이미지의 로컬 경로(있으면 업로드), null이면 imageUrl 유지
+  ///   - imageUrl  : 기존 원격 이미지(그대로 둘 때)
+  /// 대사 텍스트가 바뀐 기존 컷은 '내' 녹음을 초기화한다(다른 사용자 녹음은 RLS상 유지).
+  /// 목록에서 빠진 기존 컷은 삭제(Dialogue·Recording은 FK Cascade).
+  static Future<void> updateEpisode({
+    required String episodeId,
+    required String title,
+    required String logline,
+    required String category,
+    required List<
+            ({
+              String? cutId,
+              String? dialogueId,
+              String? imagePath,
+              String? imageUrl,
+              String speaker,
+              String text,
+              String direction,
+            })>
+        cuts,
+  }) async {
+    final uid = await ensureUser();
+
+    // 0) 기존 컷/대사 로드 — 삭제 대상·대사변경 판별용
+    final existCutRows =
+        await sb.from('Cut').select('id').eq('episodeId', episodeId);
+    final existCutIds =
+        (existCutRows as List).map((r) => r['id'] as String).toSet();
+    final existDiaRows = existCutIds.isEmpty
+        ? <Map<String, dynamic>>[]
+        : (await sb
+                .from('Dialogue')
+                .select('id,text')
+                .inFilter('cutId', existCutIds.toList()))
+            .cast<Map<String, dynamic>>();
+    final oldTextByDia = {
+      for (final r in existDiaRows)
+        r['id'] as String: (r['text'] ?? '') as String,
+    };
+
+    // 1) 화자 → 캐릭터 id (기존 이름 재활용 + 신규 생성)
+    const palette = [
+      '#EF6F5E',
+      '#5CC8BA',
+      '#F0BD62',
+      '#3A7BD5',
+      '#FF6B9D',
+      '#9B8CFF',
+    ];
+    final existCharRows = await sb
+        .from('Character')
+        .select('id,name')
+        .eq('episodeId', episodeId);
+    final charIdByName = <String, String>{
+      for (final r in existCharRows as List)
+        (r['name'] ?? '') as String: r['id'] as String,
+    };
+    final speakers = <String>[];
+    for (final c in cuts) {
+      final s = c.speaker.trim();
+      if (s.isNotEmpty && !speakers.contains(s)) speakers.add(s);
+    }
+    for (var i = 0; i < speakers.length; i++) {
+      if (charIdByName.containsKey(speakers[i])) continue;
+      final cid = _uuid.v4();
+      await sb.from('Character').insert({
+        'id': cid,
+        'episodeId': episodeId,
+        'name': speakers[i],
+        'description': '',
+        'voiceGuide': '',
+        'color': palette[i % palette.length],
+      });
+      charIdByName[speakers[i]] = cid;
+    }
+
+    // 2) 컷 순서대로 갱신/추가
+    String? thumb;
+    final keptCutIds = <String>{};
+    final diaToReset = <String>[]; // 대사 텍스트가 바뀐 기존 dialogueId
+    for (var i = 0; i < cuts.length; i++) {
+      final c = cuts[i];
+      final order = i + 1;
+      String imageUrl;
+      if (c.imagePath != null) {
+        final key = 'user/$episodeId/cut-${_uuid.v4()}.jpg';
+        await sb.storage.from(Env.bucketImages).upload(
+              key,
+              File(c.imagePath!),
+              fileOptions:
+                  const FileOptions(contentType: 'image/jpeg', upsert: false),
+            );
+        imageUrl = Env.publicImageUrl(key);
+      } else {
+        imageUrl = c.imageUrl ?? '';
+      }
+      thumb ??= imageUrl;
+      final charId = charIdByName[c.speaker.trim()];
+
+      if (c.cutId != null && existCutIds.contains(c.cutId)) {
+        // 기존 컷 — id 유지(녹음 보존)
+        keptCutIds.add(c.cutId!);
+        await sb.from('Cut').update({
+          'order': order,
+          'imageUrl': imageUrl,
+        }).eq('id', c.cutId!);
+        if (c.dialogueId != null) {
+          await sb.from('Dialogue').update({
+            'characterId': charId,
+            'order': 1,
+            'text': c.text,
+            'direction': c.direction,
+          }).eq('id', c.dialogueId!);
+          final old = oldTextByDia[c.dialogueId!];
+          if (old != null && old != c.text) diaToReset.add(c.dialogueId!);
+        }
+      } else {
+        // 신규 컷
+        final cutId = _uuid.v4();
+        await sb.from('Cut').insert({
+          'id': cutId,
+          'episodeId': episodeId,
+          'order': order,
+          'imageUrl': imageUrl,
+          'caption': '',
+        });
+        await sb.from('Dialogue').insert({
+          'id': _uuid.v4(),
+          'cutId': cutId,
+          'characterId': charId,
+          'order': 1,
+          'text': c.text,
+          'direction': c.direction,
+        });
+      }
+    }
+
+    // 3) 빠진 기존 컷 삭제 (Dialogue·Recording Cascade)
+    final toDelete = existCutIds.difference(keptCutIds);
+    for (final id in toDelete) {
+      await sb.from('Cut').delete().eq('id', id);
+    }
+
+    // 4) 대사 텍스트가 바뀐 컷 → 내 녹음만 초기화
+    if (diaToReset.isNotEmpty) {
+      await sb
+          .from('Recording')
+          .delete()
+          .inFilter('dialogueId', diaToReset)
+          .eq('userId', uid);
+    }
+
+    // 5) 에피소드 메타 갱신 (썸네일 = 첫 컷)
+    await sb.from('Episode').update({
+      'title': title,
+      'logline': logline,
+      'category': category,
+      'thumbnailUrl': ?thumb,
+      'updatedAt': _now(),
+    }).eq('id', episodeId);
+  }
+
   /// AI 컷 이미지 생성 → 로컬 파일 경로 + 남은 횟수.
   /// [refImagePaths] : 캐릭터 일관성용 참조 이미지(로컬 경로, 최대 3장).
   /// 월 한도 초과 시 [AiQuotaException].

@@ -16,16 +16,20 @@ import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/celebration.dart';
+import 'creator_screen.dart';
 import 'video_sheet.dart';
 
 class PerformerScreen extends StatefulWidget {
   final String episodeId;
+  // 작가 본인 진입 시 true → 컷/대사 '수정' 버튼 노출(공유받은 사람은 false)
+  final bool canEdit;
   // 초대 더빙: 이 배역(캐릭터)들 대사만 녹음. null이면 전체(혼자 더빙).
   final Set<String>? roleCharacterIds;
   final String? collabSessionId; // 콜라보 세션(완료 시 내 배역 표시)
   const PerformerScreen({
     super.key,
     required this.episodeId,
+    this.canEdit = false,
     this.roleCharacterIds,
     this.collabSessionId,
   });
@@ -143,6 +147,25 @@ class _PerformerScreenState extends State<PerformerScreen> {
     });
     HapticFeedback.mediumImpact();
     showAppToast(context, '녹음을 초기화했어요. 처음부터 다시 녹음하세요.');
+  }
+
+  // 만화 수정 — 작가 화면으로 갔다가 돌아오면 컷/대사를 다시 불러옴.
+  // 수정으로 바뀐 컷의 녹음은 서버에서 초기화되므로 재동기화한다.
+  Future<void> _openEdit() async {
+    final changed = await Navigator.of(context).push<bool>(
+      fadeThroughRoute(CreatorScreen(episodeId: widget.episodeId)),
+    );
+    if (changed != true || !mounted) return;
+    setState(() {
+      _detail = null;
+      _index = 0;
+      _takes.clear();
+      _takeMs.clear();
+      _saved.clear();
+      _uploading.clear();
+      _celebrated = false;
+    });
+    _load();
   }
 
   Future<void> _uploadTake(
@@ -661,7 +684,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
               ),
               const SizedBox(height: 22),
               Text(
-                '폰에서 직접 만들고 있어요.\n다른 작품 더빙하러 가도 돼요 — 완료되면 알림으로 알려드릴게요 🔔',
+                '폰에서 직접 만들고 있어요.\n다른 작품 더빙하러 가도 돼요 — 완료되면 알림으로 알려드릴게요',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansKr(
                   color: Colors.white70,
@@ -728,6 +751,16 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
               ),
               const Spacer(),
+              if (widget.canEdit)
+                IconButton(
+                  tooltip: '만화 수정',
+                  onPressed: (_recording || _rendering) ? null : _openEdit,
+                  icon: const Icon(
+                    Icons.edit_rounded,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
+                ),
               if (done > 0 && !_isCollabRole)
                 IconButton(
                   tooltip: '녹음 초기화',
@@ -829,7 +862,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
               ),
               const SizedBox(height: 18),
               Text(
-                _isCollabRole ? '내 배역 다 녹음했어요!' : '모든 컷을 다 녹음했어요! 🎉',
+                _isCollabRole ? '내 배역 다 녹음했어요!' : '모든 컷을 다 녹음했어요!',
                 style: GoogleFonts.notoSansKr(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
@@ -846,7 +879,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
               const SizedBox(height: 20),
               if (_isCollabRole)
                 _sheetButton(
-                  '✓ 내 배역 완료하기',
+                  '내 배역 완료하기',
                   filled: true,
                   onTap: () async {
                     Navigator.pop(sheetCtx);
@@ -857,7 +890,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 )
               else ...[
                 _sheetButton(
-                  '🎬 영상 만들기',
+                  '영상 만들기',
                   filled: true,
                   onTap: () {
                     Navigator.pop(sheetCtx);
@@ -866,7 +899,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
                 const SizedBox(height: 10),
                 _sheetButton(
-                  '🎙 다시 녹음하기',
+                  '다시 녹음하기',
                   filled: false,
                   onTap: () {
                     Navigator.pop(sheetCtx);
@@ -1042,7 +1075,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
               ),
               child: Text(
-                '🎉 다 녹음했어요! 초록 버튼으로 영상 만들기',
+                '다 녹음했어요! 초록 버튼으로 영상 만들기',
                 style: GoogleFonts.notoSansKr(
                   color: const Color(0xFF8FE3A6),
                   fontWeight: FontWeight.w800,
@@ -1139,7 +1172,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
                       : up
                       ? ('저장 중…', AppColors.gold)
                       : saved
-                      ? ('저장됨 ✓', const Color(0xFF6FCF97))
+                      ? ('저장됨', const Color(0xFF6FCF97))
                       : hasTake
                       ? ('녹음됨', Colors.white70)
                       : ('미녹음', Colors.white38);

@@ -176,10 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _greeting(String name) {
     final h = DateTime.now().hour;
     final who = name.isEmpty ? '' : '$name 님, ';
-    if (h < 6) return '$who늦은 밤이에요 🌙';
-    if (h < 12) return '$who좋은 아침이에요 ☀️';
-    if (h < 18) return '$who좋은 오후예요 🎬';
-    return '$who편안한 저녁이에요 🌆';
+    if (h < 6) return '$who늦은 밤이에요';
+    if (h < 12) return '$who좋은 아침이에요';
+    if (h < 18) return '$who좋은 오후예요';
+    return '$who편안한 저녁이에요';
   }
 
   // AI 창작 전면 배너 — 홈 상단에서 핵심 기능(AI로 만들기)을 바로 진입

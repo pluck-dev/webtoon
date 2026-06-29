@@ -258,10 +258,10 @@ class _CollabManageScreenState extends State<CollabManageScreen>
                   const SizedBox(height: 2),
                   Text(
                       c.isComplete
-                          ? '✅ 완성됐어요!'
+                          ? '완성됐어요!'
                           : c.isReady
-                              ? '🎬 모두 녹음 완료 — 완성할 수 있어요'
-                              : '👥 친구를 초대해 배역을 채워주세요',
+                              ? '모두 녹음 완료 — 완성할 수 있어요'
+                              : '친구를 초대해 배역을 채워주세요',
                       style: GoogleFonts.notoSansKr(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w800,

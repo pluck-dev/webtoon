@@ -13,25 +13,36 @@ import '../ai_studio.dart';
 import '../cloud.dart';
 import '../config.dart';
 import '../models.dart';
+import '../repo.dart';
 import '../widgets/app_widgets.dart';
 import 'casting_screen.dart';
 import 'performer_screen.dart';
 
-/// 작가 모드 — 컷마다 사진 + 대사로 내 만화 만들기
+/// 작가 모드 — 컷마다 사진 + 대사로 내 만화 만들기.
+/// [episodeId]가 있으면 '수정' 모드(기존 발행물을 같은 id로 in-place 갱신).
 class CreatorScreen extends StatefulWidget {
-  const CreatorScreen({super.key});
+  final String? episodeId;
+  const CreatorScreen({super.key, this.episodeId});
 
   @override
   State<CreatorScreen> createState() => _CreatorScreenState();
 }
 
 class _CutDraft {
-  String? imagePath;
+  String? cutId; // 수정 모드: 기존 컷 id (유지 시 녹음 보존)
+  String? dialogueId; // 수정 모드: 기존 대사 id
+  String? imageUrl; // 수정 모드: 기존 원격 이미지(로컬 교체 전까지 표시·유지)
+  String? imagePath; // 신규/교체 로컬 이미지 (있으면 업로드 대상)
   String? scenePrompt; // AI 스토리보드가 추천한 장면 묘사(이미지 생성 프리필용)
   bool generating = false; // AI 이미지 생성 중 → 컷 영역에 스피너
   final speaker = TextEditingController();
   final text = TextEditingController();
   final direction = TextEditingController();
+
+  // 표시·검증용: 로컬이든 원격이든 이미지가 있는지
+  bool get hasImage =>
+      imagePath != null || (imageUrl != null && imageUrl!.isNotEmpty);
+
   void dispose() {
     speaker.dispose();
     text.dispose();
@@ -58,11 +69,54 @@ class _CreatorScreenState extends State<CreatorScreen> {
   Timer? _saveDebounce;
   bool _restoring = true; // 복원 중엔 자동저장 막기
 
+  bool get _isEdit => widget.episodeId != null;
+
   @override
   void initState() {
     super.initState();
+    if (_isEdit) {
+      _loadForEdit(); // 기존 발행물 불러와 채움(임시저장은 쓰지 않음)
+    } else {
+      _loadCharacters();
+      _restoreDraft();
+    }
+  }
+
+  // 수정 모드 — 발행된 에피소드를 불러와 컷/대사/대본을 채움
+  Future<void> _loadForEdit() async {
     _loadCharacters();
-    _restoreDraft();
+    try {
+      final d = await Repo.fetchEpisodeDetail(widget.episodeId!);
+      if (!mounted) return;
+      setState(() {
+        _title.text = d.summary.title;
+        _logline.text = d.summary.logline;
+        _category = _categories.containsKey(d.summary.category)
+            ? d.summary.category
+            : 'ROLEPLAY';
+        for (final c in _cuts) {
+          c.dispose();
+        }
+        _cuts
+          ..clear()
+          ..addAll(d.cuts.map((cut) {
+            final dia = cut.dialogues.isNotEmpty ? cut.dialogues.first : null;
+            final draft = _CutDraft();
+            draft.cutId = cut.id;
+            draft.dialogueId = dia?.id;
+            draft.imageUrl = cut.imageUrl;
+            draft.speaker.text = dia?.character?.name ?? '';
+            draft.text.text = dia?.text ?? '';
+            draft.direction.text = dia?.direction ?? '';
+            return draft;
+          }));
+        if (_cuts.isEmpty) _cuts.add(_CutDraft());
+      });
+    } catch (_) {
+      if (mounted) _toast('만화를 불러오지 못했어요.');
+    } finally {
+      _restoring = false; // 수정 모드는 자동 임시저장을 쓰지 않음
+    }
   }
 
   Future<void> _loadCharacters() async {
@@ -99,7 +153,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
   }
 
   Future<void> _saveDraft() async {
-    if (_restoring) return;
+    if (_restoring || _isEdit) return;
     final empty = _title.text.trim().isEmpty &&
         _logline.text.trim().isEmpty &&
         _cuts.every((c) =>
@@ -272,7 +326,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
             ListTile(
               leading: const Icon(Icons.auto_awesome_rounded,
                   color: AppColors.gold),
-              title: Text('✨ AI로 생성',
+              title: Text('AI로 생성',
                   style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
               subtitle: Text('원하는 장면을 글로 적으면 AI가 그려줘요',
                   style: GoogleFonts.notoSansKr(
@@ -724,7 +778,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
     if (_title.text.trim().isEmpty) return '제목을 입력해 주세요.';
     if (_cuts.isEmpty) return '컷을 하나 이상 추가해 주세요.';
     for (var i = 0; i < _cuts.length; i++) {
-      if (_cuts[i].imagePath == null) return '컷 ${i + 1}의 사진을 넣어주세요.';
+      if (!_cuts[i].hasImage) return '컷 ${i + 1}의 사진을 넣어주세요.';
       if (_cuts[i].text.text.trim().isEmpty) return '컷 ${i + 1}의 대사를 입력해 주세요.';
     }
     return null;
@@ -744,6 +798,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
     final err = _validate();
     if (err != null) {
       _toast(err);
+      return;
+    }
+    if (_isEdit) {
+      await _saveEdit();
       return;
     }
     // 화자 2명 이상이면 혼자/초대 선택
@@ -794,6 +852,44 @@ class _CreatorScreenState extends State<CreatorScreen> {
       if (mounted) {
         setState(() => _publishing = false);
         _toast('발행에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      }
+    }
+  }
+
+  // 수정 모드 저장 — 같은 epId로 in-place 갱신 후 이전 화면으로 복귀
+  Future<void> _saveEdit() async {
+    setState(() => _publishing = true);
+    try {
+      final cuts = _cuts
+          .map((c) => (
+                cutId: c.cutId,
+                dialogueId: c.dialogueId,
+                imagePath: c.imagePath,
+                imageUrl: c.imageUrl,
+                speaker: c.speaker.text.trim().isEmpty
+                    ? '내레이션'
+                    : c.speaker.text.trim(),
+                text: c.text.text.trim(),
+                direction: c.direction.text.trim(),
+              ))
+          .toList();
+      await Cloud.updateEpisode(
+        episodeId: widget.episodeId!,
+        title: _title.text.trim(),
+        logline: _logline.text.trim().isEmpty
+            ? '내가 만든 만화'
+            : _logline.text.trim(),
+        category: _category,
+        cuts: cuts,
+      );
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      _toast('수정을 저장했어요.');
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _publishing = false);
+        _toast('수정 저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     }
   }
@@ -892,15 +988,17 @@ class _CreatorScreenState extends State<CreatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('만화 만들기',
+        title: Text(_isEdit ? '만화 수정' : '만화 만들기',
             style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
         actions: [
-          // 전체 초기화
-          IconButton(
-            tooltip: '초기화',
-            onPressed: _publishing ? null : _confirmReset,
-            icon: const Icon(Icons.restart_alt_rounded, color: AppColors.muted),
-          ),
+          // 전체 초기화 (새로 만들 때만 — 수정 중엔 원본 컷이 날아갈 수 있어 숨김)
+          if (!_isEdit)
+            IconButton(
+              tooltip: '초기화',
+              onPressed: _publishing ? null : _confirmReset,
+              icon:
+                  const Icon(Icons.restart_alt_rounded, color: AppColors.muted),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
@@ -912,7 +1010,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2.5, color: AppColors.ink),
                     )
-                  : Text('발행',
+                  : Text(_isEdit ? '저장' : '발행',
                       style: GoogleFonts.notoSansKr(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
@@ -996,7 +1094,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2.5, color: AppColors.paper),
                   )
-                : Text('발행하고 더빙하기',
+                : Text(_isEdit ? '수정 저장하기' : '발행하고 더빙하기',
                     style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
           ),
         ),
@@ -1023,7 +1121,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 color: AppColors.gold,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('🎬', style: TextStyle(fontSize: 22)),
+              child: const Icon(Icons.movie_filter_rounded, color: AppColors.ink, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1137,6 +1235,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
       children: [
         if (cut.imagePath != null)
           Image.file(File(cut.imagePath!), fit: BoxFit.cover)
+        else if (cut.imageUrl != null && cut.imageUrl!.isNotEmpty)
+          Image.network(cut.imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(color: AppColors.cream))
         else
           Container(color: AppColors.cream),
         Container(color: Colors.black.withValues(alpha: 0.55)),
@@ -1186,11 +1288,17 @@ class _CreatorScreenState extends State<CreatorScreen> {
               aspectRatio: 16 / 10,
               child: cut.generating
                   ? _generatingBox(cut)
-                  : cut.imagePath != null
+                  : cut.hasImage
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(File(cut.imagePath!), fit: BoxFit.cover),
+                        if (cut.imagePath != null)
+                          Image.file(File(cut.imagePath!), fit: BoxFit.cover)
+                        else
+                          Image.network(cut.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  Container(color: AppColors.cream)),
                         Positioned(
                           right: 10,
                           top: 10,

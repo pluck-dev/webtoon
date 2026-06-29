@@ -137,9 +137,14 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
       child: Row(
         children: [
           Pressable(
-            onTap: () => Navigator.of(
-              context,
-            ).push(fadeThroughRoute(PerformerScreen(episodeId: ep.id))),
+            onTap: () async {
+              await Navigator.of(context).push(
+                fadeThroughRoute(
+                  PerformerScreen(episodeId: ep.id, canEdit: true),
+                ),
+              );
+              if (mounted) _load();
+            },
             child: SizedBox(
               width: 92,
               height: 92,
@@ -193,6 +198,20 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
             ),
           ),
           IconButton(
+            tooltip: '수정',
+            onPressed: () async {
+              await Navigator.of(
+                context,
+              ).push(fadeThroughRoute(CreatorScreen(episodeId: ep.id)));
+              if (mounted) _load();
+            },
+            icon: const Icon(
+              Icons.edit_rounded,
+              color: AppColors.faint,
+            ),
+          ),
+          IconButton(
+            tooltip: '삭제',
             onPressed: () => _confirmDelete(ep),
             icon: const Icon(
               Icons.delete_outline_rounded,

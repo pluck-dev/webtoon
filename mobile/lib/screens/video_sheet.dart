@@ -128,8 +128,10 @@ class _VideoSheetState extends State<_VideoSheet> {
             ),
             Row(
               children: [
+                const Icon(Icons.movie_filter_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
                 Text(
-                  '완성된 영상 🎬',
+                  '완성된 영상',
                   style: GoogleFonts.notoSansKr(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,

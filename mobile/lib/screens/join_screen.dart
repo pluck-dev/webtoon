@@ -166,12 +166,18 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '🎬 각자 버전 더빙',
-              style: GoogleFonts.notoSansKr(
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
+            Row(
+              children: [
+                const Icon(Icons.movie_filter_rounded, size: 15),
+                const SizedBox(width: 6),
+                Text(
+                  '각자 버전 더빙',
+                  style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -281,7 +287,7 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
               ),
               const SizedBox(height: 4),
               Text(
-                '🎭 같이 더빙하고 한 영상으로 완성해요',
+                '같이 더빙하고 한 영상으로 완성해요',
                 style: GoogleFonts.notoSansKr(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -340,7 +346,7 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
       trailing = pill('더빙하기', AppColors.ink, AppColors.paper, () => _dub(r));
     } else if (r.isRecorded) {
       trailing = Text(
-        mine ? '내 녹음 완료 ✓' : '완료 ✓',
+        mine ? '내 녹음 완료' : '완료',
         style: GoogleFonts.notoSansKr(
           fontWeight: FontWeight.w800,
           fontSize: 12.5,

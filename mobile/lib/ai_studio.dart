@@ -718,12 +718,18 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                   16 + MediaQuery.of(context).padding.bottom,
                 ),
                 children: [
-                  Text(
-                    '✨ AI로 장면 만들기',
-                    style: GoogleFonts.notoSansKr(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI로 장면 만들기',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 14),
 
@@ -1111,12 +1117,18 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
                   16 + MediaQuery.of(context).padding.bottom,
                 ),
                 children: [
-                  Text(
-                    '🎭 캐릭터 · 사물 만들기',
-                    style: GoogleFonts.notoSansKr(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.theater_comedy_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '캐릭터 · 사물 만들기',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1429,12 +1441,18 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                   16 + MediaQuery.of(context).padding.bottom,
                 ),
                 children: [
-                  Text(
-                    '🎬 AI 스토리보드',
-                    style: GoogleFonts.notoSansKr(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(Icons.movie_filter_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI 스토리보드',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1514,7 +1532,7 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            '🎬 AI가 장면을 컷으로 나누는 중…',
+                            'AI가 장면을 컷으로 나누는 중…',
                             style: GoogleFonts.notoSansKr(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,

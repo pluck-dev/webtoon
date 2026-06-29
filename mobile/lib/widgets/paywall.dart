@@ -10,10 +10,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config.dart';
 
 const _proBenefits = [
-  ('🎨', 'AI 이미지 더 많이', '월 생성 한도 대폭 상향'),
-  ('🚫', '영상 워터마크 제거', '깔끔한 영상으로 공유'),
-  ('⚡', '우선 생성', '더 빠르게 만들기'),
-  ('💬', '우선 지원', '문의 빠른 응대'),
+  (Icons.palette_rounded, 'AI 이미지 더 많이', '월 생성 한도 대폭 상향'),
+  (Icons.block_rounded, '영상 워터마크 제거', '깔끔한 영상으로 공유'),
+  (Icons.bolt_rounded, '우선 생성', '더 빠르게 만들기'),
+  (Icons.chat_bubble_rounded, '우선 지원', '문의 빠른 응대'),
 ];
 
 /// 프로필 등에 넣는 Pro 구독 유도 카드
@@ -52,7 +52,7 @@ class ProSubscribeCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: const Text('👑', style: TextStyle(fontSize: 22)),
+              child: const Icon(Icons.workspace_premium_rounded, color: AppColors.ink, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -143,7 +143,7 @@ class _PaywallSheet extends StatelessWidget {
         title: Text('구독은 곧 제공돼요',
             style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
         content: Text(
-          '스토어 출시와 함께 Pro 구독을 열어요.\n조금만 기다려 주세요! 🙏',
+          '스토어 출시와 함께 Pro 구독을 열어요.\n조금만 기다려 주세요!',
           style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
         ),
         actions: [
@@ -180,7 +180,7 @@ class _PaywallSheet extends StatelessWidget {
             const SizedBox(height: 22),
             Row(
               children: [
-                const Text('👑', style: TextStyle(fontSize: 28)),
+                const Icon(Icons.workspace_premium_rounded, color: AppColors.gold, size: 28),
                 const SizedBox(width: 10),
                 Text('쩌렁쩌렁 Pro',
                     style: GoogleFonts.notoSansKr(
@@ -257,7 +257,7 @@ class _PaywallSheet extends StatelessWidget {
     );
   }
 
-  Widget _benefit(String emoji, String title, String sub) => Padding(
+  Widget _benefit(IconData icon, String title, String sub) => Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: Row(
           children: [
@@ -269,7 +269,7 @@ class _PaywallSheet extends StatelessWidget {
                 color: AppColors.gold.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Text(emoji, style: const TextStyle(fontSize: 18)),
+              child: Icon(icon, color: AppColors.gold, size: 18),
             ),
             const SizedBox(width: 13),
             Expanded(
