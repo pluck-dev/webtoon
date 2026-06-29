@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../cloud.dart';
 import '../config.dart';
 import '../repo.dart';
+import '../subscription.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/paywall.dart';
 import 'collab_list_screen.dart';
@@ -123,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   n == null
                       ? '이번 달 AI 생성 로딩 중…'
-                      : '이번 달 AI 생성 $n / ${Env.aiFreeLimit}회',
+                      : '이번 달 AI 생성 $n / ${Subscription.instance.aiLimit}회',
                   style: GoogleFonts.notoSansKr(
                       color: AppColors.muted,
                       fontSize: 12.5,

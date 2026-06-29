@@ -12,8 +12,21 @@ class Env {
   static const bucketImages = 'webtoon-images'; // 작가가 올린 컷 이미지
 
   // 무료 월 AI 생성 한도 — generate-image Edge Function의 AI_FREE_LIMIT(기본 50)과 맞출 것.
-  // 서버에서 한도를 바꾸면 이 값도 함께 수정.
   static const aiFreeLimit = 50;
+  static const aiProLimit = 500; // Pro 월 한도 (구독 연동 시 서버 AI_PRO_LIMIT도 동일하게)
+  static const storyboardFreeCuts = 5; // 무료 스토리보드 컷 수
+  static const storyboardProCuts = 20; // Pro 스토리보드 컷 수
+
+  // ── Pro 구독(인앱결제) ──────────────────────────────────────
+  // 스토어(App Store Connect·Play Console)와 RevenueCat에 동일하게 등록할 식별자.
+  static const proEntitlement = 'pro'; // RevenueCat entitlement
+  static const proMonthlyId = 'kr.co.pluck.dubbingo.pro.monthly';
+  static const proYearlyId = 'kr.co.pluck.dubbingo.pro.yearly';
+  static const proMonthlyPriceText = '₩4,900'; // 표시용(실가격은 스토어 연동 시 대체)
+  static const proYearlyPriceText = '₩39,000';
+  // RevenueCat 공개 SDK 키 — 설정 후 채우면 구독 활성화. 비어 있으면 전원 무료.
+  static const revenueCatKeyIos = '';
+  static const revenueCatKeyAndroid = '';
 
   /// 공개 버킷의 storage key → public URL
   static String publicImageUrl(String key) =>

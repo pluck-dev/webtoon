@@ -76,7 +76,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const situation = `${body?.situation ?? ''}`.trim();
     if (situation.length < 4) return json({ error: 'situation_required' }, 400);
-    const maxCuts = Math.min(Math.max(parseInt(body?.maxCuts ?? 5, 10) || 5, 2), 8);
+    // 무료 5컷 / Pro 최대 20컷 — 클라가 보낸 maxCuts를 2~20으로 clamp
+    const maxCuts = Math.min(Math.max(parseInt(body?.maxCuts ?? 5, 10) || 5, 2), 20);
 
     if (!GEMINI_API_KEY) {
       // 키 없을 때 흐름 검증용 stub

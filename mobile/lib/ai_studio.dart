@@ -23,6 +23,7 @@ import 'package:image_picker/image_picker.dart';
 import 'cloud.dart';
 import 'config.dart';
 import 'models.dart';
+import 'subscription.dart';
 
 /// 키워드 한 개: 화면 표시는 한글(ko), 프롬프트엔 영문(en) 사용.
 typedef Kw = ({String ko, String en});
@@ -2123,7 +2124,7 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
     FocusScope.of(context).unfocus();
     setState(() => _busy = true);
     try {
-      final r = await Cloud.suggestCuts(s);
+      final r = await Cloud.suggestCuts(s, maxCuts: Subscription.instance.storyboardMaxCuts);
       if (!mounted) return;
       setState(() {
         _result = r;
@@ -2241,6 +2242,17 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                     busy: _busy,
                     onTap: _suggest,
                   ),
+                  if (!Subscription.instance.isPro) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '더 긴 스토리보드(최대 ${Env.storyboardProCuts}컷)는 Pro에서',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 11.5,
+                        color: AppColors.faint,
+                      ),
+                    ),
+                  ],
 
                   // 로딩 중 — 명확한 안내(닫지 말고 기다리게)
                   if (_busy) ...[

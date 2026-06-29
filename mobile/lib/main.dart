@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'notify.dart';
 import 'repo.dart';
+import 'subscription.dart';
 import 'widgets/app_widgets.dart';
 import 'screens/auth_screen.dart';
 import 'screens/join_screen.dart';
@@ -23,10 +24,11 @@ Future<void> main() async {
   await Supabase.initialize(
     url: Env.supabaseUrl,
     // sb_publishable_ 키는 클라이언트 공개용 (구 anonKey 대체)
-    anonKey: Env.supabaseAnonKey,
     // ignore: deprecated_member_use
+    anonKey: Env.supabaseAnonKey,
   );
   await Notify.init(); // 포그라운드 서비스 + 로컬 알림 채널
+  await Subscription.instance.init(); // Pro 구독 상태 로드 (미연동 시 no-op)
   runApp(const DubbingoApp());
 }
 
