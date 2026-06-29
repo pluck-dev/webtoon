@@ -22,16 +22,10 @@ export default function SiteFooter() {
         </Link>
         <nav className="flex flex-wrap justify-end gap-2" aria-label="Footer navigation">
           <Link
-            href="/#collection"
+            href="/episodes"
             className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
           >
-            작품
-          </Link>
-          <Link
-            href="/admin"
-            className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
-          >
-            관리자
+            작품 둘러보기
           </Link>
           <Link
             href="/terms"
@@ -41,7 +35,7 @@ export default function SiteFooter() {
           </Link>
           <Link
             href="/privacy"
-            className="rounded-full border border-ink px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
+            className="rounded-full border border-line px-3.5 py-2 text-[13px] font-extrabold transition-colors hover:bg-ink/5"
           >
             개인정보처리방침
           </Link>
@@ -49,7 +43,7 @@ export default function SiteFooter() {
       </div>
 
       {/* 사업자 정보 (전자상거래법 표시) */}
-      <dl className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-7 gap-y-3.5 border-y border-line-soft py-5">
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-7 gap-y-3.5 border-y border-line py-5">
         {businessInfo.map((item) => (
           <div className="grid gap-1" key={item.label}>
             <dt className="text-[11px] font-black uppercase tracking-wider text-faint">{item.label}</dt>
