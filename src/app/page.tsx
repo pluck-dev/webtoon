@@ -10,12 +10,12 @@ import { CATEGORY_LABELS } from '@/lib/taxonomy';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: '더빙고 앱 소개',
+  title: '더빙고 — AI 웹툰을 내 목소리로',
   description:
-    '짧은 상황극과 웹툰 컷을 내 목소리로 더빙하는 더빙고. 웹에서는 작품을 구경하고 앱 설치로 이어집니다.',
+    '상황을 한 줄 적으면 AI가 웹툰 컷과 대사를 만들고, 내 목소리로 더빙해 숏폼 영상까지 완성하는 더빙고. 친구와 배역을 나눠 함께 만들 수도 있어요.',
   openGraph: {
-    title: '더빙고 — 구경하고 앱에서 만들기',
-    description: 'AI 웹툰 컷과 짧은 상황극에 목소리를 입혀 더빙 숏폼을 만드는 앱입니다. 웹에서는 예시 작품을 구경할 수 있어요.'
+    title: '더빙고 — AI 웹툰을 내 목소리로',
+    description: '글 한 줄이면 AI가 웹툰 장면·대사를 만들고, 내 목소리로 더빙해 숏폼 영상을 완성해요.'
   }
 };
 
@@ -28,36 +28,37 @@ const proofImages = [
   '/generated/borrowed-tomorrow-03.png'
 ];
 
-const webScope = [
+const valueProps = [
   {
-    title: '작품 둘러보기',
-    copy: '웹툰체·상황극·애니 화풍의 공개 작품을 바로 탐색합니다.',
-    badge: 'SEO / 공유'
+    title: '글만 쓰면 장면이 뚝딱',
+    copy: '상황을 한 줄 적으면 AI가 웹툰 컷과 대사를 만들어요. 실사부터 웹툰까지 화풍을 고르고, 같은 인물을 컷마다 유지해요.',
+    badge: 'AI 제작'
   },
   {
-    title: '제작 예시 구경',
-    copy: '앱에서 만들 수 있는 장면과 웹툰 컷 분위기를 먼저 확인합니다.',
-    badge: '갤러리'
+    title: '내 목소리로 연기',
+    copy: '컷마다 대사를 내 목소리로 녹음해 숏폼 영상으로 완성해요. 다시 녹음도 자유롭게.',
+    badge: '더빙'
   },
   {
-    title: '앱 설치로 전환',
-    copy: '직접 만들고 싶을 때는 앱 설치 안내로 연결합니다.',
-    badge: '앱 전환'
+    title: '친구와 한 작품',
+    copy: '배역을 나눠 친구를 초대하면 한 영상을 같이 더빙해요. 각자 버전으로도 만들 수 있어요.',
+    badge: '함께'
   }
 ];
 
 const appScope = [
-  'AI로 웹툰 컷 만들기',
-  '작품 수정과 임시저장',
-  '반복 녹음과 업로드 복구',
-  '내 작업 관리와 본격 영상 제작'
+  'AI 웹툰 장면 생성',
+  '실사·웹툰 화풍 선택',
+  '내 목소리 더빙',
+  '친구와 협업 더빙',
+  '숏폼 영상 완성'
 ];
 
 const steps = [
-  ['01', '작품 선택', '짧은 장면을 고르고 캐릭터와 대사를 확인합니다.'],
-  ['02', '장면 구경', '웹툰 컷, 대사, 분위기를 보며 어떤 결과물이 나오는지 확인합니다.'],
-  ['03', '앱 설치', '직접 만들고 싶어지면 앱 설치 안내로 이동합니다.'],
-  ['04', '앱에서 완성', 'AI 웹툰 제작, 녹음, 영상 완성은 앱에서 이어갑니다.']
+  ['01', '이야기 쓰기', '상황을 한 줄 적으면 AI가 컷과 대사로 나눠줘요.'],
+  ['02', '장면 만들기', '화풍과 인물을 골라 AI로 웹툰 컷을 생성해요.'],
+  ['03', '목소리 입히기', '컷마다 내 목소리로 대사를 더빙해요.'],
+  ['04', '영상 완성', '숏폼 영상으로 완성해 친구에게 공유해요.']
 ];
 
 export default async function Home() {
@@ -80,14 +81,14 @@ export default async function Home() {
           <div>
             <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-card/80 px-3.5 py-2 text-xs font-black tracking-wide text-muted">
               <i className="h-2 w-2 animate-soft-pulse rounded-full bg-coral" aria-hidden="true" />
-              구경은 웹에서, 제작은 앱에서
+              AI 웹툰 더빙 스튜디오
             </span>
-            <h1 className="max-w-[11ch] text-[clamp(40px,6.5vw,96px)] font-black leading-[0.92] tracking-tight text-ink">
-              짧은 상황극을 <em className="italic text-coral">내 목소리</em>로.
+            <h1 className="max-w-[12ch] text-[clamp(40px,6.5vw,96px)] font-black leading-[0.92] tracking-tight text-ink">
+              AI 웹툰을 <em className="italic text-coral">내 목소리</em>로.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft sm:text-xl">
-              더빙고는 AI 웹툰 컷과 짧은 상황극에 목소리를 입혀 더빙 숏폼을 만드는 앱입니다. 웹에서는 예시 작품을 구경할 수 있어요.
-              웹에서는 어떤 장면을 만들 수 있는지 구경하고, 만들고 싶어지면 앱에서 바로 이어갑니다.
+              상황을 한 줄 적으면 AI가 웹툰 컷과 대사를 만들어줘요. 컷마다 내 목소리로 더빙하면 숏폼 영상이 완성돼요.
+              친구와 배역을 나눠 함께 만들 수도 있어요.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -106,9 +107,9 @@ export default async function Home() {
             </div>
             <dl className="mt-8 grid max-w-2xl grid-cols-3 gap-3">
               {[
-                ['Web', '소개·구경'],
-                ['App', '제작·완성'],
-                ['MP4', '영상 결과']
+                ['AI', '장면 생성'],
+                ['더빙', '내 목소리'],
+                ['MP4', '숏폼 영상']
               ].map(([value, label]) => (
                 <div key={value} className="rounded-2xl border border-line bg-card p-4">
                   <dt className="text-[clamp(24px,4vw,38px)] font-black leading-none text-ink">{value}</dt>
@@ -120,12 +121,12 @@ export default async function Home() {
 
           <div className="relative mx-auto w-full max-w-[520px]">
             <div className="absolute -left-5 top-10 hidden rotate-[-8deg] rounded-2xl border border-line bg-card px-4 py-3 shadow-[0_18px_50px_rgba(23,21,18,.16)] sm:block">
-              <p className="text-xs font-black text-muted">WEB GALLERY</p>
-              <p className="text-lg font-black text-ink">먼저 구경하기</p>
+              <p className="text-xs font-black text-muted">AI SCENE</p>
+              <p className="text-lg font-black text-ink">장면 자동 생성</p>
             </div>
             <div className="absolute -right-4 bottom-16 hidden rotate-[7deg] rounded-2xl border border-ink bg-ink px-4 py-3 text-paper shadow-[0_18px_50px_rgba(23,21,18,.24)] sm:block">
-              <p className="text-xs font-black text-gold">APP STUDIO</p>
-              <p className="text-lg font-black">직접 만들기</p>
+              <p className="text-xs font-black text-gold">MY VOICE</p>
+              <p className="text-lg font-black">내 목소리 더빙</p>
             </div>
             <div className="mx-auto max-w-[360px] rounded-[42px] border-[10px] border-ink bg-ink p-3 shadow-[0_30px_90px_rgba(23,21,18,.32)]">
               <div className="overflow-hidden rounded-[30px] bg-cream">
@@ -173,13 +174,13 @@ export default async function Home() {
 
         <section id="app" className="grid gap-4 py-16 lg:grid-cols-[0.95fr_1.05fr] lg:py-24">
           <div className="rounded-2xl border border-ink bg-ink p-7 text-paper sm:p-9">
-            <p className="mb-3 text-xs font-black uppercase tracking-wider text-gold">앱이 메인 제작 공간</p>
+            <p className="mb-3 text-xs font-black uppercase tracking-wider text-gold">글만 쓰면 영상까지</p>
             <h2 className="text-[clamp(32px,5vw,64px)] font-black leading-none">
-              웹은 입구, 앱은 작업실.
+              생각만 적으면, 웹툰이 영상이 돼요.
             </h2>
             <p className="mt-5 max-w-xl leading-relaxed text-paper/72">
-              웹사이트는 제품을 이해하고 결과물을 구경하는 공간입니다. AI 웹툰 만들기, 녹음, 저장, 영상 완성 같은
-              제작 경험은 앱 설치 후 앱 안에서 이어가도록 설계합니다.
+              상황을 한 줄 적으면 AI가 장면·대사·그림을 만들어요. 컷마다 내 목소리로 더빙하면 숏폼 영상으로 완성되고,
+              친구와 배역을 나눠 같이 만들 수도 있어요.
             </p>
             <div className="mt-7 flex flex-wrap gap-2">
               {appScope.map((item) => (
@@ -191,7 +192,7 @@ export default async function Home() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            {webScope.map((item) => (
+            {valueProps.map((item) => (
               <article key={item.title} className="rounded-2xl border border-line bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(23,21,18,.08)]">
                 <span className="mb-8 inline-flex rounded-full bg-cream px-2.5 py-1 text-[11px] font-black text-muted">
                   {item.badge}
@@ -275,9 +276,9 @@ export default async function Home() {
         <section id="download" className="grid gap-5 overflow-hidden rounded-2xl bg-ink px-7 py-12 text-paper md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <p className="mb-2.5 text-xs font-black uppercase tracking-wider text-gold">Download</p>
-            <h2 className="text-[clamp(28px,4vw,48px)] font-black leading-none">마음에 들면 앱에서 직접 만들어요.</h2>
+            <h2 className="text-[clamp(28px,4vw,48px)] font-black leading-none">나만의 웹툰 더빙, 앱에서 시작해요.</h2>
             <p className="mt-3.5 max-w-md leading-relaxed text-paper/70">
-              웹사이트는 소개와 구경에 집중하고, 제작은 앱 설치 후 이어갑니다. 앱스토어 링크가 준비되면 이 버튼에 연결합니다.
+              글 한 줄이면 AI가 장면을 만들고, 내 목소리로 더빙해 숏폼 영상까지. 앱스토어 링크가 준비되면 이 버튼에 연결돼요.
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5 md:justify-end">
