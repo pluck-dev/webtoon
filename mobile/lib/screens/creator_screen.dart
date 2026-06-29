@@ -241,19 +241,13 @@ class _CreatorScreenState extends State<CreatorScreen> {
       _restoring = false;
       _wireInitialAutosave();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('이전에 만들던 작업을 불러왔어요.',
-              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
-          behavior: SnackBarBehavior.floating,
-          // 하단 '발행하고 더빙하기' 바와 겹치지 않게 그 위로 띄움
-          margin: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 90,
-          ),
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(label: '새로 시작', onPressed: _startFresh),
-        ));
+        // 상단 20% 지점 토스트(앱 공용) — 하단 발행 바와 안 겹침.
+        // '새로 시작'은 우측 상단 초기화(↺) 버튼이 같은 기능.
+        showAppToast(
+          context,
+          '이전에 만들던 작업을 불러왔어요. (새로 시작은 상단 초기화 버튼)',
+          duration: const Duration(seconds: 4),
+        );
       }
     } catch (_) {
       _restoring = false;
