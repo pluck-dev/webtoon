@@ -89,6 +89,16 @@ body {
   color: var(--text);
   font-family: Inter, Pretendard, "Segoe UI", Arial, sans-serif;
   letter-spacing: 0;
+  /* 한글이 음절 단위로 끊기지 않게(단어 단위 줄바꿈). 긴 영문/URL만 끊김 허용 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 제목은 줄 길이를 균형 있게(짧은 줄 끝에 단어 하나만 남는 것 방지) */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
 a {
