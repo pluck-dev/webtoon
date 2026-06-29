@@ -1324,6 +1324,39 @@ class _CreatorScreenState extends State<CreatorScreen> {
                             ),
                           ),
                         ),
+                        // 전체보기 버튼 — AI 생성 중엔 숨김
+                        Positioned(
+                          left: 10,
+                          top: 10,
+                          child: GestureDetector(
+                            onTap: () => showFullImage(
+                              context,
+                              filePath: cut.imagePath,
+                              url: cut.imageUrl,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.fullscreen_rounded,
+                                      color: Colors.white, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text('크게',
+                                      style: GoogleFonts.notoSansKr(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     )
                   : Container(

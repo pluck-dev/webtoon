@@ -32,25 +32,31 @@ function json(body: unknown, status = 200) {
   });
 }
 
-const STYLE =
-  'Korean webtoon / manhwa style illustration, clean line art, vibrant flat colors, ' +
-  'cinematic single panel, expressive characters, no text, no speech bubbles, no watermark. ' +
+// 공통 규칙만 강제한다. 화풍(웹툰/실사/3D/시네마틱 등)은 사용자가 키워드로
+// 지정하며, 여기서 특정 스타일을 박지 않는다 — 실사 인플루언서 등 모든 스타일 허용.
+const BASE_RULES =
+  'A single story-cut image. No text, no speech bubbles, no captions, no watermark. ' +
   // 키워드(화각/조명 등)만 와도 텍스트로 답하지 말고 반드시 이미지를 그리게 강제
-  'ALWAYS output a single illustration image, never text. If the subject is not specified, ' +
-  'invent a fitting Korean character and setting that matches the given keywords. ';
+  'ALWAYS output a single image, never text. ' +
+  // 세로(9:16) 가득 + 주요 피사체가 프레임 안에 들어오게(가장자리 잘림 방지)
+  'Vertical 9:16 portrait composition, full-bleed, keep the main subject centered and ' +
+  'fully inside the frame so nothing important is cropped at the edges. ' +
+  'If the subject is not specified, invent a fitting character and setting that matches the given keywords. ';
 
-// 프롬프트 래퍼. 참조 이미지(캐릭터)가 있으면 동일 인물 유지를 강하게 지시.
+// 프롬프트 래퍼. 참조 이미지(캐릭터)가 있으면 동일 인물 + 동일 화풍 유지를 강하게 지시.
 function buildPrompt(userPrompt: string, hasRef: boolean): string {
   if (hasRef) {
     return (
-      STYLE +
+      BASE_RULES +
       'IMPORTANT: keep the SAME character(s) from the reference image(s) — ' +
-      'identical face, hairstyle, and outfit. Only change the scene/pose/expression. ' +
+      'identical face, hairstyle, outfit, AND the same art style as the reference ' +
+      '(if the reference is a photorealistic real person, stay photorealistic; ' +
+      'if illustrated, stay illustrated). Only change the scene/pose/expression. ' +
       'New scene: ' +
       userPrompt
     );
   }
-  return STYLE + 'Scene: ' + userPrompt;
+  return BASE_RULES + 'Scene: ' + userPrompt;
 }
 
 // Gemini 이미지 생성 → base64 PNG (data 부분만)
@@ -72,7 +78,11 @@ async function generateWithGemini(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { responseModalities: ['IMAGE'] },
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        // 세로 9:16 — 더빙 화면(세로 전체)에 맞춰 컷을 세로로 생성
+        imageConfig: { aspectRatio: '9:16' },
+      },
     }),
   });
   if (!res.ok) {

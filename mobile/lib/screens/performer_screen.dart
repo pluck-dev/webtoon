@@ -544,14 +544,17 @@ class _PerformerScreenState extends State<PerformerScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 장면 (현재 컷) — 컷이 바뀌면 부드럽게 크로스페이드
+          // 장면 (현재 컷) — 컷이 바뀌면 부드럽게 크로스페이드. 탭하면 전체보기.
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 450),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            child: SizedBox.expand(
+            child: GestureDetector(
               key: ValueKey(line.cut.id),
-              child: NetworkThumb(url: line.cut.imageUrl),
+              onTap: () => showFullImage(context, url: line.cut.imageUrl),
+              child: SizedBox.expand(
+                child: BlurredImageBg(url: line.cut.imageUrl),
+              ),
             ),
           ),
           // 하단 가독성용 스크림 (장면은 비치되 자막은 또렷하게)

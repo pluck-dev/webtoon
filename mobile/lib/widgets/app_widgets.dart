@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -146,6 +148,117 @@ class NetworkThumb extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 어떤 비율의 이미지든 잘리지 않게 "흐린 배경 + 전체 보이는 전경"으로 표시.
+class BlurredImageBg extends StatelessWidget {
+  final String url;
+  const BlurredImageBg({super.key, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) {
+      return const ColoredBox(color: AppColors.deviceDark);
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1) 꽉 채운 배경 — 블러 원본
+        Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) =>
+              const ColoredBox(color: AppColors.deviceDark),
+        ),
+        // 2) 블러 + 반투명 어두운 오버레이
+        BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+          child: ColoredBox(color: Colors.black.withValues(alpha: 0.25)),
+        ),
+        // 3) 전경 — 잘림 없이 원본 비율 그대로
+        Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+/// 탭하면 원본 이미지를 풀스크린으로 보여주는 뷰어.
+/// [filePath]가 있으면 로컬 파일을 우선 표시, 없으면 [url]로 네트워크 이미지 표시.
+void showFullImage(
+  BuildContext context, {
+  String? url,
+  String? filePath,
+}) {
+  assert(url != null || filePath != null, 'url 또는 filePath 중 하나는 필요합니다');
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black,
+    useSafeArea: false,
+    builder: (ctx) => Material(
+      color: Colors.transparent,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 핀치 줌 뷰어 + 탭하면 닫기
+          GestureDetector(
+            onTap: () => Navigator.pop(ctx),
+            child: InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: Center(
+                child: filePath != null
+                    ? Image.file(
+                        File(filePath),
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.broken_image_rounded,
+                          color: Colors.white54,
+                          size: 48,
+                        ),
+                      )
+                    : Image.network(
+                        url!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.broken_image_rounded,
+                          color: Colors.white54,
+                          size: 48,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          // 우상단 닫기 버튼
+          Positioned(
+            top: 0,
+            right: 0,
+            child: SafeArea(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 은은하게 흐르는 로딩 셰이머 (스켈레톤 표면)
