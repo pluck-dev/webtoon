@@ -1062,6 +1062,7 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
       : [];
   static const _maxChars = 3;
   bool _loadingChars = true;
+  bool _suggesting = false; // AI 키워드 추천 진행 중
 
   @override
   void initState() {
@@ -1122,6 +1123,36 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
         _frags.addAll(p.frags);
       }
     });
+  }
+
+  // AI 추천 — 장면 설명을 보고 어울리는 키워드를 골라 _frags에 담음
+  Future<void> _suggestKw() async {
+    final scene = _free.text.trim();
+    if (scene.length < 2 || _suggesting) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _suggesting = true);
+    try {
+      final cand = [
+        for (final cat in kSceneKeywords)
+          for (final kw in cat.items) kw.en,
+      ];
+      final picked = await Cloud.suggestKeywords(scene, cand);
+      if (!mounted) return;
+      setState(() {
+        _frags.addAll(picked);
+        _suggesting = false;
+      });
+      _toast(
+        context,
+        picked.isEmpty
+            ? '딱 맞는 키워드를 못 찾았어요. 장면을 조금 더 적어 주세요.'
+            : '추천 키워드 ${picked.length}개를 골라뒀어요.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _suggesting = false);
+      _toast(context, '추천에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    }
   }
 
   void _toggleChar(AiCharacter c) {
@@ -1222,6 +1253,62 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     style: GoogleFonts.notoSansKr(
                       fontSize: 12,
                       color: AppColors.faint,
+                    ),
+                  ),
+
+                  // AI 자동 추천 — 장면 설명에 맞는 키워드를 골라줌
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: (_free.text.trim().length < 2 || _suggesting)
+                        ? null
+                        : _suggestKw,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _free.text.trim().length < 2
+                            ? AppColors.paper
+                            : AppColors.gold.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _free.text.trim().length < 2
+                              ? AppColors.line
+                              : AppColors.gold,
+                          width: 1.3,
+                        ),
+                      ),
+                      child: _suggesting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                color: AppColors.gold,
+                              ),
+                            )
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_fix_high_rounded,
+                                  size: 17,
+                                  color: _free.text.trim().length < 2
+                                      ? AppColors.faint
+                                      : AppColors.ink,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '이 장면에 맞는 키워드 자동 추천',
+                                  style: GoogleFonts.notoSansKr(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: _free.text.trim().length < 2
+                                        ? AppColors.faint
+                                        : AppColors.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
 

@@ -725,6 +725,25 @@ class Cloud {
     );
   }
 
+  /// AI 키워드 추천: 장면 설명 → 후보(영문 키워드) 중 어울리는 것 자동 선택.
+  /// 반환값은 후보에 있던 영문 조각이라 그대로 선택(_frags)에 넣을 수 있다.
+  /// 텍스트 생성이라 이미지 쿼터를 쓰지 않음.
+  static Future<List<String>> suggestKeywords(
+    String scene,
+    List<String> candidates,
+  ) async {
+    await ensureUser();
+    final res = await sb.functions.invoke(
+      'suggest-keywords',
+      body: {'scene': scene, 'candidates': candidates},
+    );
+    final data = (res.data ?? {}) as Map<String, dynamic>;
+    if (res.status != 200 || data['keywords'] == null) {
+      throw Exception('suggest_kw_failed: ${data['error'] ?? res.status}');
+    }
+    return (data['keywords'] as List).map((e) => '$e').toList();
+  }
+
   /// 초대 더빙 세션 생성 → (sessionId, shareCode)
   /// [assignments] : 배역별 {characterId, mine(내가 더빙 여부)}
   /// [mode] : 'TEAM'(같이 한 영상) | 'REMIX'(각자 버전)
