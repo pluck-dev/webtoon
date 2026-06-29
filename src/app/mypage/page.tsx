@@ -42,7 +42,7 @@ export default async function MyPage() {
         <section className="rounded-2xl border border-dashed border-line bg-card p-10 text-center">
           <p className="mb-2 text-lg font-black text-ink">아직 녹음한 공연이 없습니다.</p>
           <p className="mb-5 text-muted">에피소드를 골라 첫 녹음을 시작해보세요.</p>
-          <Link href="/" className="inline-block rounded-lg bg-ink px-5 py-2.5 font-black text-paper">
+          <Link href="/episodes" className="inline-block rounded-lg bg-ink px-5 py-2.5 font-black text-paper">
             에피소드 보러가기
           </Link>
         </section>

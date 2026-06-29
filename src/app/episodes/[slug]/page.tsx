@@ -65,7 +65,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ slug: 
       <header className="sticky top-0 z-20 border-b border-line bg-cream/85 backdrop-blur-md">
         <div className="mx-auto flex min-h-[56px] w-full max-w-[1760px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
           <Link
-            href="/"
+            href="/episodes"
             className="inline-flex shrink-0 items-center gap-1.5 text-sm font-extrabold text-ink-soft transition-colors hover:text-ink"
           >
             <span aria-hidden="true">←</span>

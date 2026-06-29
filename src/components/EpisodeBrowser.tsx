@@ -1,7 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
@@ -115,7 +114,7 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
             {FORMAT_LABELS[format]} 컬렉션
           </p>
           <h2 className="max-w-3xl text-[clamp(28px,4vw,54px)] font-black leading-none text-ink">
-            짧은 상황, 당신의 목소리로 연기하세요
+            사람들이 만들 수 있는 장면을 구경해보세요
           </h2>
         </div>
         <span className="shrink-0 font-black text-muted">{filtered.length}편</span>
@@ -152,9 +151,8 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
       ) : (
         <section className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {filtered.map((episode, index) => (
-            <Link
+            <article
               key={episode.id}
-              href={`/episodes/${episode.slug}`}
               className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card transition duration-200 hover:-translate-y-1 hover:border-ink hover:shadow-[0_22px_50px_rgba(23,21,18,.16)]"
             >
               <div className="relative shrink-0 overflow-hidden bg-[#ded8cc]">
@@ -171,7 +169,7 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
                 </span>
                 <div className="absolute inset-0 flex items-end bg-gradient-to-b from-transparent via-transparent to-ink/80 p-3.5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <span className="translate-y-2 text-sm font-black text-gold transition-transform duration-300 group-hover:translate-y-0">
-                    내 목소리로 연기하기 →
+                    앱에서 만들 수 있어요
                   </span>
                 </div>
               </div>
@@ -188,10 +186,10 @@ export default function EpisodeBrowser({ episodes }: { episodes: BrowserEpisode[
                 <p className="line-clamp-2 leading-snug text-ink-soft">{episode.logline}</p>
                 <div className="mt-auto flex justify-between gap-2.5 border-t border-line-soft pt-3 text-xs font-black text-muted">
                   <span>{episode.versionCount}개 버전</span>
-                  <span className="text-coral">열기 ↗</span>
+                  <span className="text-coral">앱에서 만들기</span>
                 </div>
               </div>
-            </Link>
+            </article>
           ))}
         </section>
       )}

@@ -25,7 +25,7 @@ export default function NotFound() {
                 홈으로 가기
               </Link>
               <Link
-                href="/#collection"
+                href="/episodes"
                 className="inline-flex min-h-12 items-center rounded-full border border-ink px-6 text-[15px] font-black text-ink transition-colors hover:bg-ink/5"
               >
                 에피소드 보기
