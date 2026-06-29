@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'widgets/app_widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'cloud.dart';
 import 'config.dart';
@@ -1025,12 +1026,22 @@ class _SelectedSummary extends StatelessWidget {
 /// 반환: { prompt, characters } / 취소 시 null.
 /// [initialPrompt] : 스토리보드가 추천한 장면 묘사를 미리 채워 줌.
 /// [initialCharacter] : 작가 화면에서 고른 등장인물을 기본 선택(일관성).
-Future<({String prompt, List<AiCharacter> characters})?> showAiGenerateSheet(
+Future<
+    ({
+      String prompt,
+      List<AiCharacter> characters,
+      List<String> scenePhotos,
+    })?> showAiGenerateSheet(
   BuildContext context, {
   String? initialPrompt,
   AiCharacter? initialCharacter,
 }) {
-  return showModalBottomSheet<({String prompt, List<AiCharacter> characters})>(
+  return showModalBottomSheet<
+      ({
+        String prompt,
+        List<AiCharacter> characters,
+        List<String> scenePhotos,
+      })>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
@@ -1063,6 +1074,11 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
   static const _maxChars = 3;
   bool _loadingChars = true;
   bool _suggesting = false; // AI 키워드 추천 진행 중
+
+  // 장면 참고 사진(배경·구도·사물·분위기 참고용, 로컬 경로 최대 3장)
+  final List<String> _scenePhotos = [];
+  static const _maxScenePhotos = 3;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -1098,7 +1114,104 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
     Navigator.of(context).pop((
       prompt: _composePrompt(_frags, _free.text),
       characters: List<AiCharacter>.of(_picked.take(_maxChars)),
+      scenePhotos: List<String>.of(_scenePhotos),
     ));
+  }
+
+  // 장면 참고 사진 추가 — 앨범/카메라에서 골라 _scenePhotos에 담음
+  Future<void> _addScenePhoto() async {
+    if (_scenePhotos.length >= _maxScenePhotos) {
+      _toast(context, '참고 사진은 최대 $_maxScenePhotos장까지예요.');
+      return;
+    }
+    final src = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library_rounded, color: AppColors.ink),
+              title: Text('앨범에서 선택',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.camera_alt_rounded, color: AppColors.ink),
+              title: Text('사진 찍기',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (src == null || !mounted) return;
+    try {
+      final x =
+          await _picker.pickImage(source: src, maxWidth: 1280, imageQuality: 88);
+      if (x != null && mounted) {
+        setState(() => _scenePhotos.add(x.path));
+      }
+    } catch (_) {
+      if (mounted) _toast(context, '사진을 불러오지 못했어요.');
+    }
+  }
+
+  Widget _scenePhotoTile(int i) {
+    return Container(
+      width: 72,
+      height: 72,
+      margin: const EdgeInsets.only(right: 10),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(File(_scenePhotos[i]),
+                width: 72, height: 72, fit: BoxFit.cover),
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: GestureDetector(
+              onTap: () => setState(() => _scenePhotos.removeAt(i)),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
+                child:
+                    const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addScenePhotoTile() {
+    return GestureDetector(
+      onTap: _addScenePhoto,
+      child: Container(
+        width: 72,
+        height: 72,
+        margin: const EdgeInsets.only(right: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: const Icon(Icons.add_photo_alternate_rounded,
+            color: AppColors.faint, size: 26),
+      ),
+    );
   }
 
   Future<void> _newCharacter() async {
@@ -1391,6 +1504,43 @@ class _AiGenerateSheetState extends State<_AiGenerateSheet> {
                     onToggle: _toggleChar,
                     onClear: () => setState(_picked.clear),
                     onNew: _newCharacter,
+                  ),
+
+                  // 2-b) 장면 참고 사진 (배경·구도·사물·분위기 참고)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18, bottom: 2),
+                    child: Text(
+                      _scenePhotos.isEmpty
+                          ? '장면 참고 사진 (선택)'
+                          : '장면 참고 사진 · ${_scenePhotos.length}장',
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '배경·구도·사물·분위기를 참고해요. (인물은 위에서 골라요)',
+                      style: GoogleFonts.notoSansKr(
+                        fontSize: 11.5,
+                        color: AppColors.faint,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 84,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        for (var i = 0; i < _scenePhotos.length; i++)
+                          _scenePhotoTile(i),
+                        if (_scenePhotos.length < _maxScenePhotos)
+                          _addScenePhotoTile(),
+                      ],
+                    ),
                   ),
 
                   // 3) 촬영·연출 키워드 (아코디언, 보조)

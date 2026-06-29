@@ -590,9 +590,12 @@ class Cloud {
   /// AI 컷 이미지 생성 → 로컬 파일 경로 + 남은 횟수.
   /// [refImagePaths] : 캐릭터 일관성용 참조 이미지(로컬 경로, 최대 3장).
   /// 월 한도 초과 시 [AiQuotaException].
+  /// [sceneRefPaths] : 장면 참고 이미지(배경·구도·사물·분위기 참고용, 최대 3장).
+  ///                   캐릭터 ref와 달리 인물 복제가 아니라 장면만 참고한다.
   static Future<({String path, int remaining, bool stub})> generateAiImage(
     String prompt, {
     List<String> refImagePaths = const [],
+    List<String> sceneRefPaths = const [],
   }) async {
     await ensureUser();
     final refs = <String>[];
@@ -603,9 +606,21 @@ class Cloud {
         // 참조 이미지 못 읽으면 일관성만 포기하고 생성은 진행
       }
     }
+    final sceneRefs = <String>[];
+    for (final p in sceneRefPaths.take(3)) {
+      try {
+        sceneRefs.add(base64Encode(await File(p).readAsBytes()));
+      } catch (_) {
+        // 장면 참고 못 읽으면 그것만 건너뛰고 생성은 진행
+      }
+    }
     final res = await sb.functions.invoke(
       'generate-image',
-      body: {'prompt': prompt, if (refs.isNotEmpty) 'refImages': refs},
+      body: {
+        'prompt': prompt,
+        if (refs.isNotEmpty) 'refImages': refs,
+        if (sceneRefs.isNotEmpty) 'sceneRefs': sceneRefs,
+      },
     );
     final data = (res.data ?? {}) as Map<String, dynamic>;
     if (res.status == 402 || data['error'] == 'quota_exceeded') {

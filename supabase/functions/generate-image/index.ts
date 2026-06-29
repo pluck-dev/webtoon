@@ -43,20 +43,35 @@ const BASE_RULES =
   'fully inside the frame so nothing important is cropped at the edges. ' +
   'If the subject is not specified, invent a fitting character and setting that matches the given keywords. ';
 
-// 프롬프트 래퍼. 참조 이미지(캐릭터)가 있으면 동일 인물 + 동일 화풍 유지를 강하게 지시.
-function buildPrompt(userPrompt: string, hasRef: boolean): string {
-  if (hasRef) {
-    return (
-      BASE_RULES +
-      'IMPORTANT: keep the SAME character(s) from the reference image(s) — ' +
-      'identical face, hairstyle, outfit, AND the same art style as the reference ' +
-      '(if the reference is a photorealistic real person, stay photorealistic; ' +
-      'if illustrated, stay illustrated). Only change the scene/pose/expression. ' +
-      'New scene: ' +
-      userPrompt
-    );
+// 프롬프트 래퍼. 두 종류의 참조 이미지를 구분해 지시한다:
+//  - charCount: 캐릭터 레퍼런스(앞쪽 N장) → 동일 인물·화풍 유지
+//  - sceneCount: 장면 참고(뒤쪽 M장) → 배경/구도/사물/분위기만 참고(인물 복제 금지)
+function buildPrompt(
+  userPrompt: string,
+  charCount: number,
+  sceneCount: number,
+): string {
+  let rules = BASE_RULES;
+  if (charCount > 0) {
+    rules +=
+      'IMPORTANT: the FIRST ' +
+      charCount +
+      ' reference image(s) are CHARACTER references — keep those character(s) ' +
+      'identical (same face, hairstyle, outfit) and the same art style ' +
+      '(if photorealistic real person, stay photorealistic; if illustrated, stay illustrated). ';
   }
-  return BASE_RULES + 'Scene: ' + userPrompt;
+  if (sceneCount > 0) {
+    rules +=
+      'The ' +
+      (charCount > 0 ? 'NEXT ' : '') +
+      sceneCount +
+      ' reference image(s) are SCENE references — use them ONLY as guidance for ' +
+      'background, composition, props, lighting and mood; do NOT copy any person from these scene images. ';
+  }
+  if (charCount > 0) {
+    rules += 'Only change the scene/pose/expression of the character(s). ';
+  }
+  return rules + 'Scene: ' + userPrompt;
 }
 
 // Gemini 이미지 생성 → base64 PNG (data 부분만)
@@ -65,14 +80,20 @@ function buildPrompt(userPrompt: string, hasRef: boolean): string {
 async function generateWithGemini(
   prompt: string,
   refImages: string[],
+  sceneRefs: string[],
 ): Promise<string | null> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  // 참조 이미지 먼저, 그다음 텍스트 지시
-  const parts: unknown[] = refImages.map((b64) => ({
-    inlineData: { mimeType: 'image/png', data: b64 },
-  }));
-  parts.push({ text: buildPrompt(prompt, refImages.length > 0) });
+  // 캐릭터 레퍼런스 먼저, 그다음 장면 참고, 마지막에 텍스트 지시(순서가 프롬프트와 일치)
+  const parts: unknown[] = [
+    ...refImages.map((b64) => ({
+      inlineData: { mimeType: 'image/png', data: b64 },
+    })),
+    ...sceneRefs.map((b64) => ({
+      inlineData: { mimeType: 'image/png', data: b64 },
+    })),
+  ];
+  parts.push({ text: buildPrompt(prompt, refImages.length, sceneRefs.length) });
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -127,9 +148,16 @@ Deno.serve(async (req) => {
     if (!prompt || `${prompt}`.trim().length < 2) {
       return json({ error: 'prompt_required' }, 400);
     }
-    // 최대 3장, data URL 접두사 제거
+    // 캐릭터 레퍼런스(최대 3장), data URL 접두사 제거
     const refImages: string[] = Array.isArray(body?.refImages)
       ? body.refImages
+          .slice(0, 3)
+          .map((s: string) => `${s}`.replace(/^data:image\/\w+;base64,/, ''))
+          .filter((s: string) => s.length > 0)
+      : [];
+    // 장면 참고 이미지(최대 3장) — 배경/구도/사물 참고용(인물 복제 안 함)
+    const sceneRefs: string[] = Array.isArray(body?.sceneRefs)
+      ? body.sceneRefs
           .slice(0, 3)
           .map((s: string) => `${s}`.replace(/^data:image\/\w+;base64,/, ''))
           .filter((s: string) => s.length > 0)
@@ -152,7 +180,7 @@ Deno.serve(async (req) => {
     // 5) 생성 (키 없으면 stub)
     let b64: string | null;
     if (GEMINI_API_KEY) {
-      b64 = await generateWithGemini(`${prompt}`.trim(), refImages);
+      b64 = await generateWithGemini(`${prompt}`.trim(), refImages, sceneRefs);
       // 이미지가 안 나오면(주제 부족 등) 쿼터 소비 없이 친절 안내
       if (b64 === null) {
         return json(

@@ -395,7 +395,8 @@ class _CreatorScreenState extends State<CreatorScreen> {
           refs.add(await Cloud.characterLocalImage(c));
         } catch (_) {/* 그 인물만 포기 */}
       }
-      final res = await Cloud.generateAiImage(req.prompt, refImagePaths: refs);
+      final res = await Cloud.generateAiImage(req.prompt,
+          refImagePaths: refs, sceneRefPaths: req.scenePhotos);
       final saved = await _persistImage(res.path); // 앱 꺼져도 남게 복사
       if (!mounted) return;
       setState(() {
