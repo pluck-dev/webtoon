@@ -62,7 +62,6 @@ class _CreatorScreenState extends State<CreatorScreen> {
 
   // 등장인물(AI 캐릭터) — 먼저 만들면 컷마다 같은 인물로 일관성 유지
   List<AiCharacter> _characters = [];
-  AiCharacter? _activeCharacter; // 컷 생성 시 기본 선택될 인물
 
   // 임시저장(자동) — 앱이 꺼져도 작업이 안 날아가게
   static const _draftKey = 'creator_draft_v1';
@@ -125,7 +124,6 @@ class _CreatorScreenState extends State<CreatorScreen> {
       if (!mounted) return;
       setState(() {
         _characters = list;
-        _activeCharacter ??= list.isNotEmpty ? list.first : null;
       });
     } catch (_) {
       // 목록 로드 실패 — 인물 없이 진행(섹션은 숨겨짐)
@@ -384,7 +382,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
   Future<void> _generateAi(_CutDraft cut) async {
     // 시트는 '무엇을 그릴지'만 받고 바로 닫힘 → 생성은 컷 영역에서 진행
     final req = await showAiGenerateSheet(context,
-        initialPrompt: cut.scenePrompt, initialCharacter: _activeCharacter);
+        initialPrompt: cut.scenePrompt);
     _loadCharacters(); // 시트에서 새 캐릭터를 만들었을 수도 있으니 갱신
     if (req == null || !mounted) return;
 
@@ -465,15 +463,12 @@ class _CreatorScreenState extends State<CreatorScreen> {
     if (!mounted) return;
     setState(() {
       _characters = _characters.where((x) => x.id != c.id).toList();
-      if (_activeCharacter?.id == c.id) {
-        _activeCharacter = _characters.isNotEmpty ? _characters.first : null;
-      }
     });
   }
 
-  // 등장인물 현황판 — 만든 캐릭터를 보여주고, 개별 컷 AI 생성 시 기본 인물로 쓸
-  // 캐릭터를 탭으로 정함. 생성은 여기서 안 하고 AI 생성 시트·스토리보드(인물이 실제
-  // 필요한 순간)에서만 함. 캐릭터가 하나도 없으면(=사진만 쓰는 경우) 섹션을 숨김.
+  // 등장인물 현황판 — 만들어 둔 인물 목록을 보여주기만 한다. 생성·선택은 컷 만들기/
+  // 스토리보드(인물이 실제 필요한 순간)에서 하므로 여기선 '기본 선택'을 두지 않는다.
+  // 캐릭터가 하나도 없으면(=사진만 쓰는 경우) 섹션을 숨김. (길게 누르면 삭제)
   Widget _charactersSection() {
     if (_characters.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -488,7 +483,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         const SizedBox(height: 2),
         Padding(
           padding: const EdgeInsets.only(left: 4, right: 4),
-          child: Text('컷을 AI로 그릴 때 쓰는 인물이에요. 탭하면 기본 인물로 정해져요. (길게 누르면 삭제)',
+          child: Text('만들어 둔 인물이에요. 컷·스토리를 만들 때 골라서 써요. (길게 누르면 삭제)',
               style:
                   GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 12)),
         ),
@@ -507,59 +502,28 @@ class _CreatorScreenState extends State<CreatorScreen> {
   }
 
   Widget _charTile(AiCharacter c) {
-    final active = _activeCharacter?.id == c.id;
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        setState(() => _activeCharacter = c);
-      },
       onLongPress: () => _deleteCharacter(c),
       child: SizedBox(
         width: 76,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              children: [
-                Container(
-                  width: 66,
-                  height: 66,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: active ? AppColors.ink : AppColors.line,
-                      width: active ? 2.5 : 1,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.network(c.imageUrl,
-                        width: 66,
-                        height: 66,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, e, s) => const Icon(
-                            Icons.person_rounded, color: AppColors.faint)),
-                  ),
-                ),
-                if (active)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.ink,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: AppColors.card, width: 1.5),
-                      ),
-                      child: Text('기본',
-                          style: GoogleFonts.notoSansKr(
-                              color: AppColors.paper,
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w900)),
-                    ),
-                  ),
-              ],
+            Container(
+              width: 66,
+              height: 66,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.line),
+              ),
+              child: ClipOval(
+                child: Image.network(c.imageUrl,
+                    width: 66,
+                    height: 66,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const Icon(
+                        Icons.person_rounded, color: AppColors.faint)),
+              ),
             ),
             const SizedBox(height: 4),
             Text(c.name,
@@ -567,8 +531,8 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.notoSansKr(
                     fontSize: 11.5,
-                    fontWeight: active ? FontWeight.w900 : FontWeight.w600,
-                    color: active ? AppColors.ink : AppColors.muted)),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.muted)),
           ],
         ),
       ),
