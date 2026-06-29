@@ -1257,19 +1257,33 @@ class _CharacterCreateSheetState extends State<_CharacterCreateSheet> {
 
 // ───────────────────────── AI 스토리보드 시트 ─────────────────────────
 
-/// 스토리보드 추천 결과 (창작 화면에서 컷으로 변환)
+/// 컷 한 개의 추천 데이터 (장면 프롬프트 + 화자 + 대사 + 연기 지시)
+typedef StoryCut = ({
+  String scenePrompt,
+  String speaker,
+  String dialogue,
+  String direction,
+});
+
+/// 스토리보드 추천 결과 (suggestCuts 반환과 동일 구조)
 typedef StoryboardResult = ({
   String title,
   String logline,
-  List<
-    ({String scenePrompt, String speaker, String dialogue, String direction})
-  >
-  cuts,
+  List<StoryCut> cuts,
+});
+
+/// 스토리보드 시트가 최종 반환하는 값 — 추천 결과 + 화자별 캐릭터 배정.
+/// [castBySpeaker] : 화자 이름 → 그 화자를 그릴 캐릭터(레퍼런스). 비우면 자동.
+typedef StoryboardPick = ({
+  String title,
+  String logline,
+  List<StoryCut> cuts,
+  Map<String, AiCharacter> castBySpeaker,
 });
 
 /// 전체 상황 → AI 컷 추천 시트. "이 구성으로 만들기" 시 결과를 pop으로 반환.
-Future<StoryboardResult?> showStoryboardSheet(BuildContext context) {
-  return showModalBottomSheet<StoryboardResult>(
+Future<StoryboardPick?> showStoryboardSheet(BuildContext context) {
+  return showModalBottomSheet<StoryboardPick>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.card,
@@ -1291,10 +1305,69 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
   bool _busy = false;
   StoryboardResult? _result;
 
+  // 등장인물 — 화자별로 어떤 캐릭터(레퍼런스)로 그릴지 배정
+  List<AiCharacter> _chars = [];
+  bool _loadingChars = true;
+  final Map<String, AiCharacter> _cast = {}; // 화자 이름 → 캐릭터
+
+  @override
+  void initState() {
+    super.initState();
+    _reloadChars();
+  }
+
   @override
   void dispose() {
     _situation.dispose();
     super.dispose();
+  }
+
+  Future<void> _reloadChars() async {
+    try {
+      final list = await Cloud.listAiCharacters();
+      if (mounted) {
+        setState(() {
+          _chars = list;
+          _loadingChars = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingChars = false);
+    }
+  }
+
+  /// 추천 결과의 고유 화자(등장 순서 유지). 빈 화자는 제외.
+  List<String> get _speakers {
+    final r = _result;
+    if (r == null) return const [];
+    final seen = <String>{};
+    final out = <String>[];
+    for (final c in r.cuts) {
+      final s = c.speaker.trim();
+      if (s.isEmpty || !seen.add(s)) continue;
+      out.add(s);
+    }
+    return out;
+  }
+
+  void _assign(String speaker, AiCharacter? c) {
+    setState(() {
+      if (c == null) {
+        _cast.remove(speaker);
+      } else {
+        _cast[speaker] = c;
+      }
+    });
+  }
+
+  Future<void> _newCharacterFor(String speaker) async {
+    final c = await showCharacterCreateSheet(context);
+    if (c != null && mounted) {
+      setState(() {
+        _chars = [c, ..._chars];
+        _cast[speaker] = c;
+      });
+    }
   }
 
   Future<void> _suggest() async {
@@ -1308,6 +1381,14 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
       setState(() {
         _result = r;
         _busy = false;
+        // 화자 이름과 같은 캐릭터가 이미 있으면 자동 배정
+        _cast.clear();
+        for (final c in r.cuts) {
+          final sp = c.speaker.trim();
+          if (sp.isEmpty || _cast.containsKey(sp)) continue;
+          final match = _chars.where((x) => x.name.trim() == sp);
+          if (match.isNotEmpty) _cast[sp] = match.first;
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -1470,17 +1551,214 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                         color: AppColors.muted,
                       ),
                     ),
+
+                    // 등장인물 배정 — 화자마다 어떤 캐릭터로 그릴지 (선택)
+                    if (_speakers.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text(
+                        '누구로 그릴까요?',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '화자별로 캐릭터를 정하면 컷마다 같은 인물로 그려요. (선택)',
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 12,
+                          color: AppColors.faint,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      for (final sp in _speakers)
+                        _CastAssignRow(
+                          speaker: sp,
+                          chars: _chars,
+                          loading: _loadingChars,
+                          selected: _cast[sp],
+                          onSelect: (c) => _assign(sp, c),
+                          onNew: () => _newCharacterFor(sp),
+                        ),
+                    ],
+
                     const SizedBox(height: 14),
                     for (var i = 0; i < r.cuts.length; i++)
                       _StoryCutPreview(index: i + 1, cut: r.cuts[i]),
                     const SizedBox(height: 16),
                     _PrimaryButton(
                       label: '이 구성으로 만들기 (컷 ${r.cuts.length}개)',
-                      onTap: () => Navigator.of(context).pop(r),
+                      onTap: () => Navigator.of(context).pop((
+                        title: r.title,
+                        logline: r.logline,
+                        cuts: r.cuts,
+                        castBySpeaker: Map<String, AiCharacter>.of(_cast),
+                      )),
                     ),
                   ],
                   const SizedBox(height: 8),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 화자 한 명의 캐릭터 배정 줄 — [화자명] + 가로(안 정함 · 캐릭터들 · 새로 만들기).
+/// 단일 선택. 같은 이름의 캐릭터가 있으면 상위에서 자동 배정됨.
+class _CastAssignRow extends StatelessWidget {
+  final String speaker;
+  final List<AiCharacter> chars;
+  final bool loading;
+  final AiCharacter? selected;
+  final ValueChanged<AiCharacter?> onSelect;
+  final VoidCallback onNew;
+  const _CastAssignRow({
+    required this.speaker,
+    required this.chars,
+    required this.loading,
+    required this.selected,
+    required this.onSelect,
+    required this.onNew,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: selected != null ? AppColors.ink : AppColors.lineSoft,
+          width: selected != null ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.record_voice_over_rounded,
+                  size: 15, color: AppColors.muted),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  speaker,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.notoSansKr(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                selected == null ? '안 정함' : selected!.name,
+                style: GoogleFonts.notoSansKr(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: selected == null ? AppColors.faint : AppColors.coral,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 70,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _tile(
+                  label: '안 정함',
+                  selected: selected == null,
+                  onTap: () => onSelect(null),
+                  child: const Icon(Icons.auto_awesome_rounded,
+                      color: AppColors.faint, size: 20),
+                ),
+                for (final c in chars)
+                  _tile(
+                    label: c.name,
+                    selected: selected?.id == c.id,
+                    onTap: () => onSelect(c),
+                    child: ClipOval(
+                      child: Image.network(
+                        c.imageUrl,
+                        width: 46,
+                        height: 46,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, e, s) => const Icon(
+                            Icons.person_rounded, color: AppColors.faint),
+                      ),
+                    ),
+                  ),
+                _tile(
+                  label: '새로',
+                  selected: false,
+                  onTap: onNew,
+                  child: const Icon(Icons.add_rounded,
+                      color: AppColors.coral, size: 22),
+                ),
+                if (loading)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tile({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        width: 58,
+        margin: const EdgeInsets.only(right: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? AppColors.ink : AppColors.line,
+                  width: selected ? 2.5 : 1,
+                ),
+              ),
+              child: child,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.notoSansKr(
+                fontSize: 10.5,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                color: selected ? AppColors.ink : AppColors.muted,
               ),
             ),
           ],

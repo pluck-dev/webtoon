@@ -52,7 +52,6 @@ class _CreatorScreenState extends State<CreatorScreen> {
   // 등장인물(AI 캐릭터) — 먼저 만들면 컷마다 같은 인물로 일관성 유지
   List<AiCharacter> _characters = [];
   AiCharacter? _activeCharacter; // 컷 생성 시 기본 선택될 인물
-  bool _loadingChars = true;
 
   // 임시저장(자동) — 앱이 꺼져도 작업이 안 날아가게
   static const _draftKey = 'creator_draft_v1';
@@ -73,10 +72,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
       setState(() {
         _characters = list;
         _activeCharacter ??= list.isNotEmpty ? list.first : null;
-        _loadingChars = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loadingChars = false);
+      // 목록 로드 실패 — 인물 없이 진행(섹션은 숨겨짐)
     }
   }
 
@@ -383,17 +381,6 @@ class _CreatorScreenState extends State<CreatorScreen> {
     _scheduleSave();
   }
 
-  // 🎭 새 등장인물 만들기 → 생성 후 기본 인물로 지정
-  Future<void> _newCharacter() async {
-    final c = await showCharacterCreateSheet(context);
-    if (c == null || !mounted) return;
-    setState(() {
-      _characters = [c, ..._characters];
-      _activeCharacter = c;
-    });
-    HapticFeedback.selectionClick();
-  }
-
   Future<void> _deleteCharacter(AiCharacter c) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -430,8 +417,11 @@ class _CreatorScreenState extends State<CreatorScreen> {
     });
   }
 
-  // 등장인물 섹션 — 캐릭터를 먼저 만들어 컷 일관성 유지
+  // 등장인물 현황판 — 만든 캐릭터를 보여주고, 개별 컷 AI 생성 시 기본 인물로 쓸
+  // 캐릭터를 탭으로 정함. 생성은 여기서 안 하고 AI 생성 시트·스토리보드(인물이 실제
+  // 필요한 순간)에서만 함. 캐릭터가 하나도 없으면(=사진만 쓰는 경우) 섹션을 숨김.
   Widget _charactersSection() {
+    if (_characters.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -444,7 +434,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         const SizedBox(height: 2),
         Padding(
           padding: const EdgeInsets.only(left: 4, right: 4),
-          child: Text('주인공을 먼저 만들면 모든 컷에 같은 인물로 그려져요.',
+          child: Text('컷을 AI로 그릴 때 쓰는 인물이에요. 탭하면 기본 인물로 정해져요. (길게 누르면 삭제)',
               style:
                   GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 12)),
         ),
@@ -455,15 +445,6 @@ class _CreatorScreenState extends State<CreatorScreen> {
             scrollDirection: Axis.horizontal,
             children: [
               for (final c in _characters) _charTile(c),
-              _addCharTile(),
-              if (_loadingChars)
-                const Padding(
-                  padding: EdgeInsets.all(34),
-                  child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
             ],
           ),
         ),
@@ -540,43 +521,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
     );
   }
 
-  Widget _addCharTile() {
-    return GestureDetector(
-      onTap: _newCharacter,
-      child: SizedBox(
-        width: 76,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 66,
-              height: 66,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.gold, width: 1.5),
-              ),
-              child: const Icon(Icons.add_rounded,
-                  color: AppColors.ink, size: 28),
-            ),
-            const SizedBox(height: 4),
-            Text('캐릭터 만들기',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.notoSansKr(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.inkSoft)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🎬 AI 스토리보드 — 상황 입력 → 컷(장면+대사) 추천받아 채우기
+  // 🎬 AI 스토리보드 — 상황 입력 → 컷(장면+대사) 추천 + 화자별 캐릭터 배정
   Future<void> _openStoryboard() async {
     final r = await showStoryboardSheet(context);
+    _loadCharacters(); // 스토리보드에서 새 캐릭터를 만들었을 수 있으니 갱신
     if (r == null || !mounted) return;
     setState(() {
       if (_title.text.trim().isEmpty) _title.text = r.title;
@@ -600,16 +548,17 @@ class _CreatorScreenState extends State<CreatorScreen> {
     });
     HapticFeedback.selectionClick();
     _scheduleSave();
-    _offerGenerateAll(); // 대본·대사 채웠으니 → 컷 그림도 한 번에 만들지 물어봄
+    // 대본·대사 채웠으니 → 컷 그림도 한 번에 만들지 물어봄 (화자별 캐릭터로)
+    _offerGenerateAll(r.castBySpeaker);
   }
 
   // 스토리보드/추천 장면이 있는 컷들 그림을 한 번에 자동 생성할지 제안
-  Future<void> _offerGenerateAll() async {
+  Future<void> _offerGenerateAll(Map<String, AiCharacter> castBySpeaker) async {
     final pending = _cuts
         .where((c) => (c.scenePrompt ?? '').trim().isNotEmpty && c.imagePath == null)
         .toList();
     if (pending.isEmpty || !mounted) return;
-    final hasChar = _activeCharacter != null;
+    final castCount = castBySpeaker.length;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -617,9 +566,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
         title: Text('컷 그림도 자동으로 만들까요?',
             style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
         content: Text(
-          hasChar
-              ? '${pending.length}개 컷을 "${_activeCharacter!.name}" 캐릭터로 일관되게 그려요. (조금 걸려요)'
-              : '${pending.length}개 컷을 그려요.\n캐릭터를 안 골라서 컷마다 인물이 달라질 수 있어요. (등장인물을 먼저 만들면 같은 인물로 나와요)',
+          castCount > 0
+              ? '${pending.length}개 컷을 배정한 캐릭터($castCount명)로 일관되게 그려요. (조금 걸려요)'
+              : '${pending.length}개 컷을 그려요.\n캐릭터를 배정하지 않아서 컷마다 인물이 달라질 수 있어요. (스토리보드에서 화자별 캐릭터를 정하면 같은 인물로 나와요)',
           style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
         ),
         actions: [
@@ -638,20 +587,30 @@ class _CreatorScreenState extends State<CreatorScreen> {
       ),
     );
     if (ok == true) {
-      _generateAllCuts();
+      _generateAllCuts(castBySpeaker);
     } else if (mounted) {
       _toast('각 컷에서 "AI로 생성"으로 그림을 만들 수 있어요.');
     }
   }
 
-  // 추천 장면이 있는 컷들을 순서대로 생성(활성 캐릭터로 일관성)
-  Future<void> _generateAllCuts() async {
-    final refs = <String>[];
-    if (_activeCharacter != null) {
+  // 추천 장면이 있는 컷들을 순서대로 생성 — 컷의 화자에 배정된 캐릭터로 일관성 유지
+  Future<void> _generateAllCuts(Map<String, AiCharacter> castBySpeaker) async {
+    // 캐릭터 레퍼런스 로컬 경로 캐시 (id → 경로). 같은 캐릭터 반복 다운로드 방지.
+    final refCache = <String, String>{};
+    Future<List<String>> refsFor(String speaker) async {
+      final c = castBySpeaker[speaker.trim()];
+      if (c == null) return const [];
+      final cached = refCache[c.id];
+      if (cached != null) return [cached];
       try {
-        refs.add(await Cloud.characterLocalImage(_activeCharacter!));
-      } catch (_) {}
+        final p = await Cloud.characterLocalImage(c);
+        refCache[c.id] = p;
+        return [p];
+      } catch (_) {
+        return const [];
+      }
     }
+
     for (final cut in List<_CutDraft>.of(_cuts)) {
       if (!mounted) return;
       if (cut.imagePath != null || (cut.scenePrompt ?? '').trim().isEmpty) {
@@ -659,8 +618,9 @@ class _CreatorScreenState extends State<CreatorScreen> {
       }
       setState(() => cut.generating = true);
       try {
-        final res =
-            await Cloud.generateAiImage(cut.scenePrompt!, refImagePaths: refs);
+        final refs = await refsFor(cut.speaker.text);
+        final res = await Cloud.generateAiImage(cut.scenePrompt!,
+            refImagePaths: refs);
         final saved = await _persistImage(res.path);
         if (!mounted) return;
         setState(() {
