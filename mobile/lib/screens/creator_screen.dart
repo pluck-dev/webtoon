@@ -245,6 +245,12 @@ class _CreatorScreenState extends State<CreatorScreen> {
           content: Text('이전에 만들던 작업을 불러왔어요.',
               style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w700)),
           behavior: SnackBarBehavior.floating,
+          // 하단 '발행하고 더빙하기' 바와 겹치지 않게 그 위로 띄움
+          margin: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 90,
+          ),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(label: '새로 시작', onPressed: _startFresh),
         ));
