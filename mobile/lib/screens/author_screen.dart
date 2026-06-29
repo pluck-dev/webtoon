@@ -58,7 +58,7 @@ class _AuthorScreenState extends State<AuthorScreen> {
         ),
       ),
       body: _error != null
-          ? _msg('작가 정보를 불러오지 못했어요.')
+          ? _errorView()
           : _items == null
           ? const Center(child: CircularProgressIndicator(color: AppColors.coral))
           : RefreshIndicator(
@@ -207,6 +207,49 @@ class _AuthorScreenState extends State<AuthorScreen> {
       ),
     );
   }
+
+  Widget _errorView() => Padding(
+    padding: const EdgeInsets.all(32),
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.muted),
+          const SizedBox(height: 16),
+          Text(
+            '작가 정보를 불러오지 못했어요.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '네트워크 연결을 확인해 주세요.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () {
+              setState(() => _error = null);
+              _load();
+            },
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              '다시 시도',
+              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _msg(String m) => Padding(
     padding: const EdgeInsets.all(32),

@@ -38,6 +38,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   List<CommentItem>? _comments;
   String? _myId;
   bool _sending = false;
+  bool _loadError = false;
 
   @override
   void initState() {
@@ -59,10 +60,12 @@ class _CommentsSheetState extends State<_CommentsSheet> {
         setState(() {
           _myId = mine;
           _comments = list;
+          _loadError = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _comments = []);
+      // 에러와 빈 목록을 구분: 실패 시 _loadError 플래그 사용
+      if (mounted) setState(() => _loadError = true);
     }
   }
 
@@ -91,6 +94,43 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   }
 
   Future<void> _delete(CommentItem c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(
+          '댓글 삭제',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          '이 댓글을 삭제할까요?',
+          style: GoogleFonts.notoSansKr(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              '취소',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w800,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              '삭제',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                color: AppColors.coral,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
     setState(() => _comments = _comments?.where((x) => x.id != c.id).toList());
     try {
       await Cloud.deleteComment(c.id);
@@ -160,6 +200,43 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   }
 
   Widget _list() {
+    if (_loadError) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.wifi_off_rounded,
+              size: 40,
+              color: AppColors.faint,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '댓글을 불러오지 못했어요.',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w800,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _comments = null;
+                  _loadError = false;
+                });
+                _load();
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: Text(
+                '다시 시도',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     if (_comments == null) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.coral),
@@ -250,16 +327,15 @@ class _CommentsSheetState extends State<_CommentsSheet> {
           ),
         ),
         if (mine)
-          GestureDetector(
-            onTap: () => _delete(c),
-            child: const Padding(
-              padding: EdgeInsets.only(left: 6, top: 2),
-              child: Icon(
-                Icons.delete_outline_rounded,
-                size: 18,
-                color: AppColors.faint,
-              ),
+          IconButton(
+            onPressed: () => _delete(c),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              size: 18,
+              color: AppColors.faint,
             ),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: EdgeInsets.zero,
           ),
       ],
     );

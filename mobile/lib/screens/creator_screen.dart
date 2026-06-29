@@ -544,6 +544,39 @@ class _CreatorScreenState extends State<CreatorScreen> {
     final r = await showStoryboardSheet(context);
     _loadCharacters(); // 스토리보드에서 새 캐릭터를 만들었을 수 있으니 갱신
     if (r == null || !mounted) return;
+
+    // 기존 컷에 내용(이미지 또는 대사)이 하나라도 있으면 확인 먼저
+    final hasExisting =
+        _cuts.any((c) => c.hasImage || c.text.text.trim().isNotEmpty);
+    if (hasExisting) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.card,
+          title: Text('기존 컷을 바꿀까요?',
+              style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          content: Text(
+            '지금 작업한 컷 ${_cuts.length}개가 지워지고 새로 채워져요. 계속할까요?',
+            style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('취소',
+                  style: GoogleFonts.notoSansKr(
+                      fontWeight: FontWeight.w800, color: AppColors.muted)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('계속',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
     setState(() {
       if (_title.text.trim().isEmpty) _title.text = r.title;
       if (_logline.text.trim().isEmpty) _logline.text = r.logline;
@@ -629,6 +662,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
       }
     }
 
+    bool reachedLimit = false;
     for (final cut in List<_CutDraft>.of(_cuts)) {
       if (!mounted) return;
       if (cut.imagePath != null || (cut.scenePrompt ?? '').trim().isEmpty) {
@@ -650,6 +684,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         if (!mounted) return;
         setState(() => cut.generating = false);
         _toast('이번 달 한도(${e.limit}회) 도달 — 나머지 컷은 못 만들었어요.');
+        reachedLimit = true;
         break;
       } catch (_) {
         if (!mounted) return;
@@ -657,7 +692,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
         // 이 컷만 실패하고 계속
       }
     }
-    if (mounted) _toast('컷 그림 생성을 마쳤어요!');
+    if (mounted && !reachedLimit) _toast('컷 그림 생성을 마쳤어요!');
   }
 
   void _removeCut(int i) {
@@ -669,6 +704,16 @@ class _CreatorScreenState extends State<CreatorScreen> {
         _attachAutosave(c);
         _cuts.add(c);
       }
+    });
+    HapticFeedback.selectionClick();
+    _scheduleSave();
+  }
+
+  void _moveCut(int from, int to) {
+    if (to < 0 || to >= _cuts.length) return;
+    setState(() {
+      final cut = _cuts.removeAt(from);
+      _cuts.insert(to, cut);
     });
     HapticFeedback.selectionClick();
     _scheduleSave();
@@ -768,6 +813,33 @@ class _CreatorScreenState extends State<CreatorScreen> {
       await _saveEdit();
       return;
     }
+    // 발행 전 확인 다이얼로그 (수정 모드 제외)
+    final confirmPublish = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('발행할까요?',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+        content: Text(
+          '컷 ${_cuts.length}개 · 화자 $_distinctSpeakers명으로 발행할까요?',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('취소',
+                style: GoogleFonts.notoSansKr(
+                    fontWeight: FontWeight.w800, color: AppColors.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('발행',
+                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+    if (confirmPublish != true) return;
     // 화자 2명 이상이면 혼자/초대 선택
     bool collab = false;
     if (_distinctSpeakers >= 2) {
@@ -1188,6 +1260,10 @@ class _CreatorScreenState extends State<CreatorScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 6),
+            Text('카테고리는 피드 분류에 쓰여요',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.faint, fontSize: 12)),
           ],
         ),
       );
@@ -1249,7 +1325,7 @@ class _CreatorScreenState extends State<CreatorScreen> {
           Pressable(
             onTap: cut.generating ? null : () => _pickImage(cut),
             child: AspectRatio(
-              aspectRatio: 16 / 10,
+              aspectRatio: 3 / 4,
               child: cut.generating
                   ? _generatingBox(cut)
                   : cut.hasImage
@@ -1366,6 +1442,42 @@ class _CreatorScreenState extends State<CreatorScreen> {
                               fontSize: 12)),
                     ),
                     const Spacer(),
+                    // 위로 이동
+                    GestureDetector(
+                      onTap: i > 0 ? () => _moveCut(i, i - 1) : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.lineSoft),
+                        ),
+                        child: Icon(Icons.arrow_upward_rounded,
+                            color: i > 0 ? AppColors.muted : AppColors.faint,
+                            size: 15),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // 아래로 이동
+                    GestureDetector(
+                      onTap: i < _cuts.length - 1
+                          ? () => _moveCut(i, i + 1)
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.lineSoft),
+                        ),
+                        child: Icon(Icons.arrow_downward_rounded,
+                            color: i < _cuts.length - 1
+                                ? AppColors.muted
+                                : AppColors.faint,
+                            size: 15),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () => _confirmRemoveCut(i),
                       child: Container(

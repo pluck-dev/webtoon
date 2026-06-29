@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../cloud.dart';
 import '../config.dart';
@@ -61,6 +62,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
   bool _celebrated = false; // 완성 축하 1회만
   int _countdown = 0; // 3-2-1 카운트다운
   Timer? _countdownTimer;
+  final Set<String> _uploadFailed = {}; // 업로드 실패한 dialogueId
+  bool _renderFailed = false; // 렌더 실패 여부
 
   @override
   void initState() {
@@ -200,7 +203,10 @@ class _PerformerScreenState extends State<PerformerScreen> {
         }
       }
     } catch (_) {
-      if (mounted) _toast('클라우드 저장에 실패했어요. 다시 녹음해 주세요.');
+      if (mounted) {
+        setState(() => _uploadFailed.add(dialogueId));
+        _toast('클라우드 저장에 실패했어요. 아래 "다시 올리기"를 눌러주세요.');
+      }
     } finally {
       if (mounted) setState(() => _uploading.remove(dialogueId));
     }
@@ -212,6 +218,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     setState(() {
       _rendering = true;
       _renderProgress = 0;
+      _renderFailed = false;
     });
     await Notify.requestPermission();
     await Notify.startRender(); // 백그라운드 유지 + 진행 알림
@@ -265,8 +272,10 @@ class _PerformerScreenState extends State<PerformerScreen> {
     } catch (e) {
       await Notify.stopRender();
       if (mounted) {
-        setState(() => _rendering = false);
-        _toast('영상 생성에 실패했어요.');
+        setState(() {
+          _rendering = false;
+          _renderFailed = true;
+        });
       }
     }
   }
@@ -348,7 +357,7 @@ class _PerformerScreenState extends State<PerformerScreen> {
     if (line == null) return;
     try {
       if (!await _recorder.hasPermission()) {
-        _toast('마이크 권한이 필요해요.');
+        await _showMicPermissionDialog();
         return;
       }
       // 이전 녹음이 아직 안 끝났을 수 있어 확실히 정지
@@ -451,6 +460,55 @@ class _PerformerScreenState extends State<PerformerScreen> {
     if (next < 0 || next >= _lines.length) return;
     HapticFeedback.selectionClick();
     setState(() => _index = next);
+  }
+
+  Future<void> _showMicPermissionDialog() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(
+          '마이크 권한이 필요해요',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          '마이크 접근을 허용해야 녹음할 수 있어요.\n설정 > 쩌렁쩌렁 > 마이크를 켜주세요.',
+          style: GoogleFonts.notoSansKr(
+            color: AppColors.muted,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '닫기',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w800,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final uri = Uri.parse('app-settings:');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
+            child: Text(
+              '설정 열기',
+              style: GoogleFonts.notoSansKr(
+                fontWeight: FontWeight.w900,
+                color: AppColors.coral,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _toast(String msg) {
@@ -618,6 +676,8 @@ class _PerformerScreenState extends State<PerformerScreen> {
             ),
           // 영상 만드는 중 오버레이
           if (_rendering) _renderOverlay(),
+          // 렌더 실패 배너
+          if (_renderFailed && !_rendering) _renderFailedBanner(),
         ],
       ),
     );
@@ -714,6 +774,67 @@ class _PerformerScreenState extends State<PerformerScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _renderFailedBanner() {
+    return Positioned(
+      bottom: MediaQuery.of(context).padding.bottom + 158,
+      left: 24,
+      right: 24,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xDD1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.coral.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.coral,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '영상 생성에 실패했어요.',
+                style: GoogleFonts.notoSansKr(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                setState(() => _renderFailed = false);
+                _makeVideo();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.coral,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '다시 시도',
+                  style: GoogleFonts.notoSansKr(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -902,11 +1023,11 @@ class _PerformerScreenState extends State<PerformerScreen> {
                 ),
                 const SizedBox(height: 10),
                 _sheetButton(
-                  '다시 녹음하기',
+                  '이 컷 다시 녹음',
                   filled: false,
                   onTap: () {
                     Navigator.pop(sheetCtx);
-                    _onRecordTap(); // 현재 컷 다시 녹음
+                    _onRecordTap(); // 현재 컷만 다시 녹음 (처음부터 초기화가 아님)
                   },
                 ),
               ],
@@ -1170,6 +1291,37 @@ class _PerformerScreenState extends State<PerformerScreen> {
                   final id = d.id;
                   final up = _uploading.contains(id);
                   final saved = _saved.contains(id);
+                  final failed = _uploadFailed.contains(id);
+                  if (failed) {
+                    return GestureDetector(
+                      onTap: () {
+                        final path = _takes[id];
+                        final ms = _takeMs[id];
+                        if (path != null && ms != null) {
+                          setState(() => _uploadFailed.remove(id));
+                          _uploadTake(id, path, ms);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.coral.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '다시 올리기',
+                          style: GoogleFonts.notoSansKr(
+                            color: AppColors.coral,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
                   final (String label, Color c) = _recording
                       ? ('● 녹음 중', AppColors.coral)
                       : up

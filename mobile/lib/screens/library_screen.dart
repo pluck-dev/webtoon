@@ -97,18 +97,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return ok ?? false;
   }
 
-  Future<void> _deleteWork(MyWork w) async {
+  /// confirmDismiss 콜백: 확인 다이얼로그 → API 호출.
+  /// false를 반환하면 Dismissible이 원위치로 돌아오므로 상태 불일치가 없음.
+  Future<bool> _confirmAndDelete(MyWork w) async {
+    final ok = await _confirmDelete();
+    if (!ok) return false;
+    try {
+      await Cloud.deleteWork(w.performanceId);
+      return true;
+    } catch (_) {
+      if (mounted) showAppToast(context, '삭제에 실패했어요.');
+      return false;
+    }
+  }
+
+  /// onDismissed 콜백: confirmDismiss가 true를 반환한 뒤에만 호출되므로
+  /// 여기서는 리스트 상태 제거만 수행.
+  void _deleteWork(MyWork w) {
     setState(
       () => _works!.removeWhere((x) => x.performanceId == w.performanceId),
     );
-    try {
-      await Cloud.deleteWork(w.performanceId);
-    } catch (_) {
-      if (mounted) {
-        showAppToast(context, '삭제하지 못했어요. 다시 시도해 주세요.');
-        _refresh();
-      }
-    }
   }
 
   @override
@@ -210,7 +218,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: Dismissible(
               key: ValueKey(w.performanceId),
               direction: DismissDirection.endToStart,
-              confirmDismiss: (_) => _confirmDelete(),
+              confirmDismiss: (_) => _confirmAndDelete(w),
               onDismissed: (_) => _deleteWork(w),
               background: Container(
                 alignment: Alignment.centerRight,

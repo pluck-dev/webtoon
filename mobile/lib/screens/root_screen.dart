@@ -32,13 +32,17 @@ class _RootScreenState extends State<RootScreen> {
     return Scaffold(
       // 본문을 네비 뒤까지 깔아 → 바 주변 빈 영역은 투명(콘텐츠 비침 + 터치 통과)
       extendBody: true,
-      // IndexedStack 대신 활성 화면만 빌드 — 탭 재진입 시 새로 로드(보관함 새로고침)
-      body: switch (_index) {
-        0 => const HomeScreen(),
-        1 => const FeedScreen(),
-        2 => const MyWorkScreen(),
-        _ => const ProfileScreen(),
-      },
+      // IndexedStack — 탭을 전환해도 각 화면이 살아 있어 스크롤 위치/로딩 상태가 유지된다.
+      // (재진입 시 자동 새로고침은 사라지지만, 각 화면의 당겨서 새로고침으로 갱신 가능)
+      body: IndexedStack(
+        index: _index,
+        children: const [
+          HomeScreen(),
+          FeedScreen(),
+          MyWorkScreen(),
+          ProfileScreen(),
+        ],
+      ),
       bottomNavigationBar: _FloatingNav(
         index: _index,
         onTab: (i) {

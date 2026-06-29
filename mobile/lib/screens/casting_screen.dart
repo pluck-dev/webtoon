@@ -78,13 +78,17 @@ class _CastingScreenState extends State<CastingScreen> {
           _modeCard(
             value: 'TEAM',
             title: '같이 한 영상',
-            subtitle: '친구들이 배역을 나눠 맡고 다 같이 하나의 영상을 완성',
+            subtitle: '모두가 배역을 나눠 녹음하고 하나의 영상으로 합쳐요.',
+            icon: Icons.group_rounded,
+            badge: '결과물: 영상 1개 — 다 같이 완성',
           ),
           const SizedBox(height: 10),
           _modeCard(
             value: 'REMIX',
             title: '각자 버전',
-            subtitle: '친구들이 각자 더빙해서 저마다의 영상을 만들어요 (내 배역은 공유)',
+            subtitle: '참여자가 각자 더빙해 저마다의 버전을 만들어요. 내 배역 녹음은 모든 버전에 공유돼요.',
+            icon: Icons.fork_right_rounded,
+            badge: '결과물: 참여자마다 영상 1개씩',
           ),
           const SizedBox(height: 22),
           Text('누가 어떤 배역을 맡을까요?',
@@ -135,6 +139,8 @@ class _CastingScreenState extends State<CastingScreen> {
     required String value,
     required String title,
     required String subtitle,
+    required IconData icon,
+    required String badge,
   }) {
     final sel = _mode == value;
     return Pressable(
@@ -150,21 +156,55 @@ class _CastingScreenState extends State<CastingScreen> {
               width: sel ? 1.5 : 1),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(sel ? Icons.radio_button_checked : Icons.radio_button_off,
-                color: sel ? AppColors.gold : AppColors.faint),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(
+                sel ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: sel ? AppColors.gold : AppColors.faint,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: GoogleFonts.notoSansKr(
-                          fontWeight: FontWeight.w900, fontSize: 15)),
-                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(icon,
+                          size: 15,
+                          color: sel ? AppColors.gold : AppColors.muted),
+                      const SizedBox(width: 5),
+                      Text(title,
+                          style: GoogleFonts.notoSansKr(
+                              fontWeight: FontWeight.w900, fontSize: 15)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(subtitle,
                       style: GoogleFonts.notoSansKr(
-                          fontSize: 12.5, color: AppColors.muted)),
+                          fontSize: 12.5,
+                          color: AppColors.muted,
+                          height: 1.4)),
+                  const SizedBox(height: 7),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: sel
+                          ? AppColors.gold.withValues(alpha: 0.22)
+                          : AppColors.cream,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badge,
+                      style: GoogleFonts.notoSansKr(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: sel ? AppColors.gold : AppColors.inkSoft),
+                    ),
+                  ),
                 ],
               ),
             ),

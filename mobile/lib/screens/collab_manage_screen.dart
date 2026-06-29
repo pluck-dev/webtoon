@@ -164,7 +164,7 @@ class _CollabManageScreenState extends State<CollabManageScreen>
       await Notify.stopRender();
       if (mounted) {
         setState(() => _rendering = false);
-        _snack('합본 만들기에 실패했어요. 모든 배역이 녹음됐는지 확인해 주세요.');
+        _snack('합본 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     }
   }
@@ -373,6 +373,16 @@ class _CollabManageScreenState extends State<CollabManageScreen>
         label: Text('합본 영상 완성하기',
             style: GoogleFonts.notoSansKr(
                 fontWeight: FontWeight.w900, color: AppColors.ink)),
+      );
+    } else if (c.isReady && !_isHost) {
+      // 비호스트: 모든 배역이 녹음됐지만 합본을 만들 권한은 호스트에게 있음
+      btn = OutlinedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+        label: Text(
+          '모두 녹음 완료 — 호스트가 합본을 만들 거예요',
+          style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w800),
+        ),
       );
     } else {
       btn = FilledButton.icon(

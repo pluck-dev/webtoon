@@ -72,6 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<EpisodeSummary> get _gridList =>
       _filter != 'ALL' ? _visible : (_episodes ?? []).skip(_carousel.length).toList();
 
+  // '둘러보기' 헤더 노출 여부 — 작품이 1~5개라 전부 추천 캐러셀로 빠지면
+  // 그리드가 비어 헤더만 빈 공간 위에 떠 보인다. 그릴 항목이 있을 때만(또는
+  // 카테고리 필터 중이라 칩/빈 상태가 필요할 때만) 헤더를 보여준다.
+  bool get _showBrowse => _filter != 'ALL' || _gridList.isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,7 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverToBoxAdapter(child: _aiBanner()),
               if (_carousel.isNotEmpty)
                 SliverToBoxAdapter(child: _carouselSection()),
-              if (_error == null && _episodes != null && _episodes!.isNotEmpty)
+              if (_error == null &&
+                  _episodes != null &&
+                  _episodes!.isNotEmpty &&
+                  _showBrowse)
                 SliverToBoxAdapter(child: _browseHeader()),
               _body(),
               SliverToBoxAdapter(

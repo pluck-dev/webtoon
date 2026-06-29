@@ -2061,6 +2061,7 @@ class _StoryboardSheetState extends State<_StoryboardSheet> {
                   TextField(
                     controller: _situation,
                     maxLines: 4,
+                    onChanged: (_) => setState(() {}),
                     style: GoogleFonts.notoSansKr(fontSize: 14.5),
                     decoration: InputDecoration(
                       hintText: '예: 소개팅 나갔는데 상대가 전 여친이었던 남자의 당황',

@@ -51,6 +51,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _prev() {
+    if (_page > 0) {
+      _controller.previousPage(
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _goPage(int i) {
+    _controller.animateToPage(
+      i,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final last = _page == _pages.length - 1;
@@ -59,18 +76,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: widget.onDone,
-                child: Text(
-                  '건너뛰기',
-                  style: GoogleFonts.notoSansKr(
-                    color: AppColors.muted,
-                    fontWeight: FontWeight.w700,
+            Row(
+              children: [
+                // 이전 — 첫 페이지에선 자리만 유지(레이아웃 안정)
+                Opacity(
+                  opacity: _page > 0 ? 1 : 0,
+                  child: IgnorePointer(
+                    ignoring: _page == 0,
+                    child: TextButton(
+                      onPressed: _prev,
+                      child: Text(
+                        '이전',
+                        style: GoogleFonts.notoSansKr(
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const Spacer(),
+                TextButton(
+                  onPressed: widget.onDone,
+                  child: Text(
+                    '건너뛰기',
+                    style: GoogleFonts.notoSansKr(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
             Expanded(
               child: PageView.builder(
@@ -132,14 +168,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_pages.length, (i) {
                 final active = i == _page;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: active ? 22 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.ink : AppColors.line,
-                    borderRadius: BorderRadius.circular(999),
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _goPage(i),
+                  child: Padding(
+                    // 점 자체는 작아도 탭 영역은 넉넉히
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: active ? 22 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.ink : AppColors.line,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
                   ),
                 );
               }),

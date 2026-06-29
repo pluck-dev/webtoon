@@ -92,8 +92,13 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
     try {
       await Cloud.toggleLike(ep.id);
     } catch (_) {
-      // 실패 시 롤백
-      if (mounted) setState(() => _eps![index] = ep);
+      // 실패 시 롤백 — 인덱스가 아닌 id로 항목을 찾아 목록 변경에도 안전하게 복원
+      if (mounted) {
+        setState(() {
+          final idx = _eps?.indexWhere((e) => e.id == ep.id) ?? -1;
+          if (idx != -1) _eps![idx] = ep;
+        });
+      }
     }
   }
 
@@ -117,7 +122,7 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
               if (_error != null)
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: _msgBox('피드를 불러오지 못했어요.\n당겨서 새로고침 해주세요.'),
+                  child: _errorBox(),
                 )
               else if (_eps == null)
                 const SliverFillRemaining(
@@ -565,17 +570,42 @@ class _FeedScreenState extends State<FeedScreen> with RouteAware {
     ),
   );
 
-  Widget _msgBox(String m) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Center(
-      child: Text(
-        m,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.notoSansKr(
-          fontWeight: FontWeight.w700,
-          color: AppColors.muted,
+  Widget _errorBox() => Padding(
+    padding: const EdgeInsets.fromLTRB(32, 40, 32, 80),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.muted),
+        const SizedBox(height: 16),
+        Text(
+          '피드를 불러오지 못했어요.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.notoSansKr(
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+          ),
         ),
-      ),
+        const SizedBox(height: 6),
+        Text(
+          '네트워크 연결을 확인해 주세요.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.notoSansKr(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: AppColors.muted,
+          ),
+        ),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: _load,
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: Text(
+            '다시 시도',
+            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
     ),
   );
+
 }

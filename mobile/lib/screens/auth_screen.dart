@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,10 +8,13 @@ import '../config.dart';
 import '../repo.dart';
 import '../widgets/brand_logo.dart';
 
-enum _Step { form, verify }
+enum _Step { form, verify, reset }
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  /// true면 루트(AuthGate)가 아닌, 다른 화면 위에 올라온 경우.
+  /// 로그인 성공 시 AuthGate 전환에 의존하지 않고 스스로 pop 해 호출 화면으로 복귀한다.
+  final bool returnOnAuth;
+  const AuthScreen({super.key, this.returnOnAuth = false});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -26,9 +31,26 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _busy = false;
   String? _error;
   String? _notice;
+  StreamSubscription<dynamic>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // 다른 화면 위에 올라온 경우: 로그인(구글 딥링크 포함) 완료를 감지해 스스로 닫는다.
+    if (widget.returnOnAuth) {
+      _authSub = Auth.changes.listen((_) {
+        if (!mounted) return;
+        if (Auth.isSignedIn) {
+          _authSub?.cancel();
+          Navigator.of(context).maybePop();
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _email.dispose();
     _password.dispose();
     _code.dispose();
@@ -135,8 +157,37 @@ class _AuthScreenState extends State<AuthScreen> {
     });
     try {
       await Auth.signInWithGoogle();
-    } catch (e) {
-      setState(() => _error = '$e'.replaceFirst('Exception: ', ''));
+    } catch (_) {
+      setState(() => _error = '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// 비밀번호 재설정 메일 발송 — 보수적으로 발송 안내까지만 처리.
+  /// (메일 링크를 통한 실제 재설정은 Supabase 기본 흐름을 따른다.)
+  Future<void> _sendReset() async {
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
+      setState(() => _error = '올바른 이메일을 입력해 주세요.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
+    try {
+      await sb.auth.resetPasswordForEmail(email);
+      if (!mounted) return;
+      setState(() {
+        _step = _Step.form;
+        _notice = '$email 로 재설정 메일을 보냈어요. 메일의 링크에서 새 비밀번호를 설정해 주세요.';
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = '재설정 메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -161,7 +212,11 @@ class _AuthScreenState extends State<AuthScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
-                child: _step == _Step.form ? _formStep() : _codeStep(),
+                child: switch (_step) {
+                  _Step.form => _formStep(),
+                  _Step.verify => _codeStep(),
+                  _Step.reset => _resetStep(),
+                },
               ),
             ),
           ),
@@ -263,6 +318,27 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+        if (!_isSignup)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => setState(() {
+                      _step = _Step.reset;
+                      _error = null;
+                      _notice = null;
+                    }),
+              child: Text(
+                '비밀번호를 잊으셨나요?',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
         if (_error != null) ...[
           const SizedBox(height: 12),
           Text(
@@ -270,6 +346,18 @@ class _AuthScreenState extends State<AuthScreen> {
             style: const TextStyle(
               color: AppColors.coral,
               fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        if (_notice != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _notice!,
+            style: GoogleFonts.notoSansKr(
+              color: AppColors.teal,
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+              height: 1.4,
             ),
           ),
         ],
@@ -332,6 +420,15 @@ class _AuthScreenState extends State<AuthScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
+        const SizedBox(height: 8),
+        Text(
+          '코드는 잠시 후 만료돼요. 메일이 안 보이면 스팸함을 확인하거나 아래에서 다시 받아주세요.',
+          style: GoogleFonts.notoSansKr(
+            color: AppColors.faint,
+            fontSize: 12.5,
+            height: 1.4,
+          ),
+        ),
         const SizedBox(height: 28),
         TextField(
           controller: _code,
@@ -399,6 +496,72 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _resetStep() {
+    return Column(
+      key: const ValueKey('reset'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _brand(),
+        const SizedBox(height: 28),
+        Text(
+          '비밀번호 재설정',
+          style: GoogleFonts.notoSansKr(
+            fontWeight: FontWeight.w900,
+            fontSize: 30,
+            height: 1.1,
+            letterSpacing: -0.6,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '가입한 이메일로 재설정 링크를 보내드려요',
+          style: GoogleFonts.notoSansKr(color: AppColors.muted, fontSize: 15),
+        ),
+        const SizedBox(height: 28),
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _busy ? null : _sendReset(),
+          decoration: const InputDecoration(hintText: '이메일'),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _error!,
+            style: const TextStyle(
+              color: AppColors.coral,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: _busy ? null : _sendReset,
+          child: _busy ? _spinner() : const Text('재설정 메일 보내기'),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                  _step = _Step.form;
+                  _error = null;
+                  _notice = null;
+                }),
+          child: Text(
+            '로그인으로 돌아가기',
+            style: GoogleFonts.notoSansKr(
+              color: AppColors.muted,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ],
     );

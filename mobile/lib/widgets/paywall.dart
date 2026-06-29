@@ -134,29 +134,6 @@ Future<void> showPaywallSheet(BuildContext context) {
 class _PaywallSheet extends StatelessWidget {
   const _PaywallSheet();
 
-  void _notReady(BuildContext context) {
-    HapticFeedback.mediumImpact();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text('구독은 곧 제공돼요',
-            style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-        content: Text(
-          '스토어 출시와 함께 Pro 구독을 열어요.\n조금만 기다려 주세요!',
-          style: GoogleFonts.notoSansKr(color: AppColors.muted, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('알겠어요',
-                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -218,16 +195,18 @@ class _PaywallSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Text('₩4,900',
+                  Text('출시 시 안내',
                       style: GoogleFonts.notoSansKr(
-                          fontWeight: FontWeight.w900, fontSize: 20)),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.muted)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            // 구독 버튼 (현재는 준비중 안내)
-            GestureDetector(
-              onTap: () => _notReady(context),
+            // 구독 버튼 — 스토어 출시 전까지 비활성화
+            Opacity(
+              opacity: 0.45,
               child: Container(
                 height: 54,
                 alignment: Alignment.center,
@@ -235,20 +214,19 @@ class _PaywallSheet extends StatelessWidget {
                   color: AppColors.ink,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text('Pro 시작하기',
+                child: Text('구독 준비 중',
                     style: GoogleFonts.notoSansKr(
                         color: AppColors.paper,
                         fontWeight: FontWeight.w900,
                         fontSize: 16)),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Center(
-              child: TextButton(
-                onPressed: () => _notReady(context),
-                child: Text('구매 복원',
-                    style: GoogleFonts.notoSansKr(
-                        color: AppColors.muted, fontWeight: FontWeight.w700)),
+              child: Text(
+                '스토어 출시 후 구독 및 복원이 가능해요.',
+                style: GoogleFonts.notoSansKr(
+                    color: AppColors.faint, fontSize: 12),
               ),
             ),
           ],

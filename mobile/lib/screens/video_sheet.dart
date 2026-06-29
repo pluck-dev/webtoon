@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,6 +34,8 @@ class _VideoSheetState extends State<_VideoSheet> {
   VideoPlayerController? _controller;
   bool _ready = false;
   bool _sharing = false;
+  bool _showPlayOverlay = false;
+  Timer? _overlayTimer;
 
   @override
   void initState() {
@@ -93,8 +96,26 @@ class _VideoSheetState extends State<_VideoSheet> {
     }
   }
 
+  void _togglePlay() {
+    final c = _controller;
+    if (c == null) return;
+    setState(() {
+      if (c.value.isPlaying) {
+        c.pause();
+      } else {
+        c.play();
+      }
+      _showPlayOverlay = true;
+    });
+    _overlayTimer?.cancel();
+    _overlayTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _showPlayOverlay = false);
+    });
+  }
+
   @override
   void dispose() {
+    _overlayTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
@@ -163,12 +184,34 @@ class _VideoSheetState extends State<_VideoSheet> {
                           : _controller != null &&
                                 _controller!.value.isInitialized
                           ? GestureDetector(
-                              onTap: () => setState(() {
-                                _controller!.value.isPlaying
-                                    ? _controller!.pause()
-                                    : _controller!.play();
-                              }),
-                              child: VideoPlayer(_controller!),
+                              onTap: _togglePlay,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  VideoPlayer(_controller!),
+                                  AnimatedOpacity(
+                                    opacity: _showPlayOverlay ? 1.0 : 0.0,
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    child: Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.55),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _controller!.value.isPlaying
+                                            ? Icons.pause_rounded
+                                            : Icons.play_arrow_rounded,
+                                        color: Colors.white,
+                                        size: 34,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             )
                           : const Center(
                               child: Text(

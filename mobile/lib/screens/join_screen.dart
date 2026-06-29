@@ -7,6 +7,7 @@ import '../config.dart';
 import '../models.dart';
 import '../repo.dart';
 import '../widgets/app_widgets.dart';
+import 'auth_screen.dart';
 import 'collab_manage_screen.dart';
 import 'performer_screen.dart';
 
@@ -234,7 +235,22 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
         );
       }
     } catch (_) {
-      if (mounted) setState(() => _busyRole = null);
+      if (mounted) {
+        setState(() => _busyRole = null);
+        showAppToast(context, '참여하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
+    }
+  }
+
+  // 비로그인 상태에서 로그인 화면으로 이동 — 코드 보존 후 로그인 성공 시 복귀
+  Future<void> _goLogin() async {
+    await Navigator.of(context).push(
+      fadeThroughRoute(const AuthScreen(returnOnAuth: true)),
+    );
+    if (!mounted) return;
+    if (Auth.isSignedIn) {
+      setState(() => _needLogin = false);
+      await _load();
     }
   }
 
@@ -452,11 +468,26 @@ class _JoinScreenState extends State<JoinScreen> with RouteAware {
               ),
             ),
             const SizedBox(height: 20),
-            FilledButton(
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _goLogin,
+                icon: const Icon(Icons.login_rounded, size: 20),
+                label: Text(
+                  '로그인하러 가기',
+                  style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextButton(
               onPressed: () => Navigator.of(context).maybePop(),
               child: Text(
-                '확인',
-                style: GoogleFonts.notoSansKr(fontWeight: FontWeight.w900),
+                '돌아가기',
+                style: GoogleFonts.notoSansKr(
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],

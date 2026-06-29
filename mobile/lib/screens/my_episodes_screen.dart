@@ -107,7 +107,7 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
               ),
             ),
       body: _error != null
-          ? _msg('목록을 불러오지 못했어요.')
+          ? _errorView()
           : _items == null
           ? const Center(child: CircularProgressIndicator(color: AppColors.coral))
           : _items!.isEmpty
@@ -254,13 +254,37 @@ class _MyEpisodesScreenState extends State<MyEpisodesScreen> {
     ),
   );
 
-  Widget _msg(String m) => Center(
-    child: Text(
-      m,
-      style: GoogleFonts.notoSansKr(
-        fontWeight: FontWeight.w700,
-        color: AppColors.muted,
+  Widget _errorView() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: AppColors.faint, size: 46),
+          const SizedBox(height: 14),
+          Text(
+            '목록을 불러오지 못했어요.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSansKr(
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _items = null;
+                _error = null;
+              });
+              _load();
+            },
+            child: const Text('다시 시도'),
+          ),
+        ],
       ),
     ),
   );
+
 }
