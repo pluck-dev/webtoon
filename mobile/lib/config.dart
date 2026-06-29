@@ -11,6 +11,10 @@ class Env {
   static const bucketVideos = 'rendered-videos';
   static const bucketImages = 'webtoon-images'; // 작가가 올린 컷 이미지
 
+  // 무료 월 AI 생성 한도 — generate-image Edge Function의 AI_FREE_LIMIT(기본 50)과 맞출 것.
+  // 서버에서 한도를 바꾸면 이 값도 함께 수정.
+  static const aiFreeLimit = 50;
+
   /// 공개 버킷의 storage key → public URL
   static String publicImageUrl(String key) =>
       '$supabaseUrl/storage/v1/object/public/$bucketImages/$key';

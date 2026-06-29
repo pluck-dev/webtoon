@@ -121,7 +121,9 @@ class ProfileScreen extends StatelessWidget {
                     size: 14, color: AppColors.faint),
                 const SizedBox(width: 5),
                 Text(
-                  n == null ? '이번 달 AI 생성 로딩 중…' : '이번 달 AI 생성 $n회 사용',
+                  n == null
+                      ? '이번 달 AI 생성 로딩 중…'
+                      : '이번 달 AI 생성 $n / ${Env.aiFreeLimit}회',
                   style: GoogleFonts.notoSansKr(
                       color: AppColors.muted,
                       fontSize: 12.5,
